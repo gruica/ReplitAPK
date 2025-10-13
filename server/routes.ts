@@ -9968,8 +9968,13 @@ export function setupSecurityEndpoints(app: Express, storage: IStorage) {
 
       console.log(`📄 [SEND REPORT] PDF uspješno generisan (${pdfBuffer.length} bytes)`);
 
-      // Pošalji email sa PDF prilogom
-      const emailService = (await import('./email-service.js')).default;
+      // Dohvati podatke klijenta i uređaja za email template
+      const client = service.clientId ? await storage.getClient(service.clientId) : null;
+      const appliance = service.applianceId ? await storage.getAppliance(service.applianceId) : null;
+
+      // Pošalji email sa PDF prilogom (koristi singleton instance)
+      const { EmailService } = await import('./email-service.js');
+      const emailServiceInstance = EmailService.getInstance();
       
       const subject = `Servisni izvještaj #${serviceId} - ${service.description || 'Frigo Sistem Todosijević'}`;
       const recipientDisplayName = recipientName || recipientEmail;
@@ -10023,7 +10028,7 @@ export function setupSecurityEndpoints(app: Express, storage: IStorage) {
         </html>
       `;
 
-      const emailResult = await emailService.sendEmail({
+      const emailResult = await emailServiceInstance.sendEmail({
         to: recipientEmail,
         subject,
         html,
