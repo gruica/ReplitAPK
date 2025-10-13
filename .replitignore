@@ -1,0 +1,55 @@
+# Replit Deployment Ignore Configuration
+# Files and folders to exclude from deployment package
+
+# User uploads and media (dynamic content)
+attached_assets/
+uploads/
+
+# Build artifacts and binaries
+*.apk
+*.aab
+*.ipa
+*.txt
+aab-base64.txt
+
+# Mobile build outputs
+ios/
+android/app/build/
+android/build/
+
+# Development files
+*.log
+*.md
+!README.md
+!replit.md
+
+# Documentation (not needed in production)
+docs/
+*.pdf
+
+# Git artifacts
+.git/
+.github/
+
+# Store assets (not needed in production)
+store-assets/
+
+# Scripts (development only)
+scripts/
+
+# Python files (not needed for Node.js app)
+*.py
+pyproject.toml
+uv.lock
+
+# Old APK files
+servis-todosijevic-*.apk
+DOWNLOAD-OVAJ-FAJL-*.aab
+
+# Test files
+test_*.webp
+cookies.txt
+
+# JSON credentials (already in secrets)
+bright-crossbar-*.json
+*-service-account-*.json

@@ -1,0 +1,456 @@
+import React, { useState } from 'react';
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from '@/components/ui/separator';
+import { 
+  DownloadCloud, 
+  UploadCloud, 
+  CheckCircle2, 
+  XCircle, 
+  AlertCircle,
+  FileSpreadsheet
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
+import { useDropzone } from 'react-dropzone';
+import { useQuery, useMutation } from '@tanstack/react-query';
+
+type ImportResult = {
+  total: number;
+  imported: number;
+  failed: number;
+  errors: Array<{ row: number; error: string }>;
+  summary?: {
+    clientsCreated: number;
+    appliancesCreated: number;
+    servicesCreated: number;
+  };
+};
+
+export default function ExcelImportExport() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('export');
+  const [selectedImportType, setSelectedImportType] = useState<'clients' | 'appliances' | 'services' | 'legacy-complete'>('clients');
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
+  // Funkcija za preuzimanje Excel fajla
+  const downloadExcel = async (type: string) => {
+    try {
+      const response = await fetch(`/api/excel/${type}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      // Kreiraj blob iz odgovora i preuzmi fajl
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${type}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Preuzimanje uspešno',
+        description: `Excel fajl za "${getTypeName(type)}" je uspešno preuzet.`,
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error(`Error downloading Excel file:`, error);
+      toast({
+        title: 'Greška pri preuzimanju',
+        description: `Došlo je do greške prilikom preuzimanja Excel fajla. ${error instanceof Error ? error.message : ''}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Funkcija za dobijanje imena tipa resursa
+  const getTypeName = (type: string) => {
+    const typeMap: Record<string, string> = {
+      'clients': 'Klijenti',
+      'technicians': 'Serviseri',
+      'appliances': 'Uređaji',
+      'services': 'Servisi',
+      'maintenance': 'Planovi održavanja'
+    };
+    return typeMap[type] || type;
+  };
+
+  // Dropzone za uvoz fajlova
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls']
+    },
+    maxFiles: 1,
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        handleFileUpload(acceptedFiles[0]);
+      }
+    },
+  });
+
+  // Mutacija za uvoz Excel datoteke
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      console.log('Početak uvoza fajla:', file.name, 'Tip:', selectedImportType);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(`/api/excel/import/${selectedImportType}`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`Greška ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json() as ImportResult;
+      console.log('Rezultat uvoza:', result);
+      return result;
+    },
+    onMutate: () => {
+      console.log('Početak mutacije - postavljanje loading stanja');
+      setIsUploading(true);
+      setImportResult(null);
+    },
+    onSuccess: (data) => {
+      console.log('Uspešan uvoz:', data);
+      setImportResult(data);
+      toast({
+        title: 'Uvoz završen',
+        description: `Uspešno uvezeno ${data.imported} od ${data.total} zapisa.`,
+        variant: data.failed > 0 ? 'destructive' : 'default',
+      });
+    },
+    onError: (error) => {
+      console.error('Greška pri uvozu:', error);
+      toast({
+        title: 'Greška pri uvozu',
+        description: error instanceof Error ? error.message : 'Došlo je do greške prilikom uvoza fajla.',
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
+      console.log('Završetak mutacije - uklanjanje loading stanja');
+      setIsUploading(false);
+    }
+  });
+
+  // Postupa sa odabranom datotekom
+  const handleFileUpload = (file: File) => {
+    importMutation.mutate(file);
+  };
+
+  // Ako korisnik nije administrator, prikaži poruku o nedostatku dozvole
+  if (user?.role !== 'admin') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar isMobileOpen={sidebarOpen} closeMobileMenu={() => setSidebarOpen(false)} />
+        <div className="flex-1">
+          <Header toggleSidebar={toggleSidebar} />
+          <div className="container mx-auto py-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Pristup odbijen</AlertTitle>
+              <AlertDescription>
+                Nemate dozvolu za pristup ovoj stranici. Samo administratori mogu upravljati uvozom i izvozom podataka.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen">
+      <Sidebar isMobileOpen={sidebarOpen} closeMobileMenu={() => setSidebarOpen(false)} />
+      <div className="flex-1 overflow-auto">
+        <Header toggleSidebar={toggleSidebar} />
+        <div className="container mx-auto py-6">
+          <h1 className="text-3xl font-bold mb-6">Excel Uvoz/Izvoz Podataka</h1>
+          
+          {/* Drop zona uvek na vrhu stranice */}
+          <div className="bg-white border rounded-lg p-4 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Brzi uvoz podataka</h2>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="import-type" className="text-sm font-medium">Tip podataka za uvoz</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <Button 
+                    variant={selectedImportType === 'legacy-complete' ? 'default' : 'outline'}
+                    onClick={() => setSelectedImportType('legacy-complete')}
+                    className="justify-start col-span-2 h-8 text-sm"
+                  >
+                    🔄 Kompletna migracija (stari sistem)
+                  </Button>
+                  <Button 
+                    variant={selectedImportType === 'clients' ? 'default' : 'outline'}
+                    onClick={() => setSelectedImportType('clients')}
+                    className="justify-start h-8 text-sm"
+                  >
+                    Klijenti
+                  </Button>
+                  <Button 
+                    variant={selectedImportType === 'appliances' ? 'default' : 'outline'}
+                    onClick={() => setSelectedImportType('appliances')}
+                    className="justify-start h-8 text-sm"
+                  >
+                    Uređaji
+                  </Button>
+                  <Button 
+                    variant={selectedImportType === 'services' ? 'default' : 'outline'}
+                    onClick={() => setSelectedImportType('services')}
+                    className="justify-start h-8 text-sm"
+                  >
+                    Servisi
+                  </Button>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Učitaj Excel fajl</Label>
+                <div 
+                  {...getRootProps()} 
+                  className="border-2 border-dashed rounded-md p-4 mt-2 text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900"
+                >
+                  <input {...getInputProps()} />
+                  <UploadCloud className="h-8 w-8 mx-auto text-slate-400" />
+                  <p className="mt-2 text-sm">Prevucite Excel fajl ovde ili kliknite za odabir</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Podržani formati: .xlsx, .xls
+                  </p>
+                </div>
+              </div>
+              
+              {isUploading && (
+                <div className="space-y-2">
+                  <p className="text-sm">Učitavanje i obrada fajla...</p>
+                  <Progress value={undefined} className="h-2" />
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h2 className="text-lg font-semibold text-blue-900 mb-2">🔄 Migracija iz starog sistema</h2>
+            <p className="text-blue-800">
+              Sistem automatski prepoznaje i mapira podatke iz starog sistema:
+              <strong className="mx-2">TV → Tivat, KO → Kotor, BD → Budva</strong> |
+              <strong className="mx-2">SM → Sudo mašina, VM → Veš mašina, VM KOMB → Kombinovana veš mašina, frižider komb → Kombinovan frižider</strong>
+            </p>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="export">
+                <DownloadCloud className="mr-2 h-4 w-4" />
+                Izvoz podataka
+              </TabsTrigger>
+              <TabsTrigger value="import">
+                <UploadCloud className="mr-2 h-4 w-4" />
+                Uvoz podataka
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="export">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {/* Klijenti */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Klijenti</CardTitle>
+                    <CardDescription>Izvoz baze klijenata u Excel format</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Izvoz svih podataka o klijentima uključujući kontakt informacije i adrese.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button onClick={() => downloadExcel('clients')} className="w-full">
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Preuzmi Excel
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                {/* Serviseri */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Serviseri</CardTitle>
+                    <CardDescription>Izvoz baze servisera u Excel format</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Izvoz svih podataka o serviserima uključujući njihove specijalnosti i kontakt informacije.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button onClick={() => downloadExcel('technicians')} className="w-full">
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Preuzmi Excel
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                {/* Uređaji */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Uređaji</CardTitle>
+                    <CardDescription>Izvoz baze uređaja u Excel format</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Izvoz svih podataka o uređajima uključujući modele, serijske brojeve i vlasnike.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button onClick={() => downloadExcel('appliances')} className="w-full">
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Preuzmi Excel
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                {/* Servisi */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Servisi</CardTitle>
+                    <CardDescription>Izvoz baze servisa u Excel format</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Izvoz svih podataka o servisima uključujući statuse, dodeljene servisere i datume.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button onClick={() => downloadExcel('services')} className="w-full">
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Preuzmi Excel
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                {/* Planovi održavanja */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Planovi održavanja</CardTitle>
+                    <CardDescription>Izvoz planova održavanja u Excel format</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Izvoz svih podataka o planovima održavanja uključujući frekvencije i naredne datume.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button onClick={() => downloadExcel('maintenance')} className="w-full">
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Preuzmi Excel
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="import">
+              <div className="space-y-4">
+                {/* Dodatne informacije o uvozima */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Dodatne opcije uvoza</CardTitle>
+                    <CardDescription>
+                      Koristite dugmad na vrhu za brži uvoz ili ovde za napredne opcije.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="text-sm">
+                        <strong>Dostupni tipovi uvoza:</strong>
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                          <li><strong>Kompletna migracija:</strong> Uvoz svih podataka iz jedne Excel tabele</li>
+                          <li><strong>Klijenti:</strong> Uvoz samo klijenata</li>
+                          <li><strong>Uređaji:</strong> Uvoz samo uređaja</li>
+                          <li><strong>Servisi:</strong> Uvoz samo servisa</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Rezultati uvoza */}
+                {importResult && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Rezultat uvoza</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <Alert variant={importResult.failed > 0 ? "destructive" : "default"}>
+                          <CheckCircle2 className="h-4 w-4" />
+                          <AlertTitle>Rezultat uvoza</AlertTitle>
+                          <AlertDescription className="text-sm">
+                            Ukupno: {importResult.total} | Uspešno: {importResult.imported} | Neuspešno: {importResult.failed}
+                            {importResult.summary && (
+                              <>
+                                <br />
+                                <strong>Kreirani:</strong> {importResult.summary.clientsCreated} klijenata, {importResult.summary.appliancesCreated} uređaja, {importResult.summary.servicesCreated} servisa
+                              </>
+                            )}
+                          </AlertDescription>
+                        </Alert>
+                        
+                        {importResult.errors.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-semibold mb-1">Greške ({importResult.errors.length}):</h4>
+                            <div className="max-h-40 overflow-y-auto rounded border p-2 bg-red-50 dark:bg-red-900/20">
+                              {importResult.errors.map((error, index) => (
+                                <div key={index} className="text-xs text-red-700 dark:text-red-300 mb-1">
+                                  Red {error.row}: {error.error}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+}

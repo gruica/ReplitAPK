@@ -1,0 +1,352 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Package, ShoppingCart, AlertCircle } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+
+interface SparePartsOrderFormProps {
+  serviceId?: number;
+  isOpen?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  clientName?: string;
+  applianceModel?: string;
+  applianceManufacturer?: string;
+  applianceCategory?: string;
+  technicianId?: number;
+}
+
+const urgencyOptions = [
+  { value: 'normal', label: 'Normalna', color: 'bg-green-100 text-green-800' },
+  { value: 'high', label: 'Visoka', color: 'bg-orange-100 text-orange-800' },
+  { value: 'urgent', label: 'Hitno', color: 'bg-red-100 text-red-800' },
+];
+
+const warrantyStatusOptions = [
+  { value: 'u garanciji', label: '🛡️ U garanciji', color: 'bg-green-100 text-green-800' },
+  { value: 'van garancije', label: '💰 Van garancije', color: 'bg-red-100 text-red-800' },
+];
+
+export function SparePartsOrderForm({ 
+  serviceId, 
+  isOpen = false, 
+  onClose, 
+  onSuccess, 
+  onCancel,
+  clientName,
+  applianceModel,
+  applianceManufacturer,
+  applianceCategory,
+  technicianId
+}: SparePartsOrderFormProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  
+  const [formData, setFormData] = useState({
+    partName: '',
+    partNumber: '',
+    quantity: 1,
+    urgency: 'normal',
+    warrantyStatus: '',
+    notes: ''
+  });
+
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      
+      // Map 'notes' to 'description' for backend compatibility
+      const { notes, ...restData } = orderData;
+      const requestBody = {
+        ...restData,
+        description: notes, // Map notes to description field
+        serviceId
+      };
+      
+      
+      const response = await fetch('/api/spare-parts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorData}`);
+      }
+      
+      const result = await response.json();
+      return result;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Uspešno',
+        description: 'Porudžbina rezervnog dela je poslata',
+      });
+      
+      // Reset form
+      setFormData({
+        partName: '',
+        partNumber: '',
+        quantity: 1,
+        urgency: 'normal',
+        warrantyStatus: '',
+        notes: ''
+      });
+      
+      onClose?.(); // Pozovi spoljašnji callback
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['/api/spare-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts/all-requests'] });
+      
+      onSuccess?.();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Greška',
+        description: 'Došlo je do greške prilikom slanja porudžbine',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    
+    if (!formData.partName.trim()) {
+      toast({
+        title: 'Greška',
+        description: 'Molimo unesite naziv rezervnog dela',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.warrantyStatus) {
+      toast({
+        title: 'Greška',
+        description: 'Molimo izaberite warranty status (u garanciji ili van garancije)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!serviceId) {
+      toast({
+        title: 'Greška',
+        description: 'Nedostaje ID servisa',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    createOrderMutation.mutate({
+      ...formData,
+      serviceId,
+      technicianId
+    });
+  };
+
+  const handleInputChange = (field: string, value: string | number) => {
+    const newFormData = {
+      ...formData,
+      [field]: value
+    };
+    setFormData(newFormData);
+  };
+
+  const selectedUrgency = urgencyOptions.find(opt => opt.value === formData.urgency);
+  
+  // Debug: Loguj trenutno stanje forme i razlog zašto se dugme ne aktivira
+  const isButtonDisabled = createOrderMutation.isPending || !formData.partName.trim() || !formData.warrantyStatus;
+  
+
+  return (
+    <Dialog open={true} onOpenChange={(open) => {
+      if (!open) {
+        onClose?.();
+        onCancel?.();
+      }
+    }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <Package className="h-5 w-5 text-blue-600" />
+            <span>Poruči rezervni deo</span>
+          </DialogTitle>
+          <DialogDescription>
+            Popunite podatke za naručivanje rezervnog dela za ovaj servis
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="px-6 py-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="partName">Naziv rezervnog dela *</Label>
+                  <Input
+                    id="partName"
+                    placeholder="Npr. Kompresor, Termostat, Filter..."
+                    value={formData.partName}
+                    onChange={(e) => {
+                      handleInputChange('partName', e.target.value);
+                    }}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="partNumber">Broj dela (opciono)</Label>
+                  <Input
+                    id="partNumber"
+                    placeholder="Kataloski broj ako je poznat"
+                    value={formData.partNumber}
+                    onChange={(e) => handleInputChange('partNumber', e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="quantity">Količina</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={formData.quantity}
+                    onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="urgency">Hitnost</Label>
+                  <Select value={formData.urgency} onValueChange={(value) => handleInputChange('urgency', value)}>
+                    <SelectTrigger>
+                      <SelectValue>
+                        {selectedUrgency && (
+                          <div className="flex items-center space-x-2">
+                            <Badge className={selectedUrgency.color}>
+                              {selectedUrgency.label}
+                            </Badge>
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {urgencyOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={option.color}>
+                              {option.label}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="warrantyStatus">Warranty Status *</Label>
+                <Select value={formData.warrantyStatus} onValueChange={(value) => handleInputChange('warrantyStatus', value)}>
+                  <SelectTrigger className={!formData.warrantyStatus ? "border-red-300" : ""}>
+                    <SelectValue placeholder="Izaberite warranty status">
+                      {formData.warrantyStatus && (
+                        <div className="flex items-center space-x-2">
+                          <Badge className={warrantyStatusOptions.find(opt => opt.value === formData.warrantyStatus)?.color}>
+                            {warrantyStatusOptions.find(opt => opt.value === formData.warrantyStatus)?.label}
+                          </Badge>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warrantyStatusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={option.color}>
+                            {option.label}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!formData.warrantyStatus && (
+                  <p className="text-sm text-red-600 mt-1">
+                    Molimo izaberite da li je deo u garanciji ili van garancije
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <Label htmlFor="notes">Napomene</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Dodatne informacije o rezervnom delu..."
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+                <p className="text-sm text-blue-700">
+                  Porudžbina će biti poslata administratoru koji će je obraditi u najkraćem roku.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    onClose?.();
+                    onCancel?.();
+                  }}
+                >
+                  Otkaži
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isButtonDisabled}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {createOrderMutation.isPending ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full" />
+                      Šalje se...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Pošalji zahtev ({Object.keys(formData).filter(key => formData[key as keyof typeof formData]).length})
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

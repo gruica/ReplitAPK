@@ -1,0 +1,444 @@
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import { Express } from "express";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+import { storage } from "./storage";
+import { pool } from "./db";
+import { User as SelectUser } from "@shared/schema";
+
+declare global {
+  namespace Express {
+    interface User extends SelectUser {}
+  }
+}
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+export async function comparePassword(supplied: string, stored: string) {
+  try {
+    const [hashed, salt] = stored.split(".");
+    
+    if (!hashed || !salt) {
+      return false;
+    }
+    
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    
+    if (hashedBuf.length !== suppliedBuf.length) {
+      return false;
+    }
+    
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    return false;
+  }
+}
+
+export function setupAuth(app: Express) {
+  // Detect production environment 
+  const isProduction = process.env.REPLIT_ENVIRONMENT === 'production' || 
+                       !!process.env.REPLIT_DEV_DOMAIN || 
+                       process.env.NODE_ENV === 'production';
+  
+  // MANDATORY SESSION_SECRET validation - fail-fast for production security
+  if (!process.env.SESSION_SECRET) {
+    const errorMessage = "🚨 CRITICAL SECURITY ERROR: SESSION_SECRET environment variable is required for secure session management.";
+    console.error(errorMessage);
+    
+    if (isProduction) {
+      throw new Error(`${errorMessage} Application cannot start in production without secure session secret.`);
+    }
+    
+    // Development warning
+    console.warn("⚠️  DEVELOPMENT WARNING: Using insecure fallback session secret. Set SESSION_SECRET environment variable.");
+  }
+  
+  const sessionSecret = process.env.SESSION_SECRET || "dev-fallback-never-use-in-production";
+  
+  // Initialize persistent session store using connect-pg-simple
+  const PgStore = connectPgSimple(session);
+  const sessionStore = new PgStore({
+    pool: pool, // Use existing database connection pool
+    tableName: 'user_sessions', // Table for storing sessions
+    createTableIfMissing: true, // Automatically create session table
+    pruneSessionInterval: 60 * 15, // Clean expired sessions every 15 minutes
+    errorLog: (error: Error) => {
+      console.error('🚨 [SESSION STORE ERROR]:', error);
+    }
+  });
+
+  const sessionSettings: session.SessionOptions = {
+    store: sessionStore, // Use persistent PostgreSQL session store
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    name: 'connect.sid',
+    cookie: {
+      secure: isProduction, // Enable secure cookies in production (HTTPS)
+      httpOnly: true, // Prevent XSS attacks
+      sameSite: isProduction ? "strict" : "lax", // CSRF protection
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours (reduced from 30 days for security)
+      domain: undefined,
+      path: '/'
+    },
+    proxy: isProduction // Trust proxy in production for HTTPS termination
+  };
+
+  // Trust proxy je već postavljen u index.ts
+  app.use(session(sessionSettings));
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.use(
+    new LocalStrategy(
+      {
+        usernameField: 'username',
+        passwordField: 'password',
+        session: true
+      },
+      async (username, password, done) => {
+        try {
+          const user = await storage.getUserByUsername(username);
+          
+          if (!user) {
+            return done(null, false, { message: 'Neispravno korisničko ime ili lozinka' });
+          }
+          
+          const isPasswordValid = await comparePassword(password, user.password);
+          
+          if (!isPasswordValid) {
+            return done(null, false, { message: 'Neispravno korisničko ime ili lozinka' });
+          }
+          
+          // Dodatna provera: da li je korisnik verifikovan
+          // Administratori mogu da se prijave uvek, ostali korisnici moraju biti verifikovani
+          if (user.role !== 'admin' && !user.isVerified) {
+            return done(null, false, { message: 'Vaš nalog nije još verifikovan od strane administratora. Molimo sačekajte potvrdu.' });
+          }
+          
+          return done(null, user);
+        } catch (error) {
+          console.error('Authentication error:', error);
+          return done(error);
+        }
+      }
+    ),
+  );
+
+  passport.serializeUser((user, done) => {
+    done(null, user.id);
+  });
+  
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return done(null, false);
+      }
+      
+      return done(null, user);
+    } catch (error) {
+      return done(error, null);
+    }
+  });
+
+  app.post("/api/register", async (req, res, next) => {
+    try {
+      
+      // Validacija obaveznih polja - dodato je email kao obavezno polje
+      if (!req.body.username || !req.body.password || !req.body.fullName || !req.body.email) {
+        return res.status(400).json({
+          error: "Nepotpuni podaci",
+          message: "Korisničko ime, lozinka, ime i email adresa su obavezna polja."
+        });
+      }
+
+      // Validacija email formata
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(req.body.email)) {
+        return res.status(400).json({
+          error: "Nevalidan email",
+          message: "Molimo unesite validnu email adresu."
+        });
+      }
+      
+      // Provera da li već postoji korisnik sa istim korisničkim imenom
+      const existingUsername = await storage.getUserByUsername(req.body.username);
+      if (existingUsername) {
+        return res.status(400).json({
+          error: "Korisničko ime već postoji",
+          message: "Molimo odaberite drugo korisničko ime."
+        });
+      }
+      
+      // Provera email adrese ako je poslata
+      if (req.body.email) {
+        // Provera da li već postoji korisnik sa istim email-om
+        const existingEmail = await storage.getUserByEmail(req.body.email);
+        if (existingEmail) {
+          return res.status(400).json({
+            error: "Email adresa već postoji",
+            message: "Korisnik sa ovom email adresom je već registrovan."
+          });
+        }
+      }
+
+      // Korisnički podaci za kreiranje
+      const userData = {
+        username: req.body.username,
+        password: req.body.password,
+        fullName: req.body.fullName,
+        role: req.body.role || 'customer',
+        email: req.body.email || req.body.username, // Garantujemo da uvek imamo email
+        phone: req.body.phone || null,
+        address: req.body.address || null,
+        city: req.body.city || null,
+        companyName: req.body.companyName || null,
+        companyId: req.body.companyId || null,
+        technicianId: req.body.technicianId || null,
+        isVerified: req.body.role === 'admin', 
+        registeredAt: new Date().toISOString()
+      };
+      
+      // Posebni slučaj za poslovne partnere
+      if (req.body.role === 'business_partner') {
+      }
+      
+      // Lozinka će biti heširana u storage.createUser metodi
+      const user = await storage.createUser(userData);
+
+      // Ukloni lozinku iz odgovora
+      const { password, ...userWithoutPassword } = user;
+      
+      // Logujemo registraciju
+      
+      // Administrator može odmah da se prijavi, ostali korisnici dobijaju poruku o potrebnoj verifikaciji
+      if (user.role === 'admin') {
+        req.login(user, (err) => {
+          if (err) return next(err);
+          res.status(201).json({
+            ...userWithoutPassword,
+            message: "Administrator uspešno registrovan i prijavljen."
+          });
+        });
+      } else {
+        // Za obične korisnike vraćamo samo podatke bez prijave
+        // Posebna poruka za poslovne partnere
+        if (user.role === 'business_partner') {
+          res.status(201).json({
+            ...userWithoutPassword,
+            message: "Registracija uspešna! Vaš zahtev je prosleđen administratoru na pregled. Bićete obavešteni putem email-a kada je nalog aktiviran."
+          });
+        } else {
+          res.status(201).json({
+            ...userWithoutPassword,
+            message: "Registracija uspešna! Molimo sačekajte da administrator verifikuje vaš nalog pre prijave."
+          });
+        }
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: SelectUser | false, info: { message: string } | undefined) => {
+      if (err) {
+        return next(err);
+      }
+      
+      if (!user) {
+        return res.status(401).json({ 
+          error: info?.message || "Neispravno korisničko ime ili lozinka" 
+        });
+      }
+
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          return next(loginErr);
+        }
+        
+        // Successful login - log securely
+        
+        // Security audit log for login
+        
+        // Remove password from the response
+        const { password, ...userWithoutPassword } = user as SelectUser;
+        res.status(200).json(userWithoutPassword);
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/logout", (req, res, next) => {
+    if (!req.isAuthenticated()) {
+      console.log("Logout attempted but no user is authenticated");
+      return res.sendStatus(200);
+    }
+    
+    const userId = req.user?.id;
+    const username = req.user?.username;
+    const sessionId = req.sessionID;
+    
+    
+    req.logout((err) => {
+      if (err) {
+        return next(err);
+      }
+      
+      
+      // Uništi sesiju za dodatnu sigurnost
+      req.session.destroy((sessionErr) => {
+        if (sessionErr) {
+        } else {
+        }
+        res.sendStatus(200);
+      });
+    });
+  });
+
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    // Remove password from the response
+    const { password, ...userWithoutPassword } = req.user as SelectUser;
+    res.json(userWithoutPassword);
+  });
+  
+  // API za dohvatanje neverifikovanih korisnika (samo za administratore)
+  app.get("/api/users/unverified", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Potrebna je prijava" });
+      }
+      
+      // Provera da li je prijavljeni korisnik administrator
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Pristup zabranjen. Potrebna je administratorska uloga." });
+      }
+      
+      // Dohvati neverifikovane korisnike
+      const unverifiedUsers = await storage.getUnverifiedUsers();
+      
+      // Ukloni osetljive podatke pre slanja
+      const safeUsers = unverifiedUsers.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(safeUsers);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // API za verifikaciju korisnika (samo za administratore)
+  app.post("/api/users/:id/verify", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Potrebna je prijava" });
+      }
+      
+      // Provera da li je prijavljeni korisnik administrator
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Pristup zabranjen. Potrebna je administratorska uloga." });
+      }
+      
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Nevažeći ID korisnika" });
+      }
+      
+      // Prvo proveri da li korisnik postoji
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "Korisnik nije pronađen" });
+      }
+      
+      if (user.isVerified) {
+        return res.status(400).json({ error: "Korisnik je već verifikovan" });
+      }
+      
+      // Verifikuj korisnika
+      const updatedUser = await storage.verifyUser(userId, req.user.id);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ error: "Greška pri verifikaciji korisnika" });
+      }
+      
+      // Ukloni osetljive podatke pre slanja
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      // Šalji email obaveštenja korisniku - implementirati kasnije
+      
+      res.json({
+        success: true,
+        message: "Korisnik uspešno verifikovan",
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Ruta za promjenu šifre prijavljenog korisnika
+  app.post("/api/change-password", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Potrebna je prijava" });
+      }
+      
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ 
+          error: "Trenutna i nova šifra su obavezna polja" 
+        });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ 
+          error: "Nova šifra mora imati najmanje 6 karaktera" 
+        });
+      }
+      
+      // Provjeri trenutnu šifru
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: "Korisnik nije pronađen" });
+      }
+      
+      const isPasswordValid = await comparePassword(currentPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ error: "Trenutna šifra nije ispravna" });
+      }
+      
+      // Heširanje nove šifre
+      const hashedNewPassword = await hashPassword(newPassword);
+      
+      // Ažuriranje šifre
+      await storage.updateUser(user.id, {
+        ...user,
+        password: hashedNewPassword
+      });
+      
+      return res.status(200).json({ 
+        success: true,
+        message: "Šifra uspješno promijenjena" 
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+}

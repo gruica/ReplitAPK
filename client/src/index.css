@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Android keyboard optimization - only for technician pages */
+  html {
+    height: 100%;
+    overflow: auto;
+  }
+  
+  body {
+    height: 100%;
+    overflow: auto;
+    width: 100%;
+  }
+  
+  #root {
+    min-height: 100vh;
+    overflow: auto;
+  }
+  
+  /* Apply fixed positioning only on technician pages */
+  .tech-page-wrapper {
+    position: fixed;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+  }
+  
+  /* Prevent viewport shift on mobile keyboard - only for tech pages */
+  @supports (-webkit-touch-callout: none) {
+    .tech-page-wrapper {
+      height: -webkit-fill-available;
+    }
+  }
+  
+  /* Mobile textarea optimization */
+  textarea {
+    resize: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  
+  /* Prevent zoom on input focus for mobile */
+  @media screen and (max-width: 768px) {
+    input[type="text"], 
+    input[type="number"], 
+    input[type="email"], 
+    input[type="password"],
+    textarea {
+      font-size: 16px;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  }
+  
+  /* Mobile keyboard handling for floating components */
+  @media screen and (max-width: 768px) {
+    .floating-sheet-mobile {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: calc(var(--vh, 1vh) * 100) !important;
+      max-height: calc(var(--vh, 1vh) * 100) !important;
+      border-radius: 0 !important;
+      z-index: 9999 !important;
+    }
+    
+    .floating-sheet-mobile .scrollable-content {
+      height: calc(var(--vh, 1vh) * 100 - 60px) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+  
+  /* Keyboard adaptation for Android */
+  @supports (height: 100dvh) {
+    @media screen and (max-width: 768px) {
+      .floating-sheet-mobile {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+      }
+      
+      .floating-sheet-mobile .scrollable-content {
+        height: calc(100dvh - 60px) !important;
+      }
+    }
+  }
+  
+  /* Specific Android keyboard fixes */
+  @media screen and (max-width: 768px) {
+    /* Prevent content jump when keyboard opens */
+    .floating-sheet-mobile {
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      will-change: transform;
+    }
+    
+    /* Ensure textarea visibility when keyboard is open */
+    .floating-sheet-mobile textarea:focus,
+    .floating-sheet-mobile input:focus {
+      position: relative;
+      z-index: 1;
+      transform: translateZ(0);
+    }
+    
+    /* Fix for Samsung devices */
+    .floating-sheet-mobile .scrollable-content {
+      min-height: calc(100vh - 60px);
+      padding-bottom: 20px;
+    }
+    
+    /* Technician services mobile optimizations */
+    .technician-services-container {
+      height: calc(var(--vh, 1vh) * 100);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .technician-dialog-mobile {
+      max-height: calc(var(--vh, 1vh) * 85);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .technician-input-mobile {
+      min-height: 44px;
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    .technician-button-mobile {
+      min-height: 44px;
+      min-width: 44px;
+      touch-action: manipulation;
+    }
+    
+    /* Service status buttons mobile optimization */
+    .service-status-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+    }
+    
+    .service-status-button {
+      min-height: 44px;
+      flex: 1;
+      min-width: 120px;
+      touch-action: manipulation;
+    }
+    
+    /* Service details mobile layout */
+    .service-details-mobile {
+      padding: 16px;
+      max-height: calc(var(--vh, 1vh) * 75);
+      overflow-y: auto;
+    }
+    
+    .service-details-mobile h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    
+    /* Mobile centered dialog for service forms */
+    .mobile-centered-dialog {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 9999 !important;
+      max-height: 80vh !important;
+      overflow-y: auto !important;
+      width: 95vw !important;
+      max-width: 500px !important;
+      background-color: white !important;
+      border: 1px solid #e5e7eb !important;
+      border-radius: 8px !important;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .mobile-centered-dialog textarea,
+    .mobile-centered-dialog input {
+      font-size: 16px !important;
+      min-height: 44px !important;
+    }
+    
+    .mobile-centered-dialog button {
+      min-height: 44px !important;
+      min-width: 44px !important;
+      touch-action: manipulation !important;
+    }
+    
+    /* Keyboard open state adjustments */
+    .mobile-centered-dialog.keyboard-open {
+      top: 20% !important;
+      max-height: 70vh !important;
+      transform: translate(-50%, -50%) !important;
+    }
+    
+    /* Generali dialog specific optimizations */
+    .mobile-centered-dialog .dialog-header {
+      position: sticky !important;
+      top: 0 !important;
+      background-color: white !important;
+      z-index: 10 !important;
+      padding-bottom: 16px !important;
+      border-bottom: 1px solid #e5e7eb !important;
+    }
+    
+    .mobile-centered-dialog .dialog-footer {
+      position: sticky !important;
+      bottom: 0 !important;
+      background-color: white !important;
+      z-index: 10 !important;
+      padding-top: 16px !important;
+      border-top: 1px solid #e5e7eb !important;
+    }
+    
+    .service-details-mobile p {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+  }
+  
+  /* Enhanced floating sheet mobile with drag support */
+  .floating-sheet-mobile {
+    position: fixed !important;
+    top: 50px !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: auto !important;
+    width: calc(100% - 20px) !important;
+    height: auto !important;
+    max-height: calc(var(--vh, 1vh) * 80) !important;
+    z-index: 9999 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    transition: transform 0.2s ease !important;
+  }
+
+  .floating-sheet-mobile.dragging {
+    transform: scale(1.02) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  /* Touch optimization classes */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Drag hint animation */
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    20% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+
+  .drag-hint-mobile {
+    animation: fadeInOut 3s ease-in-out;
+  }
+
+  /* Additional Android Chrome fixes */
+  @supports (env(keyboard-inset-height)) {
+    @media screen and (max-width: 768px) {
+      .floating-sheet-mobile {
+        height: calc(100vh - env(keyboard-inset-height, 0px)) !important;
+        max-height: calc(100vh - env(keyboard-inset-height, 0px)) !important;
+      }
+      
+      .floating-sheet-mobile .scrollable-content {
+        height: calc(100vh - env(keyboard-inset-height, 0px) - 60px) !important;
+      }
+    }
+  }
+}

@@ -1,0 +1,108 @@
+modules = ["nodejs-20", "web", "postgresql-16", "java-openjdk-17", "android-sdk", "python-3.11"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 36553
+externalPort = 6800
+
+[[ports]]
+localPort = 36689
+externalPort = 6000
+
+[[ports]]
+localPort = 37345
+externalPort = 8000
+
+[[ports]]
+localPort = 38097
+externalPort = 3001
+
+[[ports]]
+localPort = 38795
+externalPort = 3003
+
+[[ports]]
+localPort = 38825
+externalPort = 3002
+
+[[ports]]
+localPort = 40439
+externalPort = 9000
+
+[[ports]]
+localPort = 42109
+externalPort = 8099
+
+[[ports]]
+localPort = 42811
+externalPort = 8080
+
+[[ports]]
+localPort = 43901
+externalPort = 5000
+
+[[ports]]
+localPort = 44289
+externalPort = 8008
+
+[[ports]]
+localPort = 45171
+externalPort = 4200
+
+[[ports]]
+localPort = 45617
+externalPort = 3000
+
+[[ports]]
+localPort = 46495
+externalPort = 5173
+
+[[ports]]
+localPort = 46815
+externalPort = 8081
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[agent]
+integrations = ["github:1.0.0"]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-a8895b5b-7220-4445-8a0f-d5cbe6eea40b"
