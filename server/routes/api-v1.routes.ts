@@ -1,4 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import { jwtAuthMiddleware, generateToken } from "../jwt-auth";
+import { storage } from "../storage";
+import { comparePassword } from "../auth";
 
 /**
  * API v1 Routes
@@ -79,11 +82,6 @@ export function registerApiV1Routes(app: Express) {
    */
   
   // Dupliciraj postojeće auth route-ove za v1
-  const { jwtAuthMiddleware } = require("../jwt-auth");
-  const { storage } = require("../storage");
-  const { comparePassword } = require("../auth");
-  const { generateToken } = require("../jwt-auth");
-  
   // v1 JWT Login - identičan kao /api/jwt-login
   app.post("/api/v1/jwt-login", async (req, res) => {
     try {

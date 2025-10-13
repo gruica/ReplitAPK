@@ -57,6 +57,9 @@ Creating new functions instead of changing existing ones is mandatory.
 - **Comprehensive Client Analysis**: Real-time data analysis of client history.
 - **Folder System for Services**: Organized service management with folder tabs (Active, Business Partners, Finished, Canceled/Problematic, All Services).
 - **Database Indexing**: Strategic indices across critical tables (users, clients, appliances, services, spare_part_orders) for query performance optimization.
+- **API Documentation**: Comprehensive Swagger/OpenAPI documentation system available at /api-docs endpoint, built with swagger-ui-express and swagger-jsdoc for interactive API exploration and testing.
+- **API Versioning**: Structured API v1 versioning (/api/v1/*) wrapping existing /api/* endpoints for backward compatibility and future version management, with X-API-Version response headers for client tracking.
+- **Global Error Handler**: Professional Express.js error handling middleware positioned after routes to catch all errors, prevent server crashes, and provide structured JSON error responses with detailed logging for debugging.
 
 ### Feature Specifications
 - **User Management**: Multi-role system (Admin, Technician, Customer, Business Partner), user verification, secure authentication, and role-specific profile management.
@@ -82,3 +85,4 @@ Creating new functions instead of changing existing ones is mandatory.
 - **Authentication**: Passport.js, scrypt.
 - **File Uploads**: Multer.
 - **Image Processing**: Sharp.
+- **API Documentation**: Swagger UI Express, Swagger JSDoc.
