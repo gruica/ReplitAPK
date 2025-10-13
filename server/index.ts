@@ -3,7 +3,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
 import NodeCache from "node-cache";
-import { registerRoutes, setupSecurityEndpoints } from "./routes";
+import { registerAllRoutes } from "./routes/index";
 
 import { setupVite, serveStatic, log } from "./vite";
 import { maintenanceService } from "./maintenance-service";
@@ -291,10 +291,12 @@ app.use((req, res, next) => {
   const { wakeNeonDatabase } = await import('./db.js');
   await wakeNeonDatabase();
   
-  const server = await registerRoutes(app);
+  // Register all modular routes
+  registerAllRoutes(app);
   
-  // Registruj sigurnosne endpoint-e za audit i soft delete
-  setupSecurityEndpoints(app, storage);
+  // Create HTTP server for WebSocket support
+  const { createServer } = await import('http');
+  const server = createServer(app);
   
 
 
