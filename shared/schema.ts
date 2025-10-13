@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, pgEnum, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, pgEnum, decimal, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -21,7 +21,11 @@ export const users = pgTable("users", {
   registeredAt: timestamp("registered_at").defaultNow().notNull(), // Datum i vreme registracije
   verifiedAt: timestamp("verified_at"), // Datum i vreme kada je korisnik verifikovan
   verifiedBy: integer("verified_by"), // ID administratora koji je verifikovao korisnika
-});
+}, (table) => ({
+  // Indeksi za brze pretrage
+  usernameIdx: index("users_username_idx").on(table.username),
+  roleIdx: index("users_role_idx").on(table.role),
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -78,7 +82,11 @@ export const clients = pgTable("clients", {
   phone: text("phone").notNull(),
   address: text("address"),
   city: text("city"),
-});
+}, (table) => ({
+  // Indeksi za brze pretrage po telefonu i email-u
+  phoneIdx: index("clients_phone_idx").on(table.phone),
+  emailIdx: index("clients_email_idx").on(table.email),
+}));
 
 // Poboljšana šema za validaciju klijenata sa detaljnijim pravilima
 export const insertClientSchema = createInsertSchema(clients).pick({
@@ -160,7 +168,11 @@ export const appliances = pgTable("appliances", {
   serialNumber: text("serial_number"),
   purchaseDate: text("purchase_date"),
   notes: text("notes"),
-});
+}, (table) => ({
+  // Indeksi za brze pretrage po klijentu i kategoriji
+  clientIdIdx: index("appliances_client_id_idx").on(table.clientId),
+  categoryIdIdx: index("appliances_category_id_idx").on(table.categoryId),
+}));
 
 // Poboljšana šema za validaciju uređaja
 export const insertApplianceSchema = createInsertSchema(appliances).pick({
@@ -266,7 +278,14 @@ export const services = pgTable("services", {
   replacedPartsBeforeFailure: text("replaced_parts_before_failure"), // Delovi zamenjeni pre neuspešnog servisa
   repairFailureDate: text("repair_failure_date"), // Datum konstatovanja neuspešnog servisa
   isWarrantyService: boolean("is_warranty_service").default(false), // Da li je garantni servis (za lakše filtriranje)
-});
+}, (table) => ({
+  // Indeksi za najčešće query-je - kritično za performanse!
+  statusIdx: index("services_status_idx").on(table.status),
+  technicianIdIdx: index("services_technician_id_idx").on(table.technicianId),
+  createdAtIdx: index("services_created_at_idx").on(table.createdAt),
+  clientIdIdx: index("services_client_id_idx").on(table.clientId),
+  warrantyStatusIdx: index("services_warranty_status_idx").on(table.warrantyStatus),
+}));
 
 // Tabela za praćenje uklonjenih delova sa uređaja
 export const removedParts = pgTable("removed_parts", {
@@ -977,7 +996,11 @@ export const sparePartOrders = pgTable("spare_part_orders", {
   adminNotes: text("admin_notes"), // Napomene administratora
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Indeksi za brze pretrage rezervnih delova
+  serviceIdIdx: index("spare_part_orders_service_id_idx").on(table.serviceId),
+  statusIdx: index("spare_part_orders_status_idx").on(table.status),
+}));
 
 // Status enums za rezervne delove
 export const sparePartUrgencyEnum = z.enum([
