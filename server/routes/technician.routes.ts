@@ -102,6 +102,23 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
  */
 export function registerTechnicianRoutes(app: Express) {
   
+  /**
+   * @swagger
+   * /api/technicians/my-services:
+   *   get:
+   *     tags: [Technicians]
+   *     summary: Get my services
+   *     description: Retrieve services assigned to the authenticated technician
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Services retrieved successfully
+   *       401:
+   *         $ref: '#/components/responses/Unauthorized'
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // Get services assigned to logged-in technician
   app.get("/api/my-services", jwtAuthMiddleware, requireRole("technician"), async (req, res) => {
     try {

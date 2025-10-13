@@ -26,6 +26,36 @@ export function registerBillingRoutes(app: Express) {
   // BEKO BILLING ENDPOINTS
   // ============================================================================
   
+  /**
+   * @swagger
+   * /api/admin/billing/beko/enhanced:
+   *   get:
+   *     tags: [Admin - Billing]
+   *     summary: Beko billing report (enhanced)
+   *     description: Generate enhanced Beko billing report for warranty services
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: month
+   *         required: true
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: year
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Billing report generated successfully
+   *       400:
+   *         description: Missing required parameters
+   *       403:
+   *         description: Admin access required
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // ENHANCED BEKO BILLING - Automatsko hvatanje svih završenih servisa
   app.get("/api/admin/billing/beko/enhanced", jwtAuth, async (req, res) => {
     try {

@@ -20,6 +20,23 @@ export function registerAdminRoutes(app: Express) {
   
   // ========== USER MANAGEMENT ==========
   
+  /**
+   * @swagger
+   * /api/technicians:
+   *   get:
+   *     tags: [Admin - Users]
+   *     summary: Get all technicians
+   *     description: Retrieve list of all technicians (Admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Technicians retrieved successfully
+   *       403:
+   *         description: Admin access required
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // GET /api/technicians - Get all technicians (Admin only)
   app.get("/api/technicians", jwtAuth, async (req, res) => {
     try {
@@ -36,6 +53,23 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  /**
+   * @swagger
+   * /api/users:
+   *   get:
+   *     tags: [Admin - Users]
+   *     summary: Get all users
+   *     description: Retrieve list of all users (Admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Users retrieved successfully
+   *       403:
+   *         description: Admin access required
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // GET /api/users - Get all users (Admin only)
   app.get("/api/users", jwtAuth, async (req, res) => {
     try {
