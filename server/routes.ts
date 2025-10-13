@@ -9882,6 +9882,137 @@ export function setupSecurityEndpoints(app: Express, storage: IStorage) {
       });
     }
   });
+
+  // ========== BUSINESS PARTNER: SEND SERVICE REPORT PDF VIA EMAIL ==========
+  
+  // POST /api/business-partner/send-service-report/:serviceId - Pošalji PDF izvještaj na email
+  app.post('/api/business-partner/send-service-report/:serviceId', jwtAuth, async (req, res) => {
+    try {
+      const serviceId = parseInt(req.params.serviceId);
+      const { recipientEmail, recipientName } = req.body;
+
+      console.log(`📧 [SEND REPORT] Business partner zahtijeva slanje PDF izvještaja za servis #${serviceId} na ${recipientEmail}`);
+
+      // Validacija email adrese
+      if (!recipientEmail || !recipientEmail.includes('@')) {
+        return res.status(400).json({ error: 'Unesite validnu email adresu' });
+      }
+
+      // Provjera servisa i autorizacije
+      const service = await storage.getService(serviceId);
+      if (!service) {
+        return res.status(404).json({ error: 'Servis nije pronađen' });
+      }
+
+      // Provjera da li je korisnik business partner i da li ima pristup ovom servisu
+      if (req.user?.role === 'business_partner' && service.businessPartnerId !== req.user.userId) {
+        return res.status(403).json({ error: 'Nemate dozvolu za pristup ovom servisu' });
+      }
+
+      // Dohvati sve potrebne podatke za PDF
+      const client = service.clientId ? await storage.getClient(service.clientId) : null;
+      const appliance = service.applianceId ? await storage.getAppliance(service.applianceId) : null;
+      const technician = service.technicianId ? await storage.getTechnician(service.technicianId) : null;
+
+      // Generiraj PDF koristeći postojeći PDFService
+      const { PDFService } = await import('./pdf-service.js');
+      const pdfService = new PDFService();
+      const pdfBuffer = await pdfService.generateServiceReportPDF({
+        service,
+        client: client || { fullName: 'Nepoznat klijent' },
+        appliance: appliance || { model: 'Nepoznat uređaj' },
+        technician: technician || { fullName: 'Nepoznat serviser' }
+      });
+
+      console.log(`📄 [SEND REPORT] PDF uspješno generisan (${pdfBuffer.length} bytes)`);
+
+      // Pošalji email sa PDF prilogom
+      const emailService = (await import('./email-service.js')).default;
+      
+      const subject = `Servisni izvještaj #${serviceId} - ${service.description || 'Frigo Sistem Todosijević'}`;
+      const recipientDisplayName = recipientName || recipientEmail;
+      
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; }
+            .footer { text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6; color: #6c757d; font-size: 14px; }
+            .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 15px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Servisni Izvještaj</h1>
+              <p>Frigo Sistem Todosijević</p>
+            </div>
+            <div class="content">
+              <p>Poštovani ${recipientDisplayName},</p>
+              
+              <p>U prilogu se nalazi <strong>detaljan servisni izvještaj</strong> za servis <strong>#${serviceId}</strong>.</p>
+              
+              <p><strong>Detalji servisa:</strong></p>
+              <ul>
+                <li><strong>Broj servisa:</strong> #${serviceId}</li>
+                <li><strong>Klijent:</strong> ${client?.fullName || 'Nepoznat'}</li>
+                <li><strong>Uređaj:</strong> ${appliance?.model || 'Nepoznat'}</li>
+                <li><strong>Status:</strong> ${service.status === 'completed' ? 'Završen' : service.status === 'in_progress' ? 'U toku' : 'Na čekanju'}</li>
+                ${service.completedDate ? `<li><strong>Datum završetka:</strong> ${new Date(service.completedDate).toLocaleDateString('sr-RS')}</li>` : ''}
+              </ul>
+              
+              <p>PDF dokument sadrži sve tehničke detalje, dijagnostiku i zaključke servisera.</p>
+              
+              <p>Ako imate bilo kakvih pitanja, slobodno nas kontaktirajte.</p>
+              
+              <p>Srdačan pozdrav,<br>
+              <strong>Frigo Sistem Todosijević</strong></p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Frigo Sistem Todosijević. Sva prava zadržana.</p>
+              <p>Ovaj email je automatski generisan iz sistema.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const emailResult = await emailService.sendEmail({
+        to: recipientEmail,
+        subject,
+        html,
+        attachments: [{
+          filename: `servisni-izvjestaj-${serviceId}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }]
+      });
+
+      if (emailResult) {
+        console.log(`✅ [SEND REPORT] PDF izvještaj uspješno poslat na ${recipientEmail}`);
+        res.json({ 
+          success: true, 
+          message: `PDF izvještaj uspješno poslat na ${recipientEmail}`,
+          recipientEmail,
+          serviceId
+        });
+      } else {
+        console.error(`❌ [SEND REPORT] Greška pri slanju email-a na ${recipientEmail}`);
+        res.status(500).json({ error: 'Greška pri slanju email-a. Pokušajte ponovo.' });
+      }
+
+    } catch (error) {
+      console.error('❌ [SEND REPORT] Greška pri slanju PDF izvještaja:', error);
+      res.status(500).json({ 
+        error: 'Greška pri slanju izvještaja',
+        message: error instanceof Error ? error.message : 'Nepoznata greška'
+      });
+    }
+  });
 }
 
 
