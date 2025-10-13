@@ -35,6 +35,11 @@ interface EmailOptions {
   subject: string;
   text?: string;
   html?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string;
+  }>;
 }
 
 /**
@@ -336,6 +341,7 @@ export class EmailService {
           subject: options.subject,
           text: options.text,
           html: options.html,
+          attachments: options.attachments, // PDF prilozi i ostali attachment-i
           headers: {
             'X-System': 'FrigoServis-EmailService',
             'X-Attempt': `${attempts}`,
