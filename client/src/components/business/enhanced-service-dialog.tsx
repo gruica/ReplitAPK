@@ -26,7 +26,8 @@ import {
   MessageSquare,
   Receipt,
   Shield,
-  Send
+  Send,
+  Download
 } from "lucide-react";
 
 // Tip za Service Completion Report
@@ -214,6 +215,28 @@ export default function EnhancedServiceDialog({
   const { toast } = useToast();
 
   if (!service) return null;
+
+  const handleDownloadPDFReport = async () => {
+    try {
+      // Kreiraj link za preuzimanje PDF-a
+      const downloadUrl = `/api/business-partner/download-service-report/${service.id}`;
+      
+      // Otvori PDF u novom prozoru da se preuzme
+      window.open(downloadUrl, '_blank');
+      
+      toast({
+        title: "Preuzimanje pokrenuto",
+        description: `PDF izvještaj se preuzima...`,
+      });
+    } catch (error) {
+      console.error("Greška pri preuzimanju PDF izvještaja:", error);
+      toast({
+        title: "Greška",
+        description: "Greška pri preuzimanju izvještaja",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSendPDFReport = async () => {
     if (!recipientEmail || !recipientEmail.includes('@')) {
@@ -710,16 +733,28 @@ export default function EnhancedServiceDialog({
                 </Button>
               )}
               
-              {/* Dugme za slanje PDF izvještaja */}
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => setIsEmailDialogOpen(true)}
-                data-testid="button-send-pdf-report"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Pošalji PDF izvještaj na email
-              </Button>
+              {/* PDF Opcije - Preuzimanje i Slanje */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={handleDownloadPDFReport}
+                  data-testid="button-download-pdf-report"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Preuzmi PDF
+                </Button>
+                
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => setIsEmailDialogOpen(true)}
+                  data-testid="button-send-pdf-report"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Pošalji na email
+                </Button>
+              </div>
             </div>
           )}
         </div>
