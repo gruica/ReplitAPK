@@ -9903,24 +9903,13 @@ export function setupSecurityEndpoints(app: Express, storage: IStorage) {
       }
 
       // Provjera da li je korisnik business partner i da li ima pristup ovom servisu
-      if (req.user?.role === 'business_partner' && service.businessPartnerId !== req.user.userId) {
+      if (req.user?.role === 'business_partner' && service.businessPartnerId !== req.user.id) {
         return res.status(403).json({ error: 'Nemate dozvolu za pristup ovom servisu' });
       }
 
-      // Dohvati sve potrebne podatke za PDF
-      const client = service.clientId ? await storage.getClient(service.clientId) : null;
-      const appliance = service.applianceId ? await storage.getAppliance(service.applianceId) : null;
-      const technician = service.technicianId ? await storage.getTechnician(service.technicianId) : null;
-
-      // Generiraj PDF koristeći postojeći PDFService
-      const { PDFService } = await import('./pdf-service.js');
-      const pdfService = new PDFService();
-      const pdfBuffer = await pdfService.generateServiceReportPDF({
-        service,
-        client: client || { fullName: 'Nepoznat klijent' },
-        appliance: appliance || { model: 'Nepoznat uređaj' },
-        technician: technician || { fullName: 'Nepoznat serviser' }
-      });
+      // Generiraj PDF koristeći postojeći PDFService (prima samo serviceId)
+      const { pdfService } = await import('./pdf-service.js');
+      const pdfBuffer = await pdfService.generateServiceReportPDF(serviceId);
 
       console.log(`📄 [DOWNLOAD PDF] PDF uspješno generisan (${pdfBuffer.length} bytes)`);
 
@@ -9964,24 +9953,18 @@ export function setupSecurityEndpoints(app: Express, storage: IStorage) {
       }
 
       // Provjera da li je korisnik business partner i da li ima pristup ovom servisu
-      if (req.user?.role === 'business_partner' && service.businessPartnerId !== req.user.userId) {
+      console.log(`🔐 [SEND REPORT AUTH] User role: ${req.user?.role}, User ID: ${req.user?.id}, Service businessPartnerId: ${service.businessPartnerId}`);
+      
+      if (req.user?.role === 'business_partner' && service.businessPartnerId !== req.user.id) {
+        console.log(`❌ [SEND REPORT AUTH] Autorizacija odbačena - korisnik ${req.user.id} pokušava pristupiti servisu business partnera ${service.businessPartnerId}`);
         return res.status(403).json({ error: 'Nemate dozvolu za pristup ovom servisu' });
       }
+      
+      console.log(`✅ [SEND REPORT AUTH] Autorizacija odobrena`);
 
-      // Dohvati sve potrebne podatke za PDF
-      const client = service.clientId ? await storage.getClient(service.clientId) : null;
-      const appliance = service.applianceId ? await storage.getAppliance(service.applianceId) : null;
-      const technician = service.technicianId ? await storage.getTechnician(service.technicianId) : null;
-
-      // Generiraj PDF koristeći postojeći PDFService
-      const { PDFService } = await import('./pdf-service.js');
-      const pdfService = new PDFService();
-      const pdfBuffer = await pdfService.generateServiceReportPDF({
-        service,
-        client: client || { fullName: 'Nepoznat klijent' },
-        appliance: appliance || { model: 'Nepoznat uređaj' },
-        technician: technician || { fullName: 'Nepoznat serviser' }
-      });
+      // Generiraj PDF koristeći postojeći PDFService (prima samo serviceId)
+      const { pdfService } = await import('./pdf-service.js');
+      const pdfBuffer = await pdfService.generateServiceReportPDF(serviceId);
 
       console.log(`📄 [SEND REPORT] PDF uspješno generisan (${pdfBuffer.length} bytes)`);
 
