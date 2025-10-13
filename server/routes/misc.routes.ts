@@ -80,6 +80,17 @@ function detectDevice(userAgent: string): 'android' | 'ios' | 'desktop' | 'unkno
   return 'unknown';
 }
 
+// 🔒 SECURITY: User-Agent sanitization funkcija - uklanja potencijalno maliciozne karaktere
+function sanitizeUserAgent(userAgent: string | undefined): string {
+  if (!userAgent) return 'unknown';
+  
+  // Uklanjamo HTML tagove, script tagove i opasne karaktere
+  return userAgent
+    .replace(/[<>\"']/g, '') // Ukloni HTML/script karaktere
+    .replace(/[{}[\]]/g, '') // Ukloni zagrade koje mogu biti problematične
+    .substring(0, 200); // Limit na 200 karaktera za sigurnost
+}
+
 // Rate limiting for QR generation (per IP)
 const qrRateLimit = new Map<string, { count: number; resetTime: number }>();
 
@@ -343,7 +354,9 @@ export function registerMiscRoutes(app: Express) {
       // Check if APK exists
       await fs.access(apkPath);
       
-      const userAgent = req.get('User-Agent') || '';
+      // 🔒 SECURITY: Sanitizuj User-Agent prije korištenja
+      const rawUserAgent = req.get('User-Agent') || '';
+      const userAgent = sanitizeUserAgent(rawUserAgent);
       const device = detectDevice(userAgent);
       
       // Update statistics
@@ -660,7 +673,7 @@ export function registerMiscRoutes(app: Express) {
       const validatedData = insertDataDeletionRequestSchema.parse({
         ...req.body,
         ipAddress: req.ip || req.connection.remoteAddress,
-        userAgent: req.get('User-Agent'),
+        userAgent: sanitizeUserAgent(req.get('User-Agent')),
       });
       
       const [newRequest] = await db.insert(dataDeletionRequests).values(validatedData).returning();

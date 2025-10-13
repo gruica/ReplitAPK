@@ -7,6 +7,17 @@ import { insertUserSchema } from "@shared/schema";
 import path from "path";
 import { promises as fs } from "fs";
 
+// 🔒 SECURITY: User-Agent sanitization funkcija - uklanja potencijalno maliciozne karaktere
+function sanitizeUserAgent(userAgent: string | undefined): string {
+  if (!userAgent) return 'unknown';
+  
+  // Uklanjamo HTML tagove, script tagove i opasne karaktere
+  return userAgent
+    .replace(/[<>\"']/g, '') // Ukloni HTML/script karaktere
+    .replace(/[{}[\]]/g, '') // Ukloni zagrade koje mogu biti problematične
+    .substring(0, 200); // Limit na 200 karaktera za sigurnost
+}
+
 /**
  * Admin Routes
  * - User Management (CRUD)
@@ -407,7 +418,7 @@ export function registerAdminRoutes(app: Express) {
         oldValues: null,
         newValues: JSON.stringify(updates),
         ipAddress: req.ip,
-        userAgent: req.get('User-Agent') || null,
+        userAgent: sanitizeUserAgent(req.get('User-Agent')),
         notes: `Privilegije ažurirane za korisnika ${userId}`
       });
       
@@ -472,7 +483,7 @@ export function registerAdminRoutes(app: Express) {
         req.user!.role,
         deleteReason,
         req.ip,
-        req.get('User-Agent')
+        sanitizeUserAgent(req.get('User-Agent'))
       );
       
       if (success) {
