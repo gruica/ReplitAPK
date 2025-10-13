@@ -218,15 +218,44 @@ export default function EnhancedServiceDialog({
 
   const handleDownloadPDFReport = async () => {
     try {
-      // Kreiraj link za preuzimanje PDF-a
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('auth_token');
+      
       const downloadUrl = `/api/business-partner/download-service-report/${service.id}`;
       
-      // Otvori PDF u novom prozoru da se preuzme
-      window.open(downloadUrl, '_blank');
+      // Fetch PDF with JWT authentication
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Get PDF blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `servis-izvjestaj-${service.id}-${Date.now()}.pdf`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
       toast({
-        title: "Preuzimanje pokrenuto",
-        description: `PDF izvještaj se preuzima...`,
+        title: "Preuzimanje uspješno",
+        description: `PDF izvještaj je preuzet`,
       });
     } catch (error) {
       console.error("Greška pri preuzimanju PDF izvještaja:", error);
