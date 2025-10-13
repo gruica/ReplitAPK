@@ -3,7 +3,7 @@ import { z } from "zod";
 import { storage } from "../storage";
 import { jwtAuth, jwtAuthMiddleware, requireRole } from "../jwt-auth";
 import { emailService } from "../email-service";
-import { logger } from "../logger";
+import { logger } from "../production-logger";
 import { 
   serviceStatusEnum,
   insertServiceCompletionReportSchema 
