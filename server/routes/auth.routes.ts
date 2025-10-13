@@ -52,6 +52,53 @@ export function registerAuthRoutes(app: Express) {
   app.post("/api/security/verify-bot", verifyBotAnswer);
   app.get("/api/security/rate-limit-status", getRateLimitStatus);
   
+  /**
+   * @swagger
+   * /api/jwt-login:
+   *   post:
+   *     tags: [Authentication]
+   *     summary: JWT Login
+   *     description: Authenticate user and receive JWT token (30-day expiration)
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [username, password]
+   *             properties:
+   *               username:
+   *                 type: string
+   *                 example: admin
+   *               password:
+   *                 type: string
+   *                 format: password
+   *                 example: admin123
+   *     responses:
+   *       200:
+   *         description: Login successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 user:
+   *                   $ref: '#/components/schemas/User'
+   *                 token:
+   *                   type: string
+   *                   description: JWT Bearer token
+   *       401:
+   *         description: Invalid credentials or user not verified
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // JWT Login endpoint - replacing session-based login
   app.post("/api/jwt-login", async (req, res) => {
     try {
@@ -112,6 +159,29 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
+  /**
+   * @swagger
+   * /api/jwt-user:
+   *   get:
+   *     tags: [Authentication]
+   *     summary: Get current user info
+   *     description: Retrieve authenticated user details using JWT token
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: User info retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       401:
+   *         $ref: '#/components/responses/Unauthorized'
+   *       404:
+   *         description: User not found
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // JWT User info endpoint
   app.get("/api/jwt-user", jwtAuthMiddleware, async (req, res) => {
     try {

@@ -8,6 +8,7 @@ import { registerAdminRoutes } from "./admin.routes";
 import { registerBillingRoutes } from "./billing.routes";
 import { registerSparePartsRoutes } from "./spare-parts.routes";
 import { registerMiscRoutes } from "./misc.routes";
+import { registerApiV1Routes } from "./api-v1.routes";
 
 /**
  * Main Router - Registers all route modules
@@ -25,6 +26,9 @@ export function registerAllRoutes(app: Express) {
   registerBillingRoutes(app);
   registerSparePartsRoutes(app);
   registerMiscRoutes(app);
+  
+  // Register API v1 versioning (must be after original routes)
+  registerApiV1Routes(app);
   
   console.log("✅ All modular routes registered successfully");
 }
