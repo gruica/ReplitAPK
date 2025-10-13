@@ -43,6 +43,25 @@ const logger = new ProductionLogger();
  * - Safe delete with validation
  */
 export function registerClientRoutes(app: Express) {
+  /**
+   * @swagger
+   * /api/clients:
+   *   get:
+   *     tags: [Clients]
+   *     summary: Get all clients
+   *     description: Retrieve list of all clients in the system
+   *     responses:
+   *       200:
+   *         description: List of clients retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Client'
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // Client routes
   app.get("/api/clients", async (req, res) => {
     try {
@@ -53,6 +72,32 @@ export function registerClientRoutes(app: Express) {
     }
   });
 
+  /**
+   * @swagger
+   * /api/clients/{id}:
+   *   get:
+   *     tags: [Clients]
+   *     summary: Get client by ID
+   *     description: Retrieve a specific client's information
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Client ID
+   *     responses:
+   *       200:
+   *         description: Client retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Client'
+   *       404:
+   *         description: Client not found
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   app.get("/api/clients/:id", async (req, res) => {
     try {
       const client = await storage.getClient(parseInt(req.params.id));
@@ -101,6 +146,49 @@ export function registerClientRoutes(app: Express) {
     }
   });
 
+  /**
+   * @swagger
+   * /api/clients:
+   *   post:
+   *     tags: [Clients]
+   *     summary: Create new client
+   *     description: Create a new client (optionally with appliance)
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [fullName, phone]
+   *             properties:
+   *               fullName:
+   *                 type: string
+   *               email:
+   *                 type: string
+   *                 format: email
+   *               phone:
+   *                 type: string
+   *               address:
+   *                 type: string
+   *               city:
+   *                 type: string
+   *               categoryId:
+   *                 type: integer
+   *                 description: Optional - for creating with appliance
+   *               manufacturerId:
+   *                 type: integer
+   *                 description: Optional - for creating with appliance
+   *               model:
+   *                 type: string
+   *                 description: Optional - for creating with appliance
+   *     responses:
+   *       200:
+   *         description: Client created successfully
+   *       400:
+   *         description: Invalid client data
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   app.post("/api/clients", async (req, res) => {
     try {
       logger.debug("🔧 [ADMIN CLIENTS] POST endpoint pozvan sa podacima:", req.body);
@@ -199,6 +287,35 @@ export function registerClientRoutes(app: Express) {
   });
 
 
+  /**
+   * @swagger
+   * /api/clients/{id}:
+   *   put:
+   *     tags: [Clients]
+   *     summary: Update client
+   *     description: Update client information
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/Client'
+   *     responses:
+   *       200:
+   *         description: Client updated successfully
+   *       400:
+   *         description: Invalid data
+   *       404:
+   *         description: Client not found
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   app.put("/api/clients/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -214,6 +331,27 @@ export function registerClientRoutes(app: Express) {
     }
   });
 
+  /**
+   * @swagger
+   * /api/clients/{id}:
+   *   delete:
+   *     tags: [Clients]
+   *     summary: Delete client
+   *     description: Delete a client from the system
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Client deleted successfully
+   *       404:
+   *         description: Client not found
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   app.delete("/api/clients/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
