@@ -66,6 +66,8 @@ pool.on('error', (err: any) => {
     console.error('Baza: Došlo je do prekida konekcije. Ponovno ću se povezati.');
   } else if (err.code === '08006' || err.code === '08001' || err.code === '08004') {
     console.error('Baza: Greška konekcije. Provjerite mrežnu vezu i postavke baze.');
+  } else if (err.code === 'XX000' && err.message?.includes('disabled')) {
+    console.warn('⏰ [NEON] Baza je u suspend modu - auto-wake će je probuditi na sljedeći query');
   }
   
   // Prevent the error from causing uncaught exceptions
@@ -77,6 +79,28 @@ export const db = drizzle({
   schema,
   logger: process.env.NODE_ENV === 'development' // production-ready logging
 });
+
+// AUTO-WAKE NEON DATABASE IF SUSPENDED
+export async function wakeNeonDatabase(maxRetries = 3): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`🔄 [NEON] Pokušaj buđenja baze (#${i + 1}/${maxRetries})...`);
+      await pool.query('SELECT 1');
+      console.log(`✅ [NEON] Baza je aktivna!`);
+      return true;
+    } catch (err: any) {
+      if (err.code === 'XX000' && err.message?.includes('disabled')) {
+        console.log(`⏰ [NEON] Baza spava, čekam 2s prije sljedećeg pokušaja...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+      console.error(`❌ [NEON] Wake greška:`, err.message);
+      return false;
+    }
+  }
+  console.error(`❌ [NEON] Baza se nije probudila nakon ${maxRetries} pokušaja`);
+  return false;
+}
 
 // ENTERPRISE HEALTH CHECK & MONITORING
 export async function checkDatabaseHealth(): Promise<{ healthy: boolean; responseTime: number; activeConnections: number }> {
