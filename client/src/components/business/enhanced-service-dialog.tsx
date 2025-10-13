@@ -264,8 +264,8 @@ export default function EnhancedServiceDialog({
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-3">
             <span>Servis #{service.id}</span>
             <StatusBadge status={service.status} />
@@ -275,7 +275,7 @@ export default function EnhancedServiceDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto flex-1 pr-2">
           {/* Osnovne informacije */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Klijent */}
