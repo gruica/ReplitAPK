@@ -1,10 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   User, 
   Phone, 
@@ -21,7 +25,8 @@ import {
   AlertTriangle,
   MessageSquare,
   Receipt,
-  Shield
+  Shield,
+  Send
 } from "lucide-react";
 
 // Tip za Service Completion Report
@@ -202,9 +207,62 @@ export default function EnhancedServiceDialog({
   onEdit, 
   showActions = true 
 }: EnhancedServiceDialogProps) {
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const { toast } = useToast();
+
   if (!service) return null;
 
+  const handleSendPDFReport = async () => {
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+      toast({
+        title: "Greška",
+        description: "Unesite validnu email adresu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      await apiRequest(
+        `/api/business-partner/send-service-report/${service.id}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ 
+            recipientEmail, 
+            recipientName: recipientName || recipientEmail 
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      toast({
+        title: "Uspješno poslato",
+        description: `PDF izvještaj je poslat na ${recipientEmail}`,
+      });
+
+      setIsEmailDialogOpen(false);
+      setRecipientEmail("");
+      setRecipientName("");
+    } catch (error) {
+      console.error("Greška pri slanju PDF izvještaja:", error);
+      toast({
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška pri slanju izvještaja",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -644,15 +702,101 @@ export default function EnhancedServiceDialog({
           </div>
 
           {/* Akcije */}
-          {showActions && onEdit && (service.status !== 'completed' && service.status !== 'cancelled') && (
-            <div className="pt-4 border-t">
-              <Button className="w-full" onClick={onEdit}>
-                Izmeni servis
+          {showActions && (
+            <div className="pt-4 border-t space-y-3">
+              {onEdit && (service.status !== 'completed' && service.status !== 'cancelled') && (
+                <Button className="w-full" onClick={onEdit}>
+                  Izmeni servis
+                </Button>
+              )}
+              
+              {/* Dugme za slanje PDF izvještaja */}
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => setIsEmailDialogOpen(true)}
+                data-testid="button-send-pdf-report"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Pošalji PDF izvještaj na email
               </Button>
             </div>
           )}
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Email Dialog za slanje PDF izvještaja */}
+    <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Pošalji PDF izvještaj na email</DialogTitle>
+          <DialogDescription>
+            Unesite email adresu na koju želite poslati PDF izvještaj servisa #{service.id}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="recipient-email">Email adresa primaoca *</Label>
+            <Input
+              id="recipient-email"
+              type="email"
+              placeholder="primatelj@example.com"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              data-testid="input-recipient-email"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="recipient-name">Ime primaoca (opcionalno)</Label>
+            <Input
+              id="recipient-name"
+              type="text"
+              placeholder="Ime i prezime"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              data-testid="input-recipient-name"
+            />
+          </div>
+        </div>
+        
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => {
+              setIsEmailDialogOpen(false);
+              setRecipientEmail("");
+              setRecipientName("");
+            }}
+            disabled={isSending}
+            data-testid="button-cancel-email"
+          >
+            Otkaži
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleSendPDFReport}
+            disabled={isSending || !recipientEmail}
+            data-testid="button-confirm-send-email"
+          >
+            {isSending ? (
+              <>
+                <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Šaljem...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Pošalji
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
