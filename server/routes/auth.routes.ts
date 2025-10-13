@@ -5,6 +5,7 @@ import { generateToken, jwtAuthMiddleware } from "../jwt-auth";
 import { getBotChallenge, verifyBotAnswer } from "../bot-verification";
 import { getRateLimitStatus } from "../rate-limiting";
 import { emailVerificationService } from "../email-verification";
+import rateLimit from "express-rate-limit";
 
 // Production logger for clean deployment
 class ProductionLogger {
@@ -37,6 +38,25 @@ class ProductionLogger {
 }
 
 const logger = new ProductionLogger();
+
+// 🔒 SECURITY: Rate limiter za JWT login endpoint - zaštita od brute force napada
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuta
+  max: 5, // Maksimalno 5 pokušaja prijave po IP adresi
+  message: {
+    error: 'Previše pokušaja prijave',
+    message: 'Molimo sačekajte 15 minuta prije ponovnog pokušaja.'
+  },
+  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  handler: (req, res) => {
+    logger.security(`🚨 Rate limit exceeded for login attempt from IP: ${req.ip}`);
+    res.status(429).json({
+      error: 'Previše pokušaja prijave',
+      message: 'Molimo sačekajte 15 minuta prije ponovnog pokušaja.'
+    });
+  }
+});
 
 /**
  * Authentication Routes
@@ -100,7 +120,8 @@ export function registerAuthRoutes(app: Express) {
    *         $ref: '#/components/responses/ServerError'
    */
   // JWT Login endpoint - replacing session-based login
-  app.post("/api/jwt-login", async (req, res) => {
+  // 🔒 SECURITY: Rate limiter applied - max 5 attempts per 15 minutes
+  app.post("/api/jwt-login", loginRateLimiter, async (req, res) => {
     try {
       const { username, password } = req.body;
       
@@ -108,25 +129,26 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ error: "Korisničko ime i lozinka su obavezni" });
       }
       
-      logger.debug(`JWT Login attempt for: ${username}`);
+      // 🔒 SECURITY: Ne logujemo username zbog sigurnosnih razloga
+      logger.debug(`JWT Login attempt from IP: ${req.ip}`);
       
       // Find user
       const user = await storage.getUserByUsername(username);
       if (!user) {
-        logger.debug(`JWT Login: User ${username} not found`);
+        logger.debug(`JWT Login: User not found`);
         return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
       }
       
       // Check password
       const isPasswordValid = await comparePassword(password, user.password);
       if (!isPasswordValid) {
-        logger.debug(`JWT Login: Invalid password for ${username}`);
+        logger.debug(`JWT Login: Invalid password`);
         return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
       }
       
       // Check if user is verified
       if (!user.isVerified) {
-        logger.debug(`JWT Login: User ${username} not verified`);
+        logger.debug(`JWT Login: User not verified`);
         return res.status(401).json({ error: "Račun nije verifikovan. Kontaktirajte administratora." });
       }
       
@@ -137,7 +159,8 @@ export function registerAuthRoutes(app: Express) {
         role: user.role
       });
       
-      logger.info(`JWT Login successful for: ${username} (${user.role})`);
+      // 🔒 SECURITY: Logujemo samo ulogu, ne i username
+      logger.info(`JWT Login successful: role=${user.role}, ip=${req.ip}`);
       
       // Return token and user info
       res.json({
