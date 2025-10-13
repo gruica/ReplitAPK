@@ -287,6 +287,10 @@ app.use((req, res, next) => {
 (async () => {
   // Mobile SMS Service has been completely removed
   
+  // Auto-wake Neon database if suspended (5min inactivity auto-suspends)
+  const { wakeNeonDatabase } = await import('./db.js');
+  await wakeNeonDatabase();
+  
   const server = await registerRoutes(app);
   
   // Registruj sigurnosne endpoint-e za audit i soft delete
