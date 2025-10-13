@@ -294,6 +294,10 @@ app.use((req, res, next) => {
   // Register all modular routes
   registerAllRoutes(app);
   
+  // 📚 SWAGGER/OpenAPI DOCUMENTATION
+  const { setupSwagger } = await import('./swagger.js');
+  setupSwagger(app);
+  
   // Create HTTP server for WebSocket support
   const { createServer } = await import('http');
   const server = createServer(app);
