@@ -9883,7 +9883,66 @@ export function setupSecurityEndpoints(app: Express, storage: IStorage) {
     }
   });
 
-  // ========== BUSINESS PARTNER: SEND SERVICE REPORT PDF VIA EMAIL ==========
+  // ========== BUSINESS PARTNER: PDF SERVICE REPORTS ==========
+  
+  // GET /api/business-partner/download-service-report/:serviceId - Preuzmi PDF izvještaj
+  app.get('/api/business-partner/download-service-report/:serviceId', jwtAuth, async (req, res) => {
+    try {
+      const serviceId = parseInt(req.params.serviceId);
+
+      if (isNaN(serviceId)) {
+        return res.status(400).json({ error: 'Nevažeći ID servisa' });
+      }
+
+      console.log(`📄 [DOWNLOAD PDF] Business partner zahtijeva preuzimanje PDF izvještaja za servis #${serviceId}`);
+
+      // Provjera servisa i autorizacije
+      const service = await storage.getService(serviceId);
+      if (!service) {
+        return res.status(404).json({ error: 'Servis nije pronađen' });
+      }
+
+      // Provjera da li je korisnik business partner i da li ima pristup ovom servisu
+      if (req.user?.role === 'business_partner' && service.businessPartnerId !== req.user.userId) {
+        return res.status(403).json({ error: 'Nemate dozvolu za pristup ovom servisu' });
+      }
+
+      // Dohvati sve potrebne podatke za PDF
+      const client = service.clientId ? await storage.getClient(service.clientId) : null;
+      const appliance = service.applianceId ? await storage.getAppliance(service.applianceId) : null;
+      const technician = service.technicianId ? await storage.getTechnician(service.technicianId) : null;
+
+      // Generiraj PDF koristeći postojeći PDFService
+      const { PDFService } = await import('./pdf-service.js');
+      const pdfService = new PDFService();
+      const pdfBuffer = await pdfService.generateServiceReportPDF({
+        service,
+        client: client || { fullName: 'Nepoznat klijent' },
+        appliance: appliance || { model: 'Nepoznat uređaj' },
+        technician: technician || { fullName: 'Nepoznat serviser' }
+      });
+
+      console.log(`📄 [DOWNLOAD PDF] PDF uspješno generisan (${pdfBuffer.length} bytes)`);
+
+      // Postavi headers za PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="servisni-izvjestaj-${serviceId}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Cache-Control', 'no-cache');
+
+      // Pošalji PDF
+      res.send(pdfBuffer);
+
+      console.log(`✅ [DOWNLOAD PDF] PDF izvještaj za servis #${serviceId} uspješno preuzet`);
+
+    } catch (error) {
+      console.error('❌ [DOWNLOAD PDF] Greška pri preuzimanju PDF izvještaja:', error);
+      res.status(500).json({ 
+        error: 'Greška pri preuzimanju izvještaja',
+        message: error instanceof Error ? error.message : 'Nepoznata greška'
+      });
+    }
+  });
   
   // POST /api/business-partner/send-service-report/:serviceId - Pošalji PDF izvještaj na email
   app.post('/api/business-partner/send-service-report/:serviceId', jwtAuth, async (req, res) => {
