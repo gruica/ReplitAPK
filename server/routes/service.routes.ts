@@ -30,6 +30,49 @@ export function registerServiceRoutes(app: Express) {
   
   // ========== CORE SERVICE CRUD ==========
   
+  /**
+   * @swagger
+   * /api/services:
+   *   get:
+   *     tags: [Services]
+   *     summary: Get all services
+   *     description: Retrieve services with optional filters (status, technician, limit)
+   *     parameters:
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *           enum: [pending, assigned, in_progress, completed, repair_failed, cancelled]
+   *         description: Filter by service status
+   *       - in: query
+   *         name: technicianId
+   *         schema:
+   *           type: integer
+   *         description: Filter by technician ID
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Limit number of results
+   *     responses:
+   *       200:
+   *         description: Services retrieved successfully
+   *         headers:
+   *           X-Execution-Time:
+   *             description: Query execution time in milliseconds
+   *             schema:
+   *               type: string
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Service'
+   *       400:
+   *         description: Invalid parameters
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // GET /api/services - Get all services with optional filters
   app.get("/api/services", async (req, res) => {
     try {
@@ -112,6 +155,32 @@ export function registerServiceRoutes(app: Express) {
     }
   });
   
+  /**
+   * @swagger
+   * /api/services/{id}:
+   *   get:
+   *     tags: [Services]
+   *     summary: Get service by ID
+   *     description: Retrieve detailed information about a specific service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Service ID
+   *     responses:
+   *       200:
+   *         description: Service retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Service'
+   *       404:
+   *         description: Service not found
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
   // GET /api/services/:id - Get single service
   app.get("/api/services/:id", async (req, res) => {
     try {
