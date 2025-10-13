@@ -55,6 +55,7 @@ interface MonthlyReport {
   servicesByBrand: Record<string, BillingService[]>;
   totalServices: number;
   totalCost: number;
+  totalBillingAmount?: number;
   autoDetectedCount?: number;
   detectionSummary?: {
     withCompletedDate: number;
@@ -390,7 +391,7 @@ export default function ComplusBillingReport() {
           
           <div class="summary">
             <div><strong>Ukupno servisa:</strong> ${billingData.totalServices}</div>
-            <div><strong>Ukupna vrednost:</strong> ${Number(billingData.totalCost || 0).toFixed(2)} €</div>
+            <div><strong>Ukupna vrednost:</strong> ${Number(billingData.totalBillingAmount || billingData.totalCost || 0).toFixed(2)} €</div>
             <div><strong>Brendovi:</strong> ${billingData.brandBreakdown.map(b => `${b.brand} (${b.count})`).join(', ')}</div>
           </div>
           
@@ -587,7 +588,7 @@ export default function ComplusBillingReport() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Ukupna vrednost</p>
-                        <p className="text-2xl font-bold">{Number(billingData.totalCost || 0).toFixed(2)} €</p>
+                        <p className="text-2xl font-bold">{Number(billingData.totalBillingAmount || billingData.totalCost || 0).toFixed(2)} €</p>
                       </div>
                       <Euro className="h-8 w-8 text-blue-500" />
                     </div>
