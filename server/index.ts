@@ -298,14 +298,28 @@ app.use((req, res, next) => {
   const { createServer } = await import('http');
   const server = createServer(app);
   
+  // 🛡️ GLOBAL ERROR HANDLER - MORA BITI PRIJE VITE SETUP-A ALI POSLIJE ROUTES
+  // Hvata sve greške koje nisu pokrivene try-catch blokovima
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    // Logiraj grešku sa detaljima
+    console.error('🚨 [GLOBAL ERROR HANDLER]:', {
+      message: err.message,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+      status: err.status || err.statusCode || 500
+    });
 
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Pošalji odgovor klijentu
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    res.status(status).json({ 
+      error: message,
+      ...(app.get("env") === "development" && { stack: err.stack }) // Stack trace samo u development
+    });
+    
+    // VAŽNO: NE bacaj grešku ponovo - to bi srušilo server!
   });
 
   // importantly only setup vite in development and after
