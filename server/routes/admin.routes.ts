@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "../storage";
 import { jwtAuth, jwtAuthMiddleware, requireRole } from "../jwt-auth";
-import { logger } from "../logger";
+import { logger } from "../production-logger";
 import { z } from "zod";
 import { insertUserSchema } from "@shared/schema";
 import path from "path";

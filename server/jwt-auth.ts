@@ -46,23 +46,25 @@ export function extractTokenFromRequest(req: Request): string | null {
 }
 
 export async function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+  // HYBRID AUTH: Check session first (Passport.js), then JWT token
+  
+  // 1. Check if user is authenticated via Passport session
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    // User already authenticated via session - req.user is set by Passport
+    return next();
+  }
+  
+  // 2. Try JWT authentication
   const token = extractTokenFromRequest(req);
   
-
-  
   if (!token) {
-
     return res.status(401).json({ error: 'Potrebna je prijava' });
   }
   
-
   const payload = verifyToken(token);
   if (!payload) {
-
     return res.status(401).json({ error: 'Nevažeći token' });
   }
-  
-
   
   // Get full user data from database to include technicianId
   const user = await storage.getUser(payload.userId);
