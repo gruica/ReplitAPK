@@ -376,7 +376,35 @@ export function registerServiceRoutes(app: Express) {
         emailError: null
       };
       
-      if (originalService.status !== updatedService.status) {
+      // Proveravamo da li treba poslati email notifikaciju klijentu
+      // Email se šalje u sledećim scenarijima:
+      // 1. Status se promenio
+      // 2. Servis je upravo završen (promenjen u "completed")
+      // 3. Klijent je odbio popravku (customerRefusesRepair se promenio na true)
+      // 4. Dodati su važni detalji kao što su troškovi ili delovi (kada je servis completed)
+      const statusChanged = originalService.status !== updatedService.status;
+      const justCompleted = statusChanged && updatedService.status === 'completed';
+      const customerRefusedRepair = updatedService.customerRefusesRepair && 
+                                    !originalService.customerRefusesRepair;
+      const importantDetailsAdded = updatedService.status === 'completed' && (
+        (updatedService.cost && updatedService.cost !== originalService.cost) ||
+        (updatedService.usedParts && updatedService.usedParts !== originalService.usedParts) ||
+        (updatedService.technicianNotes && updatedService.technicianNotes !== originalService.technicianNotes)
+      );
+      
+      const shouldSendEmail = statusChanged || justCompleted || customerRefusedRepair || importantDetailsAdded;
+      
+      // Logovanje razloga slanja emaila za debugging
+      if (shouldSendEmail) {
+        const reasons = [];
+        if (statusChanged) reasons.push(`status promenjen (${originalService.status} → ${updatedService.status})`);
+        if (justCompleted) reasons.push('servis upravo završen');
+        if (customerRefusedRepair) reasons.push('klijent odbio popravku');
+        if (importantDetailsAdded) reasons.push('dodati važni detalji');
+        console.log(`[EMAIL SISTEM] Email će biti poslat jer: ${reasons.join(', ')}`);
+      }
+      
+      if (shouldSendEmail) {
         try {
           console.log(`[EMAIL SISTEM] Započinjem slanje obaveštenja o promeni statusa servisa #${id} u "${updatedService.status}"`);
           
