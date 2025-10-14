@@ -42,9 +42,14 @@ export class StorageOptimizationCron {
       console.log('📊 [STORAGE STATS] Kreiranje mesečnih statistika storage-a...');
       
       try {
-        // Ovde možemo dodati logiku za kreiranje mesečnog izveštaja
-        // o korišćenju storage-a i slanje administratoru
-        console.log('📧 Mesečni izveštaj o storage-u kreiran (TODO: implementirati email)');
+        // FUTURE FEATURE: Mjesečni storage izvještaj sa email notifikacijom
+        // Planirana implementacija: Kreiranje PDF izvještaja sa statistikama korišćenja storage-a
+        // - Ukupan prostor zauzet
+        // - Broj fotografija po kategorijama (servisi, aparati, klijenti)
+        // - Trend rasta storage-a
+        // - Top 10 servisa po veličini fotografija
+        // Email će biti poslan administratorima sa priloženim PDF izvještajem
+        console.log('📧 Mesečni izveštaj o storage-u - planirana funkcija za buduću verziju');
         
       } catch (error) {
         console.error('❌ [STORAGE STATS] Greška pri kreiranju mesečnih statistika:', error);
