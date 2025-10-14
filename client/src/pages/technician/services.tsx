@@ -89,6 +89,55 @@ export default function TechnicianServices() {
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusNotes, setStatusNotes] = useState("");
 
+  // PDF Report funkcija
+  const handlePdfReport = async (service: Service) => {
+    try {
+      console.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
+      
+      const response = await fetch(`/api/technician/service-report-pdf/${service.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Nepoznata greška' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      console.log(`📄 PDF uspešno dobijen od servera`);
+
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `servis-izvještaj-${service.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`📄 PDF izvještaj uspešno preuzet`);
+
+      toast({
+        title: "PDF izvještaj",
+        description: `Izvještaj za servis #${service.id} je uspešno preuzet.`
+      });
+
+    } catch (error) {
+      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      toast({
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Debug user objekat
   console.log('[TEHNIČKI SERVISI] Current user:', user);
   console.log('[TEHNIČKI SERVISI] User technicianId:', user?.technicianId);
@@ -433,6 +482,15 @@ export default function TechnicianServices() {
                   >
                     <Eye className="h-3 w-3 mr-1" />
                     Detalji
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    onClick={() => handlePdfReport(service)}
+                    title="Preuzmi PDF izvještaj"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    PDF
                   </Button>
                   <Button 
                     size="sm" 
