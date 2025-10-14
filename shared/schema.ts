@@ -884,8 +884,13 @@ export const supplierOrders = pgTable("supplier_orders", {
   sparePartOrderId: integer("spare_part_order_id").notNull().references(() => sparePartOrders.id),
   orderNumber: text("order_number"), // Broj porudžbine od dobavljača
   status: text("status", {
-    enum: ["pending", "sent", "confirmed", "shipped", "delivered", "cancelled"]
+    enum: ["pending", "separated", "sent", "delivered", "cancelled"]
   }).default("pending").notNull(),
+  // pending = Čeka supplier akciju
+  // separated = Supplier odvojio dio
+  // sent = Supplier poslao dio
+  // delivered = Admin primio dio
+  // cancelled = Otkazano
   sentAt: timestamp("sent_at"),
   confirmedAt: timestamp("confirmed_at"),
   shippedAt: timestamp("shipped_at"),
@@ -1510,7 +1515,7 @@ export const insertSupplierOrderSchema = createInsertSchema(supplierOrders).pick
 }).extend({
   supplierId: z.number().int().positive("ID dobavljača mora biti pozitivan broj"),
   sparePartOrderId: z.number().int().positive("ID porudžbine mora biti pozitivan broj"),
-  status: z.enum(["pending", "sent", "confirmed", "shipped", "delivered", "cancelled"]).default("pending"),
+  status: z.enum(["pending", "separated", "sent", "delivered", "cancelled"]).default("pending"),
   currency: z.string().default("EUR"),
 });
 
