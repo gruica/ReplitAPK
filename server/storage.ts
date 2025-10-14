@@ -2495,17 +2495,29 @@ export class DatabaseStorage implements IStorage {
     const startTime = Date.now();
     
     try {
-      // TEMP TEST: Direktan SQL preko pool-a
-      const poolResult = await pool.query('SELECT * FROM services WHERE business_partner_id = $1', [partnerId]);
-      console.log(`[DEBUG] POOL QUERY (direct SQL): ${poolResult.rows.length} services for partner ${partnerId}`);
+      // TEMP TEST: Direktan SQL preko pool-a SA DATUMOM
+      const poolResult = await pool.query(`
+        SELECT id, created_at, description 
+        FROM services 
+        WHERE business_partner_id = $1 
+        ORDER BY created_at DESC 
+        LIMIT 5
+      `, [partnerId]);
+      console.log(`[DEBUG] POOL - Top 5 servisa:`, poolResult.rows.map(r => `ID ${r.id} (${r.created_at})`).join(', '));
       
-      // TEMP TEST: Samo servisi bez JOIN-ova
-      const simpleServices = await db
-        .select()
+      // TEMP TEST: Drizzle sa datumom
+      const drizzleServices = await db
+        .select({
+          id: services.id,
+          createdAt: services.createdAt,
+          description: services.description
+        })
         .from(services)
-        .where(eq(services.businessPartnerId, partnerId));
+        .where(eq(services.businessPartnerId, partnerId))
+        .orderBy(desc(services.createdAt))
+        .limit(5);
       
-      console.log(`[DEBUG] SIMPLE QUERY (no JOINs): ${simpleServices.length} services for partner ${partnerId}`);
+      console.log(`[DEBUG] DRIZZLE - Top 5 servisa:`, drizzleServices.map(r => `ID ${r.id} (${r.createdAt})`).join(', '));
       
       // OPTIMIZED: Single JOIN query umesto N+1
       const rawServices = await db
