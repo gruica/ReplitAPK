@@ -56,6 +56,9 @@ const CustomerServiceRequest = lazy(() => import("@/pages/customer"));
 const CustomerProfile = lazy(() => import("@/pages/customer/profile"));
 const CustomerServices = lazy(() => import("@/pages/customer/services"));
 
+// PERFORMANCE BOOST: Lazy load supplier pages
+const SupplierDashboard = lazy(() => import("@/pages/supplier"));
+
 // PERFORMANCE BOOST: Lazy load business partner pages  
 const BusinessDashboard = lazy(() => import("@/pages/business"));
 const BusinessProfile = lazy(() => import("@/pages/business/profile"));
@@ -226,6 +229,9 @@ function Router() {
       <RoleProtectedRoute path="/tech/contact" component={TechnicianContact} allowedRoles={["technician"]} />
       {/* Mobile photo upload for technicians */}
       <RoleProtectedRoute path="/mobile/camera/:serviceId" component={CameraUpload} allowedRoles={["technician", "admin"]} />
+      
+      {/* Supplier routes */}
+      <RoleProtectedRoute path="/supplier" component={SupplierDashboard} allowedRoles={["supplier"]} />
       
       {/* Customer routes */}
       <RoleProtectedRoute path="/customer" component={CustomerServiceRequest} allowedRoles={["customer"]} />
