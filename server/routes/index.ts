@@ -10,6 +10,7 @@ import { registerSparePartsRoutes } from "./spare-parts.routes";
 import { registerMiscRoutes } from "./misc.routes";
 import { registerApiV1Routes } from "./api-v1.routes";
 import { registerBusinessPartnerRoutes } from "../business-partner-routes";
+import { registerSupplierRoutes } from "./supplier.routes";
 
 /**
  * Main Router - Registers all route modules
@@ -28,6 +29,7 @@ export function registerAllRoutes(app: Express) {
   registerSparePartsRoutes(app);
   registerMiscRoutes(app);
   registerBusinessPartnerRoutes(app);
+  registerSupplierRoutes(app);
   
   // Register API v1 versioning (must be after original routes)
   registerApiV1Routes(app);
