@@ -120,8 +120,9 @@ export default function BusinessDashboard() {
     refetchOnWindowFocus: false,
   });
 
-  const services = businessData?.services || [];
-  const meta = businessData?.meta || {};
+  // Backend vraća direktan array servisa
+  const services = (businessData as any) || [];
+  const meta = {}; // Meta podaci nisu potrebni za prikaz statistika
 
   // Dohvatanje proširenih podataka za selektovan servis
   const { data: enhancedService, isLoading: enhancedLoading } = useQuery({
