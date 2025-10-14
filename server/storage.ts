@@ -299,6 +299,11 @@ export interface IStorage {
   createSupplierOrder(order: InsertSupplierOrder): Promise<SupplierOrder>;
   updateSupplierOrder(id: number, order: Partial<SupplierOrder>): Promise<SupplierOrder | undefined>;
   deleteSupplierOrder(id: number): Promise<boolean>;
+  
+  // Supplier Portal methods (for supplier user role)
+  getSupplierTasks(supplierId: number): Promise<SupplierOrder[]>;
+  getSupplierTask(taskId: number): Promise<SupplierOrder | undefined>;
+  updateSupplierTaskStatus(taskId: number, status: 'pending' | 'separated' | 'sent' | 'delivered' | 'cancelled'): Promise<SupplierOrder>;
 
   // Parts Catalog methods
   getAllPartsFromCatalog(): Promise<PartsCatalog[]>;
@@ -5476,6 +5481,63 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Greška pri brisanju porudžbine dobavljača:', error);
       return false;
+    }
+  }
+
+  // ===== SUPPLIER PORTAL METHODS =====
+  async getSupplierTasks(supplierId: number): Promise<SupplierOrder[]> {
+    try {
+      const tasks = await db
+        .select()
+        .from(supplierOrders)
+        .where(eq(supplierOrders.supplierId, supplierId))
+        .orderBy(desc(supplierOrders.createdAt));
+      return tasks;
+    } catch (error) {
+      console.error('Greška pri dohvatanju supplier zadataka:', error);
+      throw error;
+    }
+  }
+
+  async getSupplierTask(taskId: number): Promise<SupplierOrder | undefined> {
+    try {
+      const [task] = await db
+        .select()
+        .from(supplierOrders)
+        .where(eq(supplierOrders.id, taskId));
+      return task;
+    } catch (error) {
+      console.error('Greška pri dohvatanju supplier zadatka:', error);
+      throw error;
+    }
+  }
+
+  async updateSupplierTaskStatus(
+    taskId: number, 
+    status: 'pending' | 'separated' | 'sent' | 'delivered' | 'cancelled'
+  ): Promise<SupplierOrder> {
+    try {
+      const updateData: any = { status };
+      
+      // Set appropriate timestamp based on status
+      if (status === 'separated') {
+        updateData.confirmedAt = new Date();
+      } else if (status === 'sent') {
+        updateData.shippedAt = new Date();
+      } else if (status === 'delivered') {
+        updateData.deliveredAt = new Date();
+      }
+
+      const [updated] = await db
+        .update(supplierOrders)
+        .set(updateData)
+        .where(eq(supplierOrders.id, taskId))
+        .returning();
+      
+      return updated;
+    } catch (error) {
+      console.error('Greška pri ažuriranju supplier task statusa:', error);
+      throw error;
     }
   }
 
