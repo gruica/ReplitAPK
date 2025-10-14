@@ -526,5 +526,60 @@ export function registerTechnicianRoutes(app: Express) {
     }
   });
 
+  // GET /api/technician/service-report-pdf/:serviceId - Generate service PDF report for technicians
+  app.get('/api/technician/service-report-pdf/:serviceId', jwtAuthMiddleware, requireRole(['technician']), async (req: Request, res: Response) => {
+    try {
+      const serviceId = parseInt(req.params.serviceId);
+      const technicianId = (req as any).user?.technicianId;
+      
+      if (isNaN(serviceId)) {
+        return res.status(400).json({ 
+          error: 'Nevaljan ID servisa' 
+        });
+      }
+
+      // Provjera da li servis pripada ovom serviseru
+      const service = await storage.getService(serviceId);
+      if (!service) {
+        return res.status(404).json({
+          error: "Servis nije pronađen"
+        });
+      }
+
+      if (service.technicianId !== technicianId) {
+        return res.status(403).json({
+          error: "Nemate dozvolu",
+          message: "Možete preuzeti PDF samo za svoje servise"
+        });
+      }
+
+      console.log(`📄 [TECHNICIAN PDF] Zahtev za PDF izvještaj servisa ${serviceId} od servisera ${technicianId}`);
+
+      const { pdfService } = await import('../pdf-service.js');
+      
+      console.log(`📄 [TECHNICIAN PDF] PDF service učitan, generisanje PDF-a...`);
+      
+      const pdfBuffer = await pdfService.generateServiceReportPDF(serviceId);
+      
+      console.log(`📄 [TECHNICIAN PDF] ✅ PDF uspešno generisan (${pdfBuffer.length} bytes)`);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="service-report-${serviceId}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      res.send(pdfBuffer);
+      
+      console.log(`📄 [TECHNICIAN PDF] ✅ PDF izvještaj za servis ${serviceId} uspešno poslat`);
+      
+    } catch (error) {
+      console.error('📄 [TECHNICIAN PDF] ❌ Greška pri generisanju PDF izvještaja:', error);
+      res.status(500).json({ 
+        error: 'Greška pri generisanju PDF izvještaja',
+        message: 'Došlo je do greške. Pokušajte ponovo.'
+      });
+    }
+  });
+
   console.log("✅ Technician routes registered");
 }
