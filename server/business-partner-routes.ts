@@ -535,4 +535,58 @@ export function registerBusinessPartnerRoutes(app: Express) {
       });
     }
   });
+
+  // GET /api/business/service-report-pdf/:serviceId - Generate service PDF report for business partners
+  app.get('/api/business/service-report-pdf/:serviceId', businessPartnerAuth, async (req: Request, res: Response) => {
+    try {
+      const serviceId = parseInt(req.params.serviceId);
+      const partnerId = req.user!.id;
+      const userRole = req.user!.role;
+      
+      if (isNaN(serviceId)) {
+        return res.status(400).json({ 
+          error: 'Nevaljan ID servisa' 
+        });
+      }
+
+      // Provjera da li servis pripada ovom poslovnom partneru (osim ako je admin)
+      if (userRole !== 'admin') {
+        const services = await storage.getServicesByPartner(partnerId);
+        const hasAccess = services.some(s => s.id === serviceId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({
+            error: "Nemate dozvolu",
+            message: "Možete preuzeti PDF samo za svoje servise"
+          });
+        }
+      }
+
+      console.log(`📄 [BUSINESS PDF] Zahtev za PDF izvještaj servisa ${serviceId} od partnera ${partnerId}`);
+
+      const { pdfService } = await import('./pdf-service.js');
+      
+      console.log(`📄 [BUSINESS PDF] PDF service učitan, generisanje PDF-a...`);
+      
+      const pdfBuffer = await pdfService.generateServiceReportPDF(serviceId);
+      
+      console.log(`📄 [BUSINESS PDF] ✅ PDF uspešno generisan (${pdfBuffer.length} bytes)`);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="service-report-${serviceId}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      res.send(pdfBuffer);
+      
+      console.log(`📄 [BUSINESS PDF] ✅ PDF izvještaj za servis ${serviceId} uspešno poslat`);
+      
+    } catch (error) {
+      console.error('📄 [BUSINESS PDF] ❌ Greška pri generisanju PDF izvještaja:', error);
+      res.status(500).json({ 
+        error: 'Greška pri generisanju PDF izvještaja',
+        message: 'Došlo je do greške. Pokušajte ponovo.'
+      });
+    }
+  });
 }
