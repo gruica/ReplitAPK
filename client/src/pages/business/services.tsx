@@ -186,8 +186,8 @@ export default function BusinessServices() {
     gcTime: 300000, // 5 minuta cache
   });
 
-  // Izvuci services iz API response - API vraća objekat sa services propertijem
-  const services: ServiceItem[] = (businessData as any)?.services || [];
+  // Izvuci services iz API response - API vraća direktan array servisa
+  const services: ServiceItem[] = (businessData as any) || [];
 
 
 
