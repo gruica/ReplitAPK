@@ -45,6 +45,32 @@ export const logger = {
   // Sistem logovi - uvek prikazuj (startup, shutdown, health checks)
   system: (...args: any[]) => {
     console.log('[SYSTEM]', ...args);
+  },
+
+  // Performance logovi - samo u development
+  performance: (message: string, duration: number, ...args: any[]) => {
+    if (!isProduction) {
+      console.log(`[PERFORMANCE] ${message}: ${duration}ms`, ...args);
+    }
+  },
+
+  // Database logovi - samo u development
+  database: (...args: any[]) => {
+    if (!isProduction) {
+      console.log('[DATABASE]', ...args);
+    }
+  },
+
+  // Security logovi - uvek prikazuj (važno za sigurnost)
+  security: (...args: any[]) => {
+    console.log('[SECURITY]', ...args);
+  },
+
+  // API logovi - samo u development
+  api: (method: string, path: string, status: number, duration: number) => {
+    if (!isProduction) {
+      console.log(`[API] ${method} ${path} ${status} in ${duration}ms`);
+    }
   }
 };
 
