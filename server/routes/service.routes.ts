@@ -356,7 +356,9 @@ export function registerServiceRoutes(app: Express) {
         machineNotes: req.body.machineNotes !== undefined ? req.body.machineNotes : originalService.machineNotes,
         isCompletelyFixed: req.body.isCompletelyFixed !== undefined ? req.body.isCompletelyFixed : originalService.isCompletelyFixed,
         businessPartnerId: req.body.businessPartnerId !== undefined ? req.body.businessPartnerId : originalService.businessPartnerId,
-        partnerCompanyName: req.body.partnerCompanyName !== undefined ? req.body.partnerCompanyName : originalService.partnerCompanyName
+        partnerCompanyName: req.body.partnerCompanyName !== undefined ? req.body.partnerCompanyName : originalService.partnerCompanyName,
+        customerRefusesRepair: req.body.customerRefusesRepair !== undefined ? req.body.customerRefusesRepair : originalService.customerRefusesRepair,
+        customerRefusalReason: req.body.customerRefusalReason !== undefined ? req.body.customerRefusalReason : originalService.customerRefusalReason
       };
       
       console.log("Validovani podaci za ažuriranje:", validatedData);
