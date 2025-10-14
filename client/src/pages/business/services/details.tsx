@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, Clock, Wrench, Calendar, Phone, Mail, MapPin, Building, MessageSquare, ClipboardCheck, Package, Settings, Truck, XCircle, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Clock, Wrench, Calendar, Phone, Mail, MapPin, Building, MessageSquare, ClipboardCheck, Package, Settings, Truck, XCircle, CheckCircle, FileText } from "lucide-react";
 import { 
   Card, 
   CardContent, 
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import BusinessLayout from "@/components/layout/business-layout";
+import { useToast } from "@/hooks/use-toast";
 
 // Tip za Service Completion Report
 interface CompletionReport {
@@ -193,7 +194,57 @@ export default function ServiceDetails() {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const serviceId = parseInt(params.id, 10);
+  
+  // PDF Report funkcija
+  const handlePdfReport = async () => {
+    try {
+      console.log(`📄 Generisanje PDF izvještaja za servis ${serviceId}`);
+      
+      const response = await fetch(`/api/business/service-report-pdf/${serviceId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Nepoznata greška' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      console.log(`📄 PDF uspešno dobijen od servera`);
+
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `servis-izvještaj-${serviceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`📄 PDF izvještaj uspešno preuzet`);
+
+      toast({
+        title: "PDF izvještaj",
+        description: `Izvještaj za servis #${serviceId} je uspešno preuzet.`
+      });
+
+    } catch (error) {
+      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      toast({
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",
+        variant: "destructive",
+      });
+    }
+  };
   
   // Fetch service details
   const { data: service, isLoading } = useQuery<ServiceDetails>({
@@ -263,7 +314,17 @@ export default function ServiceDetails() {
             </p>
           </div>
           
-          <StatusBadge status={service.status} />
+          <div className="flex items-center gap-3 mt-4 md:mt-0">
+            <Button 
+              variant="outline" 
+              onClick={handlePdfReport}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Preuzmi PDF
+            </Button>
+            <StatusBadge status={service.status} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
