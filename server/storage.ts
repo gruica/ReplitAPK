@@ -2495,6 +2495,18 @@ export class DatabaseStorage implements IStorage {
     const startTime = Date.now();
     
     try {
+      // TEMP TEST: Direktan SQL preko pool-a
+      const poolResult = await pool.query('SELECT * FROM services WHERE business_partner_id = $1', [partnerId]);
+      console.log(`[DEBUG] POOL QUERY (direct SQL): ${poolResult.rows.length} services for partner ${partnerId}`);
+      
+      // TEMP TEST: Samo servisi bez JOIN-ova
+      const simpleServices = await db
+        .select()
+        .from(services)
+        .where(eq(services.businessPartnerId, partnerId));
+      
+      console.log(`[DEBUG] SIMPLE QUERY (no JOINs): ${simpleServices.length} services for partner ${partnerId}`);
+      
       // OPTIMIZED: Single JOIN query umesto N+1
       const rawServices = await db
         .select({
@@ -2540,8 +2552,8 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
         .leftJoin(technicians, eq(services.technicianId, technicians.id))
         .where(eq(services.businessPartnerId, partnerId))
-        .orderBy(desc(services.createdAt))
-        .limit(50);
+        .orderBy(desc(services.createdAt));
+        // .limit(100); // PRIVREMENO UKLONJENO ZA TESTIRANJE
 
       // Transformišemo podatke u odgovarajući format
       const servicesWithDetails = rawServices.map(row => ({
@@ -2594,6 +2606,10 @@ export class DatabaseStorage implements IStorage {
 
       const responseTime = Date.now() - startTime;
       console.log(`[PERFORMANCE] getServicesByPartner(${partnerId}): ${responseTime}ms for ${servicesWithDetails.length} services`);
+      console.log(`[DEBUG] Raw services from DB: ${rawServices.length}, After transformation: ${servicesWithDetails.length}`);
+      if (rawServices.length > 0) {
+        console.log(`[DEBUG] First service ID: ${rawServices[0].id}, Last service ID: ${rawServices[rawServices.length-1].id}`);
+      }
 
       return servicesWithDetails;
     } catch (error) {
