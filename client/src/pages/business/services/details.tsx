@@ -245,7 +245,7 @@ export default function ServiceDetails() {
 
   return (
     <BusinessLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-8">
         {/* Header sa breadcrumb i nazad dugmetom */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
