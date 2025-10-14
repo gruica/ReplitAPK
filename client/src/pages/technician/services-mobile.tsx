@@ -104,6 +104,55 @@ function ServiceCard({ service }: { service: Service }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // PDF Report funkcija
+  const handlePdfReport = async () => {
+    try {
+      console.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
+      
+      const response = await fetch(`/api/technician/service-report-pdf/${service.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Nepoznata greška' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      console.log(`📄 PDF uspešno dobijen od servera`);
+
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `servis-izvještaj-${service.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`📄 PDF izvještaj uspešno preuzet`);
+
+      toast({
+        title: "PDF izvještaj",
+        description: `Izvještaj za servis #${service.id} je uspešno preuzet.`
+      });
+
+    } catch (error) {
+      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      toast({
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",
+        variant: "destructive",
+      });
+    }
+  };
+
   // OPTIMIZED: Lightning-fast service start mutation
   const startWorkMutation = useMutation({
     mutationFn: (serviceId: number) => {
@@ -648,6 +697,16 @@ function ServiceCard({ service }: { service: Service }) {
             </Button>
           )}
         </div>
+
+        {/* PDF Export Button */}
+        <Button 
+          onClick={handlePdfReport}
+          variant="outline"
+          className="w-full h-12 border-purple-200 text-purple-700 hover:bg-purple-50 mt-2"
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Preuzmi PDF izvještaj
+        </Button>
 
         {/* Professional Service Actions */}
         <div className="mt-4 space-y-2">
