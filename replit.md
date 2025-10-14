@@ -38,7 +38,7 @@ Creating new functions instead of changing existing ones is mandatory.
 ### Technical Implementations
 - **Frontend**: React.js, Wouter for routing, React Query for server state management.
 - **Backend**: Node.js with Express.js, TypeScript, and ES modules.
-- **Modular Routes Architecture**: Server routes organized into 9 specialized modules (auth, client, appliance, service, technician, admin, billing, spare-parts, misc) for improved maintainability and debugging.
+- **Modular Routes Architecture**: Server routes organized into 10 specialized modules (auth, client, appliance, service, technician, supplier, admin, billing, spare-parts, misc) for improved maintainability and debugging.
 - **Database**: PostgreSQL with Drizzle ORM, utilizing Neon serverless PostgreSQL for production.
 - **Database Environment Separation**: Complete separation between development and production databases using `REPLIT_DEPLOYMENT` flag.
 - **Authentication**: Hybrid system supporting both Passport.js session-based and JWT token authentication (30-day expiration). Scrypt for password hashing.
@@ -64,7 +64,8 @@ Creating new functions instead of changing existing ones is mandatory.
 - **Security Hardening** (October 2025): Production-ready security implementation including JWT login rate limiting (5 attempts/15min window), sanitized debug logging (usernames removed from authentication logs), and User-Agent XSS protection (HTML/script character sanitization before logging). All security measures maintain backward compatibility with existing authentication flows.
 
 ### Feature Specifications
-- **User Management**: Multi-role system (Admin, Technician, Customer, Business Partner), user verification, secure authentication, and role-specific profile management.
+- **User Management**: Multi-role system (Admin, Technician, Customer, Business Partner, Supplier), user verification, secure authentication, and role-specific profile management.
+- **Supplier Portal** (October 2025): Modular parts procurement workflow. Admin creates supplier orders and delegates to suppliers. Suppliers access dedicated portal at `/supplier` to manage tasks with 2-action workflow: (1) Mark part as "separated" when prepared, (2) Mark as "sent" when dispatched. Admin marks as "delivered" upon receipt. Simple local Montenegro operations without complex tracking systems. Backend: `/api/supplier/tasks` endpoints. Frontend: React dashboard with real-time status updates via React Query.
 - **Service Management**: Full service lifecycle tracking, automated status updates, and handling for customer refusal.
 - **Client & Appliance Management**: Detailed client profiles, categorized appliance registry, and service history.
 - **Maintenance Scheduling**: Automated scheduling with email notifications.
