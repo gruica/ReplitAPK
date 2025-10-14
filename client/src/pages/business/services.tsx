@@ -18,7 +18,8 @@ import {
   UserX,
   PhoneOff,
   Package,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -203,6 +204,46 @@ export default function BusinessServices() {
     }
   }, [services, highlightedServiceId, shouldAutoOpen, setShouldAutoOpen]);
   
+  // PDF Report funkcija
+  const handlePdfReport = async (service: ServiceItem) => {
+    try {
+      console.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
+      
+      const response = await fetch(`/api/business/service-report-pdf/${service.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Nepoznata greška' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      console.log(`📄 PDF uspešno dobijen od servera`);
+
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `servis-izvještaj-${service.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`📄 PDF izvještaj uspešno preuzet`);
+
+    } catch (error) {
+      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      alert(error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja");
+    }
+  };
+  
   // Filtriranje servisa po statusu i pretrazi
   const filteredServices = (services && Array.isArray(services)) ? services.filter((service: ServiceItem) => {
     // Filter po statusu
@@ -358,6 +399,17 @@ export default function BusinessServices() {
                               </Button>
                             )}
                             <Button 
+                              variant="secondary" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePdfReport(service);
+                              }}
+                              title="Preuzmi PDF izvještaj"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button 
                               variant="ghost" 
                               size="sm"
                               onClick={(e) => {
@@ -485,6 +537,17 @@ export default function BusinessServices() {
                         Izmeni
                       </Button>
                     )}
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePdfReport(service);
+                      }}
+                      title="Preuzmi PDF"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
                     <Button 
                       className="flex-1" 
                       variant="outline" 
