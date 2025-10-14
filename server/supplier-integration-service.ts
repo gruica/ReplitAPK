@@ -278,26 +278,46 @@ ${timestamp}
   /**
    * Šalje porudžbinu preko API-ja (placeholder)
    */
+  /**
+   * FUTURE FEATURE: API integracija sa dobavljačima
+   * 
+   * Planirana implementacija:
+   * - REST API pozivi prema dobavljačkim sistemima
+   * - Automatska provjera dostupnosti rezervnih djelova
+   * - Real-time praćenje statusa porudžbine
+   * - Automatsko ažuriranje cijena
+   * 
+   * Trenutno: Email notifikacija je primarni metod naručivanja
+   */
   private async sendApiOrder(supplier: any, orderRequest: SupplierOrderRequest, supplierOrderId: number): Promise<SupplierOrderResult> {
-    // TODO: Implementirati API integraciju kada bude dostupna
-    console.log(`[API ORDER] API integracija za dobavljača ${supplier.name} još nije implementirana`);
+    console.log(`[API ORDER] API integracija za dobavljača ${supplier.name} - planirana funkcija za buduću verziju`);
     
     return {
       success: false,
-      message: 'API integracija još nije implementirana'
+      message: 'API integracija trenutno nije dostupna. Koristite email metod.'
     };
   }
 
   /**
    * Šalje porudžbinu preko faksa (placeholder)
    */
+  /**
+   * FUTURE FEATURE: Fax integracija za dobavljače
+   * 
+   * Planirana implementacija:
+   * - eFax API integracija (Fax.Plus, SRFax, ili iFax)
+   * - Automatsko formatiranje fax dokumenata
+   * - Praćenje statusa isporuke faksa
+   * - Backup metod za dobavljače bez email/API pristupa
+   * 
+   * Trenutno: Email notifikacija je primarni metod naručivanja
+   */
   private async sendFaxOrder(supplier: any, orderRequest: SupplierOrderRequest, supplierOrderId: number): Promise<SupplierOrderResult> {
-    // TODO: Implementirati fax integraciju kada bude dostupna
-    console.log(`[FAX ORDER] Fax integracija za dobavljača ${supplier.name} još nije implementirana`);
+    console.log(`[FAX ORDER] Fax integracija za dobavljača ${supplier.name} - planirana funkcija za buduću verziju`);
     
     return {
       success: false,
-      message: 'Fax integracija još nije implementirana'
+      message: 'Fax integracija trenutno nije dostupna. Koristite email metod.'
     };
   }
 
