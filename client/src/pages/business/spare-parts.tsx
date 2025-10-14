@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { ArrowLeft, Package, Eye, Calendar, User, Phone, Settings, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Package, Eye, Calendar, User, Phone, Settings, CheckCircle, Clock, AlertCircle, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // Interface za rezervne delove
 interface ApprovedSparePart {
@@ -47,6 +48,56 @@ function translateLocation(location: string) {
 export default function BusinessSpareParts() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  
+  // PDF Report funkcija - napravit ćemo poseban izvještaj sa svim djelovima
+  const handlePdfReport = async () => {
+    try {
+      console.log(`📄 Generisanje PDF izvještaja za rezervne dijelove`);
+      
+      const response = await fetch(`/api/business/spare-parts-pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Nepoznata greška' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      console.log(`📄 PDF uspešno dobijen od servera`);
+
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `rezervni-dijelovi-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`📄 PDF izvještaj uspešno preuzet`);
+
+      toast({
+        title: "PDF izvještaj",
+        description: "Izvještaj rezervnih dijelova je uspešno preuzet."
+      });
+
+    } catch (error) {
+      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      toast({
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",
+        variant: "destructive",
+      });
+    }
+  };
   
   // Dohvatanje odobrenih rezervnih dijelova
   const { data: approvedParts = [], isLoading } = useQuery<ApprovedSparePart[]>({
@@ -91,24 +142,37 @@ export default function BusinessSpareParts() {
     <BusinessLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate("/business/complus")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Nazad na Com Plus
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Package className="h-6 w-6 text-blue-600" />
-              Odobreni rezervni delovi
-            </h2>
-            <p className="text-muted-foreground">
-              Rezervni delovi koje je administrator odobrio za poručivanje
-            </p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate("/business/complus")}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Nazad na Com Plus
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <Package className="h-6 w-6 text-blue-600" />
+                Odobreni rezervni delovi
+              </h2>
+              <p className="text-muted-foreground">
+                Rezervni delovi koje je administrator odobrio za poručivanje
+              </p>
+            </div>
           </div>
+          
+          {totalParts > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={handlePdfReport}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Preuzmi PDF izvještaj
+            </Button>
+          )}
         </div>
 
         {/* Statistike */}
