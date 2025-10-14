@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   role: text("role").default("customer").notNull(), // Promenjen default na customer
   technicianId: integer("technician_id"), // Reference to technician if user is a technician
+  supplierId: integer("supplier_id"), // Reference to supplier if user is a supplier
   email: text("email"), // Email adresa korisnika
   phone: text("phone"), // Broj telefona korisnika
   address: text("address"), // Adresa korisnika

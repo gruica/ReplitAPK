@@ -19,7 +19,11 @@ export function registerSupplierRoutes(app: Express) {
   // GET /api/supplier/tasks - Get supplier's assigned tasks
   app.get('/api/supplier/tasks', jwtAuthMiddleware, requireRole(['supplier']), async (req: Request, res: Response) => {
     try {
-      const supplierId = req.user!.id;
+      const supplierId = req.user!.supplierId;
+      
+      if (!supplierId) {
+        return res.status(400).json({ error: 'Korisnik nema dodijeljenog dobavljača' });
+      }
       
       console.log(`[SUPPLIER] Fetching tasks for supplier ${supplierId}`);
       
@@ -39,7 +43,11 @@ export function registerSupplierRoutes(app: Express) {
   app.patch('/api/supplier/tasks/:id/separated', jwtAuthMiddleware, requireRole(['supplier']), async (req: Request, res: Response) => {
     try {
       const taskId = parseInt(req.params.id);
-      const supplierId = req.user!.id;
+      const supplierId = req.user!.supplierId;
+      
+      if (!supplierId) {
+        return res.status(400).json({ error: 'Korisnik nema dodijeljenog dobavljača' });
+      }
       
       if (isNaN(taskId)) {
         return res.status(400).json({ error: 'Nevaljan ID zadatka' });
@@ -69,7 +77,11 @@ export function registerSupplierRoutes(app: Express) {
   app.patch('/api/supplier/tasks/:id/sent', jwtAuthMiddleware, requireRole(['supplier']), async (req: Request, res: Response) => {
     try {
       const taskId = parseInt(req.params.id);
-      const supplierId = req.user!.id;
+      const supplierId = req.user!.supplierId;
+      
+      if (!supplierId) {
+        return res.status(400).json({ error: 'Korisnik nema dodijeljenog dobavljača' });
+      }
       
       if (isNaN(taskId)) {
         return res.status(400).json({ error: 'Nevaljan ID zadatka' });
@@ -98,7 +110,11 @@ export function registerSupplierRoutes(app: Express) {
   // GET /api/supplier/stats - Get supplier statistics
   app.get('/api/supplier/stats', jwtAuthMiddleware, requireRole(['supplier']), async (req: Request, res: Response) => {
     try {
-      const supplierId = req.user!.id;
+      const supplierId = req.user!.supplierId;
+      
+      if (!supplierId) {
+        return res.status(400).json({ error: 'Korisnik nema dodijeljenog dobavljača' });
+      }
       
       const tasks = await storage.getSupplierTasks(supplierId);
       
