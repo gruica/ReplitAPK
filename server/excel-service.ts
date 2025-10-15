@@ -16,7 +16,7 @@ import {
   insertServiceSchema,
   insertMaintenanceScheduleSchema,
   maintenanceFrequencyEnum
-} from '@shared/schema';
+} from '@shared/schema/index';
 import { z } from 'zod';
 
 /**
