@@ -53,6 +53,7 @@ Creating new functions instead of changing existing ones is mandatory.
 - **Performance Optimizations**: Ultra-fast service start functionality (≤500ms response times).
 - **SEO Optimization**: Advanced Google Guidelines implementation (meta tags, LocalBusiness schema, Core Web Vitals, dynamic sitemap.xml).
 - **Email Integration**: Automatic email notification system for ComPlus and Beko brand services.
+- **Admin Email + PDF Reports** (October 2025): Professional service report delivery system. Administrators can send completed service reports via email with PDF attachments directly from admin panel. Features: One-click email button (Mail icon) on completed services, automatic PDF generation (client info, service details, appliance data, technician notes), professional HTML email template, SMTP delivery via mail.frigosistemtodosijevic.com:465, email validation, service status verification, loading states, and toast notifications. Backend endpoint: POST /api/admin/send-service-email-with-pdf/:serviceId. Fully tested and operational.
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 - **Device Return Functionality**: "Vrati aparat klijentu" feature in technician mobile interface.
 - **Comprehensive Client Analysis**: Real-time data analysis of client history.

@@ -1,5 +1,4 @@
 import { Switch, Route, useLocation } from "wouter";
-import { Toaster } from "@/components/ui/toaster";
 import React, { useEffect, Suspense, lazy } from "react";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
