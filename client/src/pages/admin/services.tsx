@@ -41,7 +41,8 @@ import {
   Filter,
   Building,
   Share,
-  Star
+  Star,
+  Mail
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 import { AdminSparePartsOrderingSimple } from "@/components/admin/AdminSparePartsOrderingSimple";
@@ -760,6 +761,29 @@ const AdminServices = memo(function AdminServices() {
       toast({
         title: "Greška",
         description: error.message || "Greška pri dodeli servisera.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send email with PDF mutation
+  const sendEmailWithPdfMutation = useMutation({
+    mutationFn: async (serviceId: number) => {
+      const response = await apiRequest(`/api/admin/send-service-email-with-pdf/${serviceId}`, {
+        method: "POST"
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "✅ Email uspešno poslat",
+        description: `Profesionalni izveštaj sa PDF-om je poslat na email adresu klijenta.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Greška pri slanju email-a",
+        description: error.message || "Došlo je do greške pri slanju email-a sa PDF-om.",
         variant: "destructive",
       });
     },
