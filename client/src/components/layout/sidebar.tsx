@@ -108,6 +108,7 @@ export const Sidebar = memo(function Sidebar({ isMobileOpen, closeMobileMenu }: 
       icon: AppIcons.status.waitingParts,
       items: [
         { path: "/admin/spare-parts", label: "Porudžbine delova", icon: AppIcons.status.waitingParts, highlight: true, badge: pendingSparePartsCount, isProfessionalIcon: true },
+        { path: "/admin/suppliers", label: "Dobavljači", icon: AppIcons.business.partner, highlight: true, isProfessionalIcon: true },
         { path: "/admin/available-parts", label: "Dostupni delovi", icon: AppIcons.system.warehouse, highlight: true, isProfessionalIcon: true },
         { path: "/admin/spare-parts-catalog", label: "PartKeepr Katalog", icon: AppIcons.system.partsCatalog, highlight: true, isProfessionalIcon: true },
         { path: "/admin/web-scraping", label: "Web Scraping", icon: AppIcons.system.webScraping, highlight: true, isProfessionalIcon: true }
