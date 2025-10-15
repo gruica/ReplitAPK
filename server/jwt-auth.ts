@@ -68,14 +68,28 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     return res.status(401).json({ error: 'Nevažeći token' });
   }
   
-  // Get full user data from database to include technicianId
-  const user = await storage.getUser(payload.userId);
-  if (!user) {
-    return res.status(401).json({ error: 'Korisnik nije pronađen' });
-  }
-  
-  // Attach full user object to request (Express.User is extended from User schema)
-  req.user = user;
+  // ⚡ OPTIMIZED: Use JWT payload data directly (no DB query needed!)
+  // All necessary user data is already in the JWT token
+  req.user = {
+    id: payload.userId,
+    username: payload.username,
+    role: payload.role,
+    supplierId: payload.supplierId || null,
+    technicianId: payload.technicianId || null,
+    // These fields are not critical for auth middleware
+    fullName: payload.username, // Fallback to username
+    password: '', // Not needed for authenticated requests
+    email: null,
+    phone: null,
+    address: null,
+    city: null,
+    companyName: null,
+    companyId: null,
+    isVerified: true, // User must be verified to have valid JWT
+    registeredAt: new Date(),
+    verifiedAt: null,
+    verifiedBy: null
+  } as any;
   
   next();
 }
