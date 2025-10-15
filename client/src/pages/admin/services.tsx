@@ -1079,6 +1079,31 @@ const AdminServices = memo(function AdminServices() {
     }
   };
 
+  // Handle send email with PDF
+  const handleSendEmailWithPdf = async (service: AdminService) => {
+    // Provera da li klijent ima email adresu
+    if (!service.client?.email) {
+      toast({
+        title: "Greška",
+        description: `Klijent ${service.client?.fullName || 'nepoznat'} nema email adresu.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Provera da li je servis završen
+    if (service.status !== 'completed') {
+      toast({
+        title: "Greška",
+        description: "Email sa izvještajem može biti poslat samo za završene servise.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    sendEmailWithPdfMutation.mutate(service.id);
+  };
+
   // Handle assign technician
   const handleAssignTechnician = (serviceId: number, technicianId: number) => {
     // Don't assign if placeholder value is selected
@@ -1357,6 +1382,7 @@ const AdminServices = memo(function AdminServices() {
                             className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                             onClick={() => handleViewDetails(service)}
                             title="Pogledaj detalje"
+                            data-testid={`button-view-details-${service.id}`}
                           >
                             <Eye className="h-3 w-3" />
                           </button>
@@ -1364,6 +1390,7 @@ const AdminServices = memo(function AdminServices() {
                             className="p-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
                             onClick={() => handleEditService(service)}
                             title="Uredi servis"
+                            data-testid={`button-edit-service-${service.id}`}
                           >
                             <Edit className="h-3 w-3" />
                           </button>
@@ -1371,13 +1398,30 @@ const AdminServices = memo(function AdminServices() {
                             className="p-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
                             onClick={() => handlePdfReport(service)}
                             title="Generiši PDF izvještaj"
+                            data-testid={`button-pdf-report-${service.id}`}
                           >
                             <FileText className="h-3 w-3" />
                           </button>
+                          {service.status === 'completed' && service.client?.email && (
+                            <button
+                              className="p-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors"
+                              onClick={() => handleSendEmailWithPdf(service)}
+                              title={`Pošalji email sa PDF izvještajem na ${service.client.email}`}
+                              data-testid={`button-send-email-${service.id}`}
+                              disabled={sendEmailWithPdfMutation.isPending}
+                            >
+                              {sendEmailWithPdfMutation.isPending ? (
+                                <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full"></div>
+                              ) : (
+                                <Mail className="h-3 w-3" />
+                              )}
+                            </button>
+                          )}
                           <button
                             className="p-1 bg-cyan-500 text-white rounded hover:bg-cyan-600 transition-colors"
                             onClick={() => handleShareService(service)}
                             title="Dijeli servis informacije"
+                            data-testid={`button-share-service-${service.id}`}
                           >
                             <Share className="h-3 w-3" />
                           </button>
@@ -1385,6 +1429,7 @@ const AdminServices = memo(function AdminServices() {
                             className="p-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
                             onClick={() => handleDeleteService(service)}
                             title="Obriši servis"
+                            data-testid={`button-delete-service-${service.id}`}
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
@@ -1393,6 +1438,7 @@ const AdminServices = memo(function AdminServices() {
                               className="p-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
                               onClick={() => handleReturnService(service)}
                               title="Vrati servis od tehnčara"
+                              data-testid={`button-return-service-${service.id}`}
                             >
                               <XCircle className="h-3 w-3" />
                             </button>
