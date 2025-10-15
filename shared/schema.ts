@@ -895,8 +895,6 @@ export const supplierOrders = pgTable("supplier_orders", {
   // cancelled = Otkazano
   sentAt: timestamp("sent_at"),
   confirmedAt: timestamp("confirmed_at"),
-  shippedAt: timestamp("shipped_at"),
-  deliveredAt: timestamp("delivered_at"),
   trackingNumber: text("tracking_number"),
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
   currency: text("currency").default("EUR"),
