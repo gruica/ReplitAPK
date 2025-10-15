@@ -152,13 +152,22 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ error: "Račun nije verifikovan. Kontaktirajte administratora." });
       }
       
+      // 🔧 FIX: Validate technician has technicianId
+      if (user.role === "technician" && !user.technicianId) {
+        logger.error(`Technician ${user.username} missing technicianId in database`);
+        return res.status(401).json({ 
+          error: "Greška u konfiguraciji naloga. Kontaktirajte administratora." 
+        });
+      }
+      
       // Generate JWT token with supplierId and technicianId for optimized auth
+      // 🔧 FIX: Pass values directly without conversion
       const token = generateToken({
         userId: user.id,
         username: user.username,
         role: user.role,
-        supplierId: user.supplierId || undefined,
-        technicianId: user.technicianId || undefined
+        ...(user.supplierId && { supplierId: user.supplierId }),
+        ...(user.technicianId && { technicianId: user.technicianId })
       });
       
       // 🔒 SECURITY: Logujemo samo ulogu, ne i username

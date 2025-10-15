@@ -289,7 +289,7 @@ export function registerTechnicianRoutes(app: Express) {
         warrantyStatus: isWarrantyService ? 'u garanciji' : (service.warrantyStatus === 'nepoznato' ? 'van garancije' : service.warrantyStatus) as 'u garanciji' | 'van garancije',
         createdAt: service.createdAt,
         
-        status: 'completed',
+        status: 'completed' as const,
         technicianNotes: technicianNotes.trim(),
         machineNotes: machineNotes?.trim() || service.machineNotes,
         cost: cost?.trim() || service.cost,
@@ -354,8 +354,8 @@ export function registerTechnicianRoutes(app: Express) {
                   newStatus: 'completed',
                   statusDescription: 'Završen',
                   technicianNotes: `${workPerformed} | Cena: ${cost || 'Besplatno'} EUR`,
-                  businessPartnerPhone: null,
-                  businessPartnerName: null
+                  businessPartnerPhone: undefined,
+                  businessPartnerName: undefined
                 });
                 
                 console.log(`[SERVICE COMPLETE] ✅ SMS poslat klijentu ${client.fullName} (${client.phone})`);
