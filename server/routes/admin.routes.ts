@@ -1285,5 +1285,122 @@ export function registerAdminRoutes(app: Express) {
     res.json({ success: true });
   });
 
+  // POST /api/admin/send-service-email-with-pdf/:serviceId - Send professional email with PDF report
+  app.post('/api/admin/send-service-email-with-pdf/:serviceId', jwtAuthMiddleware, requireRole(['admin']), async (req, res) => {
+    try {
+      const serviceId = parseInt(req.params.serviceId);
+      
+      if (isNaN(serviceId)) {
+        return res.status(400).json({ 
+          error: 'Nevaljan ID servisa' 
+        });
+      }
+
+      console.log(`📧 [EMAIL+PDF API] Zahtev za slanje email-a sa PDF-om za servis ${serviceId}`);
+
+      // Dohvati servis i klijenta
+      const service = await storage.getService(serviceId);
+      if (!service) {
+        return res.status(404).json({ error: 'Servis nije pronađen' });
+      }
+
+      const client = await storage.getClient(service.clientId);
+      if (!client) {
+        return res.status(404).json({ error: 'Klijent nije pronađen' });
+      }
+
+      if (!client.email) {
+        return res.status(400).json({ error: `Klijent ${client.fullName} nema email adresu` });
+      }
+
+      // Generiši PDF
+      const { pdfService } = await import('../pdf-service.js');
+      console.log(`📄 [EMAIL+PDF API] Generisanje PDF-a...`);
+      const pdfBuffer = await pdfService.generateServiceReportPDF(serviceId);
+      console.log(`📄 [EMAIL+PDF API] ✅ PDF generisan (${pdfBuffer.length} bytes)`);
+
+      // Pripremi email sa PDF prilogom
+      const { emailService } = await import('../email-service.js');
+      
+      const subject = `Izvještaj o završenom servisu #${serviceId} - Frigo Sistem Todosijević`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px;">
+            <h1 style="color: #2563eb; margin: 0; font-size: 28px;">FRIGO SISTEM TODOSIJEVIĆ</h1>
+            <h2 style="color: #64748b; margin: 5px 0; font-size: 18px; font-weight: normal;">Servis bijele tehnike</h2>
+          </div>
+          
+          <h2 style="color: #0066cc;">Izvještaj o završenom servisu</h2>
+          
+          <p>Poštovani/a ${client.fullName},</p>
+          
+          <p>Zahvaljujemo se što ste nam ukazali povjerenje. Vaš servis je uspješno završen.</p>
+          
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1e40af; margin-top: 0;">Detalji servisa:</h3>
+            <p><strong>Broj servisa:</strong> #${serviceId}</p>
+            <p><strong>Status:</strong> ${service.status}</p>
+            ${service.description ? `<p><strong>Opis:</strong> ${service.description}</p>` : ''}
+            ${service.technicianNotes ? `<p><strong>Napomene:</strong> ${service.technicianNotes}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #dbeafe; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1e40af;">
+              📎 <strong>U prilogu ovog email-a</strong> nalaze se detaljni izvještaj o izvršenom servisu u PDF formatu.
+            </p>
+          </div>
+          
+          <p>Ukoliko imate bilo kakvih pitanja ili nedoumica, slobodno nas kontaktirajte.</p>
+          
+          <p>Srdačan pozdrav,<br><strong>Tim Frigo Sistema Todosijević</strong></p>
+          
+          <hr style="border: 1px solid #e2e8f0; margin: 30px 0;">
+          
+          <div style="text-align: center; color: #64748b; font-size: 13px;">
+            <p><strong>FRIGO SISTEM TODOSIJEVIĆ</strong></p>
+            <p>Kontakt telefon: 033 402 402</p>
+            <p>Email: info@frigosistemtodosijevic.com</p>
+            <p>Podgorica, Crna Gora</p>
+          </div>
+        </div>
+      `;
+
+      console.log(`📧 [EMAIL+PDF API] Slanje email-a na: ${client.email}`);
+      
+      const emailSent = await emailService.sendEmail({
+        to: client.email,
+        subject: subject,
+        html: html,
+        attachments: [{
+          filename: `servisni-izvjestaj-${serviceId}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }]
+      }, 3); // 3 pokušaja
+
+      if (emailSent) {
+        console.log(`📧 [EMAIL+PDF API] ✅ Email sa PDF-om uspješno poslat na ${client.email}`);
+        res.json({ 
+          success: true, 
+          message: `Profesionalni email sa PDF izvještajem uspješno poslat klijentu ${client.fullName} (${client.email})`,
+          serviceId: serviceId,
+          clientEmail: client.email
+        });
+      } else {
+        console.error(`📧 [EMAIL+PDF API] ❌ Neuspješno slanje email-a`);
+        res.status(500).json({ 
+          error: 'Greška pri slanju email-a. Provjerite SMTP konfiguraciju.' 
+        });
+      }
+      
+    } catch (error) {
+      console.error('📧 [EMAIL+PDF API] ❌ Greška pri slanju email-a sa PDF-om:', error);
+      res.status(500).json({ 
+        error: 'Greška pri slanju email-a sa PDF izvještajem',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   console.log("✅ Admin routes registered");
 }
