@@ -96,11 +96,20 @@ interface SparePartsOrdersProps {
   highlightedPartId?: string | null;
 }
 
+interface Supplier {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+}
+
 const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: SparePartsOrdersProps = {}) {
   const [selectedOrder, setSelectedOrder] = useState<SparePartOrder | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDirectOrderOpen, setIsDirectOrderOpen] = useState(false);
+  const [isAssignSupplierOpen, setIsAssignSupplierOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [editFormData, setEditFormData] = useState({
     status: '',
@@ -110,9 +119,23 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
     receivedDate: '',
     adminNotes: ''
   });
+  const [assignSupplierFormData, setAssignSupplierFormData] = useState({
+    supplierId: '',
+    orderNumber: '',
+    estimatedDelivery: '',
+    totalCost: '',
+    currency: 'EUR',
+    notes: ''
+  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch suppliers
+  const { data: suppliers = [] } = useQuery<Supplier[]>({
+    queryKey: ['/api/admin/suppliers'],
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Auto-generate JWT token if not present
   useEffect(() => {
@@ -220,6 +243,32 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
       toast({
         title: "Greška pri brisanju",
         description: error.message || "Nije moguće obrisati porudžbinu. Proverite da li ste prijavljeni.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Assign supplier mutation
+  const assignSupplierMutation = useMutation({
+    mutationFn: async (data: { orderId: number; supplierData: any }) => {
+      const response = await apiRequest(`/api/admin/spare-parts/${data.orderId}/assign-supplier`, {
+        method: 'POST',
+        body: JSON.stringify(data.supplierData)
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Uspešno dodeljeno",
+        description: "Porudžbina je uspešno dodeljena dobavljaču.",
+      });
+      setIsAssignSupplierOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Greška pri dodeli",
+        description: error.message || "Došlo je do greške pri dodeli dobavljača.",
         variant: "destructive",
       });
     }
@@ -373,6 +422,43 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
   const handleDirectOrder = (order: SparePartOrder) => {
     setSelectedOrder(order);
     setIsDirectOrderOpen(true);
+  };
+
+  const handleAssignSupplier = (order: SparePartOrder) => {
+    setSelectedOrder(order);
+    setAssignSupplierFormData({
+      supplierId: '',
+      orderNumber: '',
+      estimatedDelivery: '',
+      totalCost: '',
+      currency: 'EUR',
+      notes: ''
+    });
+    setIsAssignSupplierOpen(true);
+  };
+
+  const handleAssignSupplierSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrder || !assignSupplierFormData.supplierId) {
+      toast({
+        title: "Greška",
+        description: "Morate izabrati dobavljača.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    assignSupplierMutation.mutate({
+      orderId: selectedOrder.id,
+      supplierData: {
+        supplierId: parseInt(assignSupplierFormData.supplierId),
+        orderNumber: assignSupplierFormData.orderNumber,
+        estimatedDelivery: assignSupplierFormData.estimatedDelivery,
+        totalCost: assignSupplierFormData.totalCost,
+        currency: assignSupplierFormData.currency,
+        notes: assignSupplierFormData.notes
+      }
+    });
   };
 
   // Handle mark as received
@@ -655,15 +741,27 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
                           Podijeli
                         </Button>
                         {order.status === 'pending' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDirectOrder(order)}
-                            className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
-                          >
-                            <ShoppingCart className="h-4 w-4 mr-1" />
-                            Poruči direktno
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDirectOrder(order)}
+                              className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+                            >
+                              <ShoppingCart className="h-4 w-4 mr-1" />
+                              Poruči direktno
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAssignSupplier(order)}
+                              className="bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
+                              data-testid="button-assign-supplier"
+                            >
+                              <User className="h-4 w-4 mr-1" />
+                              Dodeli dobavljaču
+                            </Button>
+                          </>
                         )}
                         {(order.status === 'pending' || order.status === 'ordered') && (
                           <Button
@@ -1029,6 +1127,116 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
               </Button>
               <Button type="submit" disabled={updateOrderMutation.isPending}>
                 {updateOrderMutation.isPending ? 'Ažuriranje...' : 'Sačuvaj izmene'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Supplier Dialog */}
+      <Dialog open={isAssignSupplierOpen} onOpenChange={setIsAssignSupplierOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Dodeli dobavljača - Porudžbina #{selectedOrder?.id}</DialogTitle>
+            <DialogDescription>
+              Dodelite ovu porudžbinu dobavljaču koji će je obraditi
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleAssignSupplierSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="supplier">Dobavljač *</Label>
+              <Select 
+                value={assignSupplierFormData.supplierId} 
+                onValueChange={(value) => setAssignSupplierFormData(prev => ({ ...prev, supplierId: value }))}
+              >
+                <SelectTrigger data-testid="select-supplier">
+                  <SelectValue placeholder="Izaberite dobavljača" />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                      {supplier.name} - {supplier.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="orderNumber">Broj porudžbine</Label>
+                <Input
+                  id="orderNumber"
+                  placeholder="npr. PO-2024-001"
+                  value={assignSupplierFormData.orderNumber}
+                  onChange={(e) => setAssignSupplierFormData(prev => ({ ...prev, orderNumber: e.target.value }))}
+                  data-testid="input-order-number"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="estimatedDeliverySupplier">Očekivana isporuka</Label>
+                <Input
+                  id="estimatedDeliverySupplier"
+                  type="date"
+                  value={assignSupplierFormData.estimatedDelivery}
+                  onChange={(e) => setAssignSupplierFormData(prev => ({ ...prev, estimatedDelivery: e.target.value }))}
+                  data-testid="input-estimated-delivery"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="totalCost">Ukupna cena</Label>
+                <Input
+                  id="totalCost"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={assignSupplierFormData.totalCost}
+                  onChange={(e) => setAssignSupplierFormData(prev => ({ ...prev, totalCost: e.target.value }))}
+                  data-testid="input-total-cost"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currency">Valuta</Label>
+                <Select 
+                  value={assignSupplierFormData.currency} 
+                  onValueChange={(value) => setAssignSupplierFormData(prev => ({ ...prev, currency: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="RSD">RSD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Napomene</Label>
+              <Textarea
+                id="notes"
+                placeholder="Dodatne napomene za dobavljača..."
+                value={assignSupplierFormData.notes}
+                onChange={(e) => setAssignSupplierFormData(prev => ({ ...prev, notes: e.target.value }))}
+                rows={3}
+                data-testid="input-notes"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsAssignSupplierOpen(false)}>
+                Otkaži
+              </Button>
+              <Button type="submit" disabled={assignSupplierMutation.isPending} data-testid="button-submit-assign">
+                {assignSupplierMutation.isPending ? 'Dodeljuje se...' : 'Dodeli dobavljaču'}
               </Button>
             </DialogFooter>
           </form>
