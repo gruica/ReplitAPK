@@ -195,8 +195,19 @@ export function registerTechnicianRoutes(app: Express) {
       
       if (req.user?.role === "technician") {
         const technicianId = req.user!.technicianId;
-        if (!technicianId || service.technicianId !== technicianId) {
-          return res.status(403).json({ error: "Nemate dozvolu" });
+        
+        if (!technicianId) {
+          console.error(`[QUICK-START] Korisnik ${req.user.username} nema technicianId!`);
+          return res.status(403).json({ 
+            error: "Greška: Korisnik nema technicianId. Kontaktirajte administratora." 
+          });
+        }
+        
+        if (service.technicianId !== technicianId) {
+          console.error(`[QUICK-START] Servis #${serviceId} dodeljen serviseru ${service.technicianId}, a pokušava ${technicianId}`);
+          return res.status(403).json({ 
+            error: "Servis nije dodeljen Vama. Kontaktirajte administratora." 
+          });
         }
       }
       
@@ -414,9 +425,17 @@ export function registerTechnicianRoutes(app: Express) {
       if (req.user?.role === "technician") {
         const technicianId = req.user!.technicianId;
         
-        if (!technicianId || service.technicianId !== technicianId) {
+        if (!technicianId) {
+          console.error(`[STATUS UPDATE] Korisnik ${req.user.username} nema technicianId!`);
           return res.status(403).json({ 
-            error: "Nemate dozvolu da mijenjate ovaj servis" 
+            error: "Greška: Korisnik nema technicianId. Kontaktirajte administratora." 
+          });
+        }
+        
+        if (service.technicianId !== technicianId) {
+          console.error(`[STATUS UPDATE] Servis #${serviceId} dodeljen serviseru ${service.technicianId}, a pokušava ${technicianId}`);
+          return res.status(403).json({ 
+            error: "Servis nije dodeljen Vama. Kontaktirajte administratora." 
           });
         }
       }
