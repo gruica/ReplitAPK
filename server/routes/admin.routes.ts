@@ -6,6 +6,7 @@ import { z } from "zod";
 import { insertUserSchema } from "@shared/schema";
 import path from "path";
 import { promises as fs } from "fs";
+import { neon } from "@neondatabase/serverless";
 
 // 🔒 SECURITY: User-Agent sanitization funkcija - uklanja potencijalno maliciozne karaktere
 function sanitizeUserAgent(userAgent: string | undefined): string {
@@ -1406,8 +1407,8 @@ export function registerAdminRoutes(app: Express) {
   
   /**
    * GET /api/admin/check-technicians-production
-   * Temporary endpoint to check technicians in PRODUCTION database
-   * Returns list of technicians with their technicianId status
+   * CRITICAL: Direct production database check
+   * Reads production DATABASE_URL regardless of current environment
    * Admin only - READ ONLY operation
    */
   app.get("/api/admin/check-technicians-production", jwtAuth, async (req, res) => {
@@ -1417,24 +1418,52 @@ export function registerAdminRoutes(app: Express) {
         return res.status(403).json({ error: "Samo administrator može pristupiti ovom endpointu" });
       }
 
-      // 🔍 Read current database (production if deployed)
-      const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-      console.log(`🔍 [TECH CHECK] Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+      const currentEnv = process.env.REPLIT_DEPLOYMENT === '1' ? 'PRODUCTION' : 'DEVELOPMENT';
+      console.log(`🔍 [TECH CHECK] Current Environment: ${currentEnv}`);
       
-      // Get all users with role = 'technician'
-      const technicians = await storage.getUsersByRole('technician');
+      // 🔒 DIRECT PRODUCTION DATABASE ACCESS (READ ONLY)
+      const productionDbUrl = process.env.DATABASE_URL; // Always points to production in Replit
+      
+      if (!productionDbUrl) {
+        return res.status(500).json({ error: 'Production DATABASE_URL nije konfigurisan' });
+      }
 
-      console.log(`🔍 [TECH CHECK] Found ${technicians.length} technicians`);
+      console.log(`🔍 [TECH CHECK] Connecting to production database...`);
+      const sql = neon(productionDbUrl);
+      
+      // Direct SQL query - READ ONLY
+      const technicians = await sql`
+        SELECT id, username, full_name, role, technician_id, is_verified 
+        FROM users 
+        WHERE role = 'technician' 
+        ORDER BY id
+      `;
+
+      console.log(`🔍 [TECH CHECK] Found ${technicians.length} technicians in PRODUCTION`);
       
       // Check for problems (missing technicianId)
-      const problems = technicians.filter((t: any) => !t.technicianId);
+      const problems = technicians.filter((t: any) => !t.technician_id);
       
       res.json({
-        environment: isProduction ? 'PRODUCTION' : 'DEVELOPMENT',
+        databaseSource: 'PRODUCTION (Direct DATABASE_URL)',
+        currentEnvironment: currentEnv,
         timestamp: new Date().toISOString(),
         totalTechnicians: technicians.length,
         problemsFound: problems.length,
-        technicians: technicians,
+        technicians: technicians.map((t: any) => ({
+          id: t.id,
+          username: t.username,
+          fullName: t.full_name,
+          role: t.role,
+          technicianId: t.technician_id,
+          isVerified: t.is_verified
+        })),
+        problemTechnicians: problems.map((t: any) => ({
+          id: t.id,
+          username: t.username,
+          fullName: t.full_name,
+          technicianId: t.technician_id
+        })),
         summary: problems.length > 0 
           ? `⚠️ PRONAĐENO ${problems.length} tehničara BEZ technicianId!` 
           : '✅ Svi tehničari imaju technicianId'
@@ -1443,7 +1472,7 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error('❌ [TECH CHECK] Error checking production technicians:', error);
       res.status(500).json({ 
-        error: 'Greška pri proveri tehničara',
+        error: 'Greška pri proveri production tehničara',
         message: error instanceof Error ? error.message : String(error)
       });
     }
