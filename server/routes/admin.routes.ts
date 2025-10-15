@@ -1047,6 +1047,208 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // ========== SUPPLIER MANAGEMENT ==========
+
+  // GET /api/admin/suppliers - Get all suppliers
+  app.get('/api/admin/suppliers', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      console.log("[SUPPLIERS] Fetching all suppliers");
+      const suppliers = await storage.getAllSuppliers();
+      res.json(suppliers);
+    } catch (error) {
+      console.error("[SUPPLIERS] Error fetching suppliers:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju dobavljača" });
+    }
+  });
+
+  // GET /api/admin/suppliers/stats - Get supplier statistics
+  app.get('/api/admin/suppliers/stats', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const suppliers = await storage.getAllSuppliers();
+      const supplierOrders = await storage.getAllSupplierOrders();
+      
+      const stats = {
+        totalSuppliers: suppliers.length,
+        activeSuppliers: suppliers.filter(s => s.isActive).length,
+        pendingOrders: supplierOrders.filter(o => o.status === 'pending').length,
+        emailIntegrations: suppliers.filter(s => s.integrationMethod === 'email').length,
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("[SUPPLIERS] Error fetching supplier stats:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju statistike dobavljača" });
+    }
+  });
+
+  // POST /api/admin/suppliers - Create new supplier
+  app.post('/api/admin/suppliers', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      console.log("[SUPPLIERS] Creating new supplier:", req.body.name);
+      const newSupplier = await storage.createSupplier(req.body);
+      res.status(201).json(newSupplier);
+    } catch (error) {
+      console.error("[SUPPLIERS] Error creating supplier:", error);
+      res.status(500).json({ error: "Greška pri kreiranju dobavljača" });
+    }
+  });
+
+  // PUT /api/admin/suppliers/:id - Update supplier
+  app.put('/api/admin/suppliers/:id', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      console.log(`[SUPPLIERS] Updating supplier ${supplierId}`);
+      const updatedSupplier = await storage.updateSupplier(supplierId, req.body);
+      res.json(updatedSupplier);
+    } catch (error) {
+      console.error("[SUPPLIERS] Error updating supplier:", error);
+      res.status(500).json({ error: "Greška pri ažuriranju dobavljača" });
+    }
+  });
+
+  // DELETE /api/admin/suppliers/:id - Delete supplier
+  app.delete('/api/admin/suppliers/:id', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      console.log(`[SUPPLIERS] Deleting supplier ${supplierId}`);
+      await storage.deleteSupplier(supplierId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[SUPPLIERS] Error deleting supplier:", error);
+      res.status(500).json({ error: "Greška pri brisanju dobavljača" });
+    }
+  });
+
+  // GET /api/admin/supplier-orders - Get all supplier orders
+  app.get('/api/admin/supplier-orders', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      console.log("[SUPPLIERS] Fetching all supplier orders");
+      const supplierOrders = await storage.getAllSupplierOrders();
+      res.json(supplierOrders);
+    } catch (error) {
+      console.error("[SUPPLIERS] Error fetching supplier orders:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju porudžbina dobavljača" });
+    }
+  });
+
+  // POST /api/admin/suppliers/:supplierId/create-user - Create user for supplier
+  app.post('/api/admin/suppliers/:supplierId/create-user', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const { username, password, fullName } = req.body;
+      
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier) {
+        return res.status(404).json({ error: "Dobavljač nije pronađen" });
+      }
+      
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Korisničko ime već postoji" });
+      }
+      
+      const userData = insertUserSchema.parse({
+        username,
+        password,
+        fullName: fullName || supplier.name,
+        email: supplier.email,
+        phone: supplier.phone || "",
+        role: "supplier",
+        supplierId: supplier.id,
+        isVerified: true,
+      });
+      
+      const newUser = await storage.createUser(userData);
+      
+      const { password: _, ...userWithoutPassword } = newUser;
+      
+      console.log(`[SUPPLIERS] ✅ Created user for supplier ${supplier.name}`);
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Nevažeći podaci korisnika", details: error.format() });
+      }
+      console.error("[SUPPLIERS] Error creating supplier user:", error);
+      res.status(500).json({ error: "Greška pri kreiranju korisnika dobavljača" });
+    }
+  });
+
+  // POST /api/admin/spare-parts/:orderId/assign-supplier - Assign spare part order to supplier
+  app.post('/api/admin/spare-parts/:orderId/assign-supplier', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const { supplierId, orderNumber, estimatedDelivery, totalCost, currency, notes } = req.body;
+      
+      console.log(`[SUPPLIER ASSIGNMENT] Assigning spare part order ${orderId} to supplier ${supplierId}`);
+      
+      // Get spare part order
+      const sparePartOrder = await storage.getSparePartOrder(orderId);
+      if (!sparePartOrder) {
+        return res.status(404).json({ error: "Porudžbina rezervnog dela nije pronađena" });
+      }
+      
+      // Get supplier
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier) {
+        return res.status(404).json({ error: "Dobavljač nije pronađen" });
+      }
+      
+      // Create supplier order (task for supplier)
+      const supplierOrder = await storage.createSupplierOrder({
+        supplierId: supplierId,
+        sparePartOrderId: orderId,
+        orderNumber: orderNumber || undefined,
+        status: 'pending',
+        totalCost: totalCost ? parseFloat(totalCost) : undefined,
+        currency: currency || 'EUR',
+        estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
+        emailContent: notes || undefined,
+      });
+      
+      // Update spare part order status to 'ordered'
+      await storage.updateSparePartOrder(orderId, {
+        status: 'ordered',
+        supplierName: supplier.name,
+        orderDate: new Date().toISOString(),
+        expectedDelivery: estimatedDelivery || undefined,
+      });
+      
+      console.log(`[SUPPLIER ASSIGNMENT] ✅ Created supplier order ${supplierOrder.id} for supplier ${supplier.name}`);
+      
+      res.status(201).json(supplierOrder);
+    } catch (error) {
+      console.error("[SUPPLIER ASSIGNMENT] Error assigning order to supplier:", error);
+      res.status(500).json({ error: "Greška pri dodeli porudžbine dobavljaču" });
+    }
+  });
+
+  // GET /api/admin/supplier-tasks-by-supplier - Get supplier tasks grouped by supplier
+  app.get('/api/admin/supplier-tasks-by-supplier', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      console.log("[SUPPLIER TASKS] Fetching tasks grouped by supplier");
+      
+      const suppliers = await storage.getAllSuppliers();
+      const allSupplierOrders = await storage.getAllSupplierOrders();
+      
+      const tasksBySupplier = suppliers.map(supplier => ({
+        supplier,
+        tasks: allSupplierOrders.filter(order => order.supplierId === supplier.id),
+        stats: {
+          total: allSupplierOrders.filter(o => o.supplierId === supplier.id).length,
+          pending: allSupplierOrders.filter(o => o.supplierId === supplier.id && o.status === 'pending').length,
+          separated: allSupplierOrders.filter(o => o.supplierId === supplier.id && o.status === 'separated').length,
+          sent: allSupplierOrders.filter(o => o.supplierId === supplier.id && o.status === 'sent').length,
+          delivered: allSupplierOrders.filter(o => o.supplierId === supplier.id && o.status === 'delivered').length,
+        }
+      }));
+      
+      res.json(tasksBySupplier);
+    } catch (error) {
+      console.error("[SUPPLIER TASKS] Error fetching tasks by supplier:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju zadataka po dobavljačima" });
+    }
+  });
+
   // JavaScript error tracking endpoints
   app.post("/api/errors/javascript", (req, res) => {
     console.error("💥 [BROWSER JS ERROR]:", {
