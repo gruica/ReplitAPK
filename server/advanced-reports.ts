@@ -1,5 +1,5 @@
 import { db } from './db.js';
-import { services, appliances, clients, technicians, sparePartOrders, manufacturers, applianceCategories } from '../shared/schema.js';
+import { services, appliances, clients, technicians, sparePartOrders, manufacturers, applianceCategories } from '../shared/schema/index.js';
 import { EmailService } from './email-service.js';
 import { and, gte, lte, eq, isNotNull, isNull, or, like, sql, count, sum, desc } from 'drizzle-orm';
 

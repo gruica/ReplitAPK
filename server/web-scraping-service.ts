@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import { storage } from './storage.js';
-import type { SparePartsCatalog, SparePartCategory } from '../shared/schema.js';
+import type { SparePartsCatalog, SparePartCategory } from '../shared/schema/index.js';
 
 export interface ScrapingResult {
   success: boolean;

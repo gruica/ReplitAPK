@@ -1,8 +1,16 @@
 import { pgTable, text, serial, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { createInsertSchema } from 'drizzle-zod';
+import { z } from 'zod';
+import { services } from './services.schema';
+import { users } from './users.schema';
 
 export const messageTypeEnum = pgEnum("message_type", ["inquiry", "complaint", "request", "update", "urgent"]);
 export const messageStatusEnum = pgEnum("message_status", ["unread", "read", "replied", "archived"]);
 export const messagePriorityEnum = pgEnum("message_priority", ["low", "normal", "high", "urgent"]);
+
+export const conversationMessageTypeEnum = pgEnum("conversation_message_type", ["whatsapp", "sms", "auto"]);
+export const conversationMessageDirectionEnum = pgEnum("conversation_message_direction", ["outgoing", "incoming"]);
+export const conversationDeliveryStatusEnum = pgEnum("conversation_delivery_status", ["sent", "delivered", "failed", "pending"]);
 
 export const businessPartnerMessages = pgTable("business_partner_messages", {
   id: serial("id").primaryKey(),
@@ -46,3 +54,43 @@ export const notifications = pgTable("notifications", {
 });
 
 export type Notification = typeof notifications.$inferSelect;
+
+export const conversationMessages = pgTable("conversation_messages", {
+  id: serial("id").primaryKey(),
+  serviceId: integer("service_id").notNull().references(() => services.id),
+  senderId: integer("sender_id").notNull().references(() => users.id),
+  recipientPhone: text("recipient_phone").notNull(),
+  messageType: conversationMessageTypeEnum("message_type").notNull(),
+  messageContent: text("message_content").notNull(),
+  mediaUrl: text("media_url"),
+  messageDirection: conversationMessageDirectionEnum("message_direction").notNull().default('outgoing'),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  deliveryStatus: conversationDeliveryStatusEnum("delivery_status").notNull().default('pending'),
+  messageId: text("message_id"),
+  relatedUserId: integer("related_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertConversationMessageSchema = createInsertSchema(conversationMessages).pick({
+  serviceId: true,
+  senderId: true,
+  recipientPhone: true,
+  messageType: true,
+  messageContent: true,
+  mediaUrl: true,
+  messageDirection: true,
+  deliveryStatus: true,
+  messageId: true,
+  relatedUserId: true,
+}).extend({
+  serviceId: z.number().int().positive("ID servisa mora biti pozitivan broj"),
+  senderId: z.number().int().positive("ID pošaljaoca mora biti pozitivan broj"),
+  recipientPhone: z.string().min(8, "Broj telefona mora imati najmanje 8 karaktera").max(20, "Broj telefona je predugačak"),
+  messageType: z.enum(["whatsapp", "sms", "auto"]),
+  messageContent: z.string().min(1, "Sadržaj poruke je obavezan").max(2000, "Poruka je predugačka"),
+  mediaUrl: z.string().url("URL mora biti validan").or(z.literal("")).nullable().optional(),
+});
+
+export type InsertConversationMessage = z.infer<typeof insertConversationMessageSchema>;
+export type ConversationMessage = typeof conversationMessages.$inferSelect;

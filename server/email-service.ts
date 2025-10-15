@@ -1,5 +1,5 @@
 import nodemailer, { Transporter, TransportOptions } from 'nodemailer';
-import { Client } from '@shared/schema';
+import { Client } from '@shared/schema/index';
 import fs from 'fs';
 import path from 'path';
 
