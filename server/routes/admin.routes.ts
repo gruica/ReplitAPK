@@ -1402,5 +1402,52 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // ========== TEMPORARY PRODUCTION CHECK ENDPOINT ==========
+  
+  /**
+   * GET /api/admin/check-technicians-production
+   * Temporary endpoint to check technicians in PRODUCTION database
+   * Returns list of technicians with their technicianId status
+   * Admin only - READ ONLY operation
+   */
+  app.get("/api/admin/check-technicians-production", jwtAuth, async (req, res) => {
+    try {
+      const userRole = (req.user as any)?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ error: "Samo administrator može pristupiti ovom endpointu" });
+      }
+
+      // 🔍 Read current database (production if deployed)
+      const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
+      console.log(`🔍 [TECH CHECK] Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+      
+      // Get all users with role = 'technician'
+      const technicians = await storage.getUsersByRole('technician');
+
+      console.log(`🔍 [TECH CHECK] Found ${technicians.length} technicians`);
+      
+      // Check for problems (missing technicianId)
+      const problems = technicians.filter((t: any) => !t.technicianId);
+      
+      res.json({
+        environment: isProduction ? 'PRODUCTION' : 'DEVELOPMENT',
+        timestamp: new Date().toISOString(),
+        totalTechnicians: technicians.length,
+        problemsFound: problems.length,
+        technicians: technicians,
+        summary: problems.length > 0 
+          ? `⚠️ PRONAĐENO ${problems.length} tehničara BEZ technicianId!` 
+          : '✅ Svi tehničari imaju technicianId'
+      });
+      
+    } catch (error) {
+      console.error('❌ [TECH CHECK] Error checking production technicians:', error);
+      res.status(500).json({ 
+        error: 'Greška pri proveri tehničara',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   console.log("✅ Admin routes registered");
 }
