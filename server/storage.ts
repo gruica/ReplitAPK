@@ -2739,10 +2739,14 @@ export class DatabaseStorage implements IStorage {
           id: technicianData.id,
           fullName: technicianData.fullName,
           phone: technicianData.phone,
-          email: technicianData.email
+          email: technicianData.email,
+          specialization: technicianData.specialization
         };
       }
     }
+    
+    // Dohvati utrošene dijelove (removed parts)
+    const removedPartsList = await db.select().from(removedParts).where(eq(removedParts.serviceId, serviceId));
     
     // Kombinuj sve podatke
     return {
@@ -2751,7 +2755,8 @@ export class DatabaseStorage implements IStorage {
       appliance,
       technician,
       category,
-      manufacturer
+      manufacturer,
+      removedParts: removedPartsList
     };
   }
   
