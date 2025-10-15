@@ -215,11 +215,15 @@ export class PDFService {
             </div>
             <div class="info-item">
               <span class="info-label">Proizvođač:</span>
-              <span class="info-value">${appliance.manufacturer?.name || 'Nepoznato'}</span>
+              <span class="info-value"><strong>${appliance.manufacturer?.name || 'Nepoznato'}</strong></span>
             </div>
             <div class="info-item">
               <span class="info-label">Model:</span>
               <span class="info-value">${appliance.model || 'Nije unesen'}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Status garancije:</span>
+              <span class="info-value"><strong>${service.warrantyStatus === 'in_warranty' ? 'U GARANCIJI' : 'VAN GARANCIJE'}</strong></span>
             </div>
           </div>
           <div>
@@ -281,15 +285,57 @@ export class PDFService {
           </div>
         </div>
         ` : ''}
-        ${service.usedParts ? `
-        <div>
-          <div class="info-label" style="display: block; margin-bottom: 5px;">Korišćeni rezervni delovi:</div>
-          <div style="background: #fefce8; padding: 15px; border-radius: 6px; border-left: 4px solid #ca8a04;">
-            ${service.usedParts}
+      </div>
+
+      ${service.removedParts && service.removedParts.length > 0 ? `
+      <div class="section">
+        <div class="section-title">🔩 Uklonjeni / Utrošeni rezervni delovi</div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f1f5f9;">
+              <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Naziv dela</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Šifra dela</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Količina</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Napomena</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${service.removedParts.map((part: any) => `
+              <tr>
+                <td style="padding: 10px; border: 1px solid #e2e8f0;">${part.partName || 'N/A'}</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0;">${part.partNumber || 'N/A'}</td>
+                <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">${part.quantity || 1}</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0;">${part.notes || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      ${service.billingPrice ? `
+      <div class="section">
+        <div class="section-title">💰 Naplata i fakturisanje</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item">
+              <span class="info-label">Cijena za naplatu:</span>
+              <span class="info-value"><strong style="font-size: 18px; color: #059669;">${service.billingPrice} €</strong></span>
+            </div>
+          </div>
+          <div>
+            ${service.billingPriceReason ? `
+            <div class="info-item">
+              <span class="info-label">Napomena o cijeni:</span>
+              <div style="background: #fef3c7; padding: 10px; border-radius: 6px; margin-top: 5px;">
+                ${service.billingPriceReason}
+              </div>
+            </div>
+            ` : ''}
           </div>
         </div>
-        ` : ''}
       </div>
+      ` : ''}
 
       <div class="signature-section">
         <div class="signature-box">
