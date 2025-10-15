@@ -775,16 +775,20 @@ const AdminServices = memo(function AdminServices() {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('📧 [UI] Email sa PDF-om uspješno poslat:', data);
       toast({
         title: "✅ Email uspešno poslat",
         description: `Profesionalni izveštaj sa PDF-om je poslat na email adresu klijenta.`,
+        duration: 5000,
       });
     },
     onError: (error: any) => {
+      console.error('📧 [UI] Greška pri slanju email-a:', error);
       toast({
         title: "Greška pri slanju email-a",
         description: error.message || "Došlo je do greške pri slanju email-a sa PDF-om.",
         variant: "destructive",
+        duration: 5000,
       });
     },
   });
