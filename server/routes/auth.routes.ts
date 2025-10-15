@@ -152,11 +152,13 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ error: "Račun nije verifikovan. Kontaktirajte administratora." });
       }
       
-      // Generate JWT token
+      // Generate JWT token with supplierId and technicianId for optimized auth
       const token = generateToken({
         userId: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        supplierId: user.supplierId || undefined,
+        technicianId: user.technicianId || undefined
       });
       
       // 🔒 SECURITY: Logujemo samo ulogu, ne i username
