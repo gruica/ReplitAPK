@@ -171,7 +171,8 @@ export function registerAuthRoutes(app: Express) {
           role: user.role,
           email: user.email,
           phone: user.phone,
-          technicianId: user.technicianId
+          technicianId: user.technicianId,
+          supplierId: user.supplierId
         },
         token
       });
@@ -222,7 +223,8 @@ export function registerAuthRoutes(app: Express) {
         role: user.role,
         email: user.email,
         phone: user.phone,
-        technicianId: user.technicianId
+        technicianId: user.technicianId,
+        supplierId: user.supplierId
       });
     } catch (error) {
       logger.error("JWT User info error:", error);
