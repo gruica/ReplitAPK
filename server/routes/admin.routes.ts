@@ -1173,6 +1173,18 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // GET /api/admin/spare-parts - Get all spare part orders
+  app.get('/api/admin/spare-parts', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      console.log("[ADMIN SPARE PARTS] Fetching all spare part orders");
+      const orders = await storage.getAllSparePartOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("[ADMIN SPARE PARTS] Error fetching orders:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju porudžbina" });
+    }
+  });
+
   // POST /api/admin/spare-parts/:orderId/assign-supplier - Assign spare part order to supplier
   app.post('/api/admin/spare-parts/:orderId/assign-supplier', jwtAuth, requireRole(['admin']), async (req, res) => {
     try {

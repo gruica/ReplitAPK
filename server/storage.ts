@@ -5428,9 +5428,8 @@ export class DatabaseStorage implements IStorage {
         .from(supplierOrders)
         .where(or(
           eq(supplierOrders.status, 'pending'),
-          eq(supplierOrders.status, 'sent'),
-          eq(supplierOrders.status, 'confirmed'),
-          eq(supplierOrders.status, 'shipped')
+          eq(supplierOrders.status, 'separated'),
+          eq(supplierOrders.status, 'sent')
         ))
         .orderBy(desc(supplierOrders.createdAt));
     } catch (error) {
@@ -5523,9 +5522,7 @@ export class DatabaseStorage implements IStorage {
       if (status === 'separated') {
         updateData.confirmedAt = new Date();
       } else if (status === 'sent') {
-        updateData.shippedAt = new Date();
-      } else if (status === 'delivered') {
-        updateData.deliveredAt = new Date();
+        updateData.sentAt = new Date();
       }
 
       const [updated] = await db

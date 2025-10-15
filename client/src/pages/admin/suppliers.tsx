@@ -413,7 +413,14 @@ export default function SuppliersPage() {
                       <div className="text-sm">
                         <span className="font-medium">Brendovi: </span>
                         <span className="text-muted-foreground">
-                          {JSON.parse(supplier.supportedBrands || '[]').join(', ')}
+                          {(() => {
+                            try {
+                              const brands = JSON.parse(supplier.supportedBrands);
+                              return Array.isArray(brands) ? brands.join(', ') : supplier.supportedBrands;
+                            } catch {
+                              return supplier.supportedBrands;
+                            }
+                          })()}
                         </span>
                       </div>
                     )}
