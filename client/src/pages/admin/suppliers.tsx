@@ -52,6 +52,7 @@ export default function SuppliersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [selectedTab, setSelectedTab] = useState<'suppliers' | 'orders'>('suppliers');
   
@@ -150,6 +151,30 @@ export default function SuppliersPage() {
     },
   });
 
+  // Create supplier user mutation
+  const createUserMutation = useMutation({
+    mutationFn: ({ supplierId, data }: { supplierId: number; data: any }) => 
+      apiRequest(`/api/admin/suppliers/${supplierId}/create-user`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      setIsCreateUserDialogOpen(false);
+      setEditingSupplier(null);
+      toast({
+        title: "Uspeh",
+        description: "Korisnik za dobavljača je uspešno kreiran",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Greška",
+        description: error.message || "Greška pri kreiranju korisnika",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredSuppliers = suppliers.filter((supplier) =>
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     supplier.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -227,6 +252,21 @@ export default function SuppliersPage() {
     };
 
     updateSupplierMutation.mutate({ id: editingSupplier.id, data });
+  };
+
+  const handleCreateUser = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingSupplier) return;
+
+    const formData = new FormData(event.currentTarget);
+    
+    const data = {
+      username: formData.get('username') as string,
+      password: formData.get('password') as string,
+      fullName: formData.get('fullName') as string,
+    };
+
+    createUserMutation.mutate({ supplierId: editingSupplier.id, data });
   };
 
   return (
@@ -381,11 +421,23 @@ export default function SuppliersPage() {
                     <div className="flex justify-end space-x-2 pt-2">
                       <Button
                         size="sm"
+                        variant="default"
+                        onClick={() => {
+                          setEditingSupplier(supplier);
+                          setIsCreateUserDialogOpen(true);
+                        }}
+                        data-testid={`button-create-user-${supplier.id}`}
+                      >
+                        Kreiraj korisnika
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="outline"
                         onClick={() => {
                           setEditingSupplier(supplier);
                           setIsEditDialogOpen(true);
                         }}
+                        data-testid={`button-edit-${supplier.id}`}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -397,6 +449,7 @@ export default function SuppliersPage() {
                             deleteSupplierMutation.mutate(supplier.id);
                           }
                         }}
+                        data-testid={`button-delete-${supplier.id}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -790,6 +843,87 @@ export default function SuppliersPage() {
                 </Button>
                 <Button type="submit" disabled={updateSupplierMutation.isPending}>
                   {updateSupplierMutation.isPending ? "Čuvanje..." : "Sačuvaj izmene"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kreiraj korisnika za dobavljača</DialogTitle>
+            <DialogDescription>
+              Kreirajte korisnika koji će imati pristup portalu dobavljača
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingSupplier && (
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="supplier-info">Dobavljač</Label>
+                <Input 
+                  id="supplier-info" 
+                  value={`${editingSupplier.name} (${editingSupplier.email})`}
+                  disabled
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="user-username">Korisničko ime*</Label>
+                <Input 
+                  id="user-username" 
+                  name="username" 
+                  required 
+                  placeholder="npr. dobavljac1"
+                  data-testid="input-username"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="user-password">Lozinka*</Label>
+                <Input 
+                  id="user-password" 
+                  name="password" 
+                  type="password"
+                  required 
+                  minLength={6}
+                  placeholder="Minimum 6 karaktera"
+                  data-testid="input-password"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="user-fullName">Puno ime</Label>
+                <Input 
+                  id="user-fullName" 
+                  name="fullName" 
+                  defaultValue={editingSupplier.contactPerson || editingSupplier.name}
+                  placeholder="Ime i prezime korisnika"
+                  data-testid="input-fullname"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsCreateUserDialogOpen(false);
+                    setEditingSupplier(null);
+                  }}
+                  data-testid="button-cancel-user"
+                >
+                  Otkaži
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createUserMutation.isPending}
+                  data-testid="button-submit-user"
+                >
+                  {createUserMutation.isPending ? "Kreiranje..." : "Kreiraj korisnika"}
                 </Button>
               </DialogFooter>
             </form>
