@@ -52,7 +52,8 @@ export default function AuthPage() {
       const redirectPath = user.role === "technician" ? "/tech" :
                          user.role === "customer" ? "/customer" :
                          user.role === "admin" ? (user.companyName === "Com Plus" ? "/complus" : "/admin") :
-                         (user.role === "business_partner" || user.role === "business") ? "/business" : "/";
+                         (user.role === "business_partner" || user.role === "business") ? "/business" :
+                         user.role === "supplier" ? "/supplier" : "/";
       navigate(redirectPath);
     }
   }, [user, navigate]);
