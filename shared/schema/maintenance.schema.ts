@@ -2,13 +2,17 @@ import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Maintenance frequency enum
+export const maintenanceFrequencyEnum = ["monthly", "quarterly", "biannual", "annual", "custom"] as const;
+export type MaintenanceFrequency = typeof maintenanceFrequencyEnum[number];
+
 // Tabela za održavanje uređaja
 export const maintenanceSchedules = pgTable("maintenance_schedules", {
   id: serial("id").primaryKey(),
   applianceId: integer("appliance_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  frequency: text("frequency", { enum: ["monthly", "quarterly", "biannual", "annual", "custom"] }).notNull(),
+  frequency: text("frequency", { enum: maintenanceFrequencyEnum }).notNull(),
   lastMaintenanceDate: timestamp("last_maintenance_date"),
   nextMaintenanceDate: timestamp("next_maintenance_date").notNull(),
   customIntervalDays: integer("custom_interval_days"),

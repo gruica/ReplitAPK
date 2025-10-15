@@ -504,7 +504,7 @@ const MaintenanceSchedulesPage = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.values(maintenanceFrequencyEnum.Values).map((freq) => (
+                        {maintenanceFrequencyEnum.map((freq) => (
                           <SelectItem key={freq} value={freq}>
                             {translateFrequency(freq)}
                           </SelectItem>
