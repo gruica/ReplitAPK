@@ -34,6 +34,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   fullName: true,
   role: true,
   technicianId: true,
+  supplierId: true,
   email: true,
   phone: true,
   address: true,
