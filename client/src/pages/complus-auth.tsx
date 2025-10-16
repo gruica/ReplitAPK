@@ -43,7 +43,8 @@ export default function ComplusAuthPage() {
         localStorage.setItem("auth_token", data.token);
         // Postavi flag da je Com Plus login
         localStorage.setItem("complus_login", "true");
-        navigate("/complus");
+        // Redirect to business ComPlus panel (not admin panel)
+        navigate("/business/complus");
       } else {
         setError("Greška pri prijavi na Com Plus panel");
       }
