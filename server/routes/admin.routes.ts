@@ -1478,5 +1478,111 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // ========== EMAIL SETTINGS ENDPOINTS ==========
+  
+  // GET /api/email-settings - Get current email settings (Admin only)
+  app.get("/api/email-settings", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const configured = !!(
+        process.env.EMAIL_HOST && 
+        process.env.EMAIL_USER && 
+        process.env.EMAIL_PASSWORD
+      );
+
+      res.json({
+        configured,
+        host: process.env.EMAIL_HOST || '',
+        port: parseInt(process.env.EMAIL_PORT || '465'),
+        secure: process.env.EMAIL_SECURE !== 'false',
+        user: process.env.EMAIL_USER || ''
+      });
+    } catch (error) {
+      console.error("Error fetching email settings:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju email postavki" });
+    }
+  });
+
+  // POST /api/email-settings - Save email settings (Admin only)
+  app.post("/api/email-settings", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const { host, port, secure, user, password } = req.body;
+
+      if (!host || !port || !user || !password) {
+        return res.status(400).json({ error: "Sva polja su obavezna" });
+      }
+
+      // Note: In a real application, these would be saved to environment variables or database
+      // For now, we return success indicating the settings would be applied
+      res.json({
+        success: true,
+        message: "Email postavke bi bile sačuvane (napomena: potrebno je ažurirati environment varijable ručno)",
+        settings: { host, port, secure, user }
+      });
+    } catch (error) {
+      console.error("Error saving email settings:", error);
+      res.status(500).json({ error: "Greška pri čuvanju email postavki" });
+    }
+  });
+
+  // POST /api/send-test-email - Send test email (Admin only)
+  app.post("/api/send-test-email", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const { recipient } = req.body;
+
+      if (!recipient) {
+        return res.status(400).json({ error: "Email adresa primaoca je obavezna" });
+      }
+
+      const { emailService } = await import("../email-service");
+
+      const result = await emailService.sendEmail({
+        to: recipient,
+        subject: "Test Email - Servis Todosijević",
+        html: `
+          <h2>Test Email</h2>
+          <p>Ovo je test email poruka sa sistema Servis Todosijević.</p>
+          <p>Email sistem radi ispravno!</p>
+          <p>Vreme slanja: ${new Date().toLocaleString('sr-RS')}</p>
+        `,
+        text: "Test email poruka sa sistema Servis Todosijević."
+      });
+
+      if (result) {
+        res.json({
+          success: true,
+          message: "Test email je uspešno poslat",
+          diagnosticInfo: {
+            connectionTest: true,
+            emailSent: true,
+            timestamp: Date.now()
+          }
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: "Nepoznata greška pri slanju email-a",
+          diagnosticInfo: {
+            connectionTest: false,
+            emailSent: false,
+            timestamp: Date.now(),
+            errorInfo: "Email servis je vratio negativan rezultat"
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Greška pri slanju test email-a",
+        diagnosticInfo: {
+          connectionTest: false,
+          emailSent: false,
+          timestamp: Date.now(),
+          errorInfo: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  });
+
   console.log("✅ Admin routes registered");
 }
