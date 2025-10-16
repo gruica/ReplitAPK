@@ -133,6 +133,14 @@ export function registerAuthRoutes(app: Express) {
       logger.debug(`JWT Login attempt from IP: ${req.ip}`);
       
       // Find user
+      console.log('[JWT LOGIN DEBUG] Looking up username:', username);
+      
+      // DEBUG: Try finding by ID first to verify Drizzle works
+      if (username === 'servis@eurotehnikamn.me') {
+        const testUser = await storage.getUser(65);
+        console.log('[JWT LOGIN DEBUG] Test getUser(65):', testUser ? `Found: ${testUser.username}` : 'Not found');
+      }
+      
       const user = await storage.getUserByUsername(username);
       console.log('[JWT LOGIN DEBUG] User lookup result:', user ? `Found user: ${user.username}` : 'User not found');
       if (!user) {
