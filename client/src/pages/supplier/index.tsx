@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { Package, CheckCircle, Send, Clock, Truck, XCircle } from "lucide-react";
+import { Package, CheckCircle, Send, Clock, Truck, XCircle, LogOut, User } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 // Status configuration for supplier tasks
@@ -35,7 +36,18 @@ interface SupplierTask {
 export default function SupplierDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    toast({
+      title: "Odjavljeni ste",
+      description: "Uspješno ste se odjavili sa portala.",
+    });
+    navigate("/");
+  };
 
   // Fetch supplier tasks
   const { data: tasks, isLoading } = useQuery<SupplierTask[]>({
@@ -107,6 +119,28 @@ export default function SupplierDashboard() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
+      {/* User Info & Logout */}
+      <div className="flex justify-between items-center mb-6 p-4 bg-card rounded-lg border">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 p-2 rounded-full">
+            <User className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Prijavljen kao</p>
+            <p className="font-semibold" data-testid="text-username">{user?.username}</p>
+          </div>
+        </div>
+        
+        <Button 
+          variant="outline" 
+          onClick={handleLogout}
+          data-testid="button-logout"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Odjavi se
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Dobavljač Portal</h1>
