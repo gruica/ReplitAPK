@@ -1663,6 +1663,10 @@ export class DatabaseStorage implements IStorage {
         await this.seedManufacturers();
         await this.seedTechnicians();
         await this.seedAdminUser();
+        await this.seedSupplierUser();
+      } else {
+        // Even if users exist, ensure supplier user exists
+        await this.seedSupplierUser();
       }
     } catch (error) {
       console.error("Greška pri inicijalizaciji baze:", error);
@@ -1757,6 +1761,48 @@ export class DatabaseStorage implements IStorage {
       console.error("Greška pri kreiranju korisnika:", error);
     }
   }
+  
+  private async seedSupplierUser(): Promise<void> {
+    try {
+      // First, ensure supplier exists
+      const [supplier] = await db.select().from(suppliers).where(eq(suppliers.id, 3));
+      
+      if (!supplier) {
+        console.log("Supplier ID 3 does not exist, creating it...");
+        await db.insert(suppliers).values({
+          name: "Eurotehnika Mont-Negra d.o.o.",
+          address: "Podgorica",
+          phone: "+382 20 123 456",
+          email: "servis@eurotehnikamn.me"
+        });
+      }
+      
+      // Check if supplier user already exists
+      const [existingUser] = await db.select().from(users).where(eq(users.username, "servis@eurotehnikamn.me"));
+      
+      if (existingUser) {
+        console.log("Supplier user servis@eurotehnikamn.me already exists");
+        return;
+      }
+      
+      const hashedPassword = await this.hashPassword("BEKO123");
+      
+      // Create supplier user
+      await db.insert(users).values({
+        username: "servis@eurotehnikamn.me",
+        password: hashedPassword,
+        fullName: "Eurotehnika Servis",
+        email: "servis@eurotehnikamn.me",
+        role: "supplier",
+        supplierId: 3,
+        isVerified: true
+      });
+      
+      console.log("✅ Supplier user created: servis@eurotehnikamn.me / BEKO123");
+    } catch (error) {
+      console.error("Greška pri kreiranju supplier korisnika:", error);
+    }
+  }
 
   private async hashPassword(password: string): Promise<string> {
     const salt = randomBytes(16).toString("hex");
@@ -1782,24 +1828,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
-    console.log(`[DB] getUserByEmail called with: "${email}"`);
-    
-    // DEBUG: Check total users and users with this email
-    const allUsersCount = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
-    console.log(`[DB] Total users in database:`, allUsersCount.rows[0]);
-    
-    const usersWithEmail = await db.execute(sql`SELECT id, username, email FROM users WHERE email LIKE '%eurotehnika%'`);
-    console.log(`[DB] Users with 'eurotehnika' in email:`, usersWithEmail.rows);
-    
-    // Try exact match
-    const rawResult = await db.execute(sql`SELECT id, username, email FROM users WHERE email = ${email} LIMIT 1`);
-    console.log(`[DB] RAW SQL for exact email "${email}":`, rawResult.rows);
-    
     const result = await db.select().from(users).where(eq(users.email, email));
-    console.log(`[DB] Drizzle query returned ${result.length} results`);
-    if (result.length > 0) {
-      console.log(`[DB] getUserByEmail found:`, { id: result[0].id, username: result[0].username, email: result[0].email });
-    }
     const [user] = result;
     return user;
   }
