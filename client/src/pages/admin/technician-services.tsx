@@ -57,12 +57,12 @@ export default function TechnicianServicesAdmin() {
   }, [location]);
   
   // Fetch technicians
-  const { data: technicians, isLoading: loadingTechnicians } = useQuery({
+  const { data: technicians, isLoading: loadingTechnicians } = useQuery<any[]>({
     queryKey: ["/api/technicians"],
   });
   
   // Fetch services
-  const { data: services, isLoading: loadingServices } = useQuery({
+  const { data: services, isLoading: loadingServices } = useQuery<any[]>({
     queryKey: ["/api/services"],
   });
   

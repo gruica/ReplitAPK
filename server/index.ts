@@ -104,8 +104,7 @@ app.use((req, res, next) => {
     /(\<script.*?\>)|(\<\/script\>)/gi, // XSS script tags
     /((\%3C)|<)((\%2F)|\/)*[a-z0-9\%]+((\%3E)|>)/gi, // XSS encoded
     /((\%3C)|<)[^\n]+((\%3E)|>)/gi, // HTML tags
-    /\b(union|select|insert|delete|drop|create|alter|exec|script)\b/gi, // SQL injection keywords
-    /['";\\|]|--/gi, // SQL injection chars
+    /\b(union\s+select|drop\s+table|delete\s+from|insert\s+into)\b/gi, // SQL injection multi-word keywords only
     /\.\.\//gi, // Directory traversal (samo sa /)
     /((\%2E)|\.){2}\//gi // Directory traversal encoded (samo sa /)
   ];
