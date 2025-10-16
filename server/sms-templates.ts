@@ -39,6 +39,23 @@ export interface SMSTemplateData {
 }
 
 export class SMSTemplates {
+  // Prevod statusa sa engleskog na srpski
+  private static translateStatus(status: string): string {
+    const translations: Record<string, string> = {
+      'pending': 'Na čekanju',
+      'assigned': 'Dodeljen',
+      'in_progress': 'U radu',
+      'completed': 'Završen',
+      'cancelled': 'Otkazan',
+      'client_unavailable': 'Klijent nedostupan',
+      'device_picked_up': 'Aparat preuzet',
+      'customer_refused': 'Klijent odbio',
+      'repair_failed': 'Popravka neuspela',
+      'waiting_for_parts': 'Čeka se deo'
+    };
+    return translations[status] || status;
+  }
+
   // KRITIČNO: Sve poruke MORAJU da stanu u 160 karaktera za jednodelnu dostavu
   private static validateSMSLength(message: string, templateName: string): string {
     // Uklanja sve problematične karaktere koji mogu aktivirati Unicode
@@ -108,7 +125,9 @@ export class SMSTemplates {
   static adminStatusChange(data: SMSTemplateData): string {
     const clientInfo = data.clientPhone ? `${data.clientName} (${data.clientPhone})` : data.clientName;
     const deviceInfo = data.manufacturerName ? `${data.deviceType} ${data.manufacturerName}` : data.deviceType;
-    const message = `PROMENA - Servis #${data.serviceId}: ${clientInfo}, ${deviceInfo}, ${data.oldStatus}->${data.newStatus}, Serviser: ${data.technicianName}`;
+    const oldStatusSr = data.oldStatus ? this.translateStatus(data.oldStatus) : '';
+    const newStatusSr = data.newStatus ? this.translateStatus(data.newStatus) : '';
+    const message = `PROMENA - Servis #${data.serviceId}: ${clientInfo}, ${deviceInfo}, ${oldStatusSr}->${newStatusSr}, Serviser: ${data.technicianName}`;
     return this.validateSMSLength(message, 'admin_status_change');
   }
 
