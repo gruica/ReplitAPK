@@ -58,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // JWT user data received successfully - debug logging removed for production security
       return userData;
     },
-    enabled: !!localStorage.getItem('auth_token'),
+    // Uvek omogući query - queryFn će vratiti null ako nema tokena
+    enabled: true,
     staleTime: 2 * 60 * 1000, // PERFORMANCE BOOST: 2 minute stale time for auth
     refetchOnWindowFocus: true,
     refetchOnMount: true,
@@ -84,7 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (response: { user: SelectUser; token: string }) => {
       localStorage.setItem('auth_token', response.token);
       queryClient.setQueryData(["/api/jwt-user"], response.user);
-      refetch();
+      // Odmah invalidiramo query da se ponovo aktivira sa novim tokenom
+      queryClient.invalidateQueries({ queryKey: ["/api/jwt-user"] });
       toast({
         title: "Uspešna prijava",
         description: `Dobrodošli, ${response.user.fullName}!`,
