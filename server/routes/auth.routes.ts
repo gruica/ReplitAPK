@@ -133,26 +133,19 @@ export function registerAuthRoutes(app: Express) {
       logger.debug(`JWT Login attempt from IP: ${req.ip}`);
       
       // Find user - try username first, then email if username contains @
-      console.log('[JWT LOGIN DEBUG] Looking up username:', username);
-      
       let user = await storage.getUserByUsername(username);
       
-      // WORKAROUND: If username looks like email and not found, try getUserByEmail
+      // If username looks like email and not found, try getUserByEmail
       if (!user && username.includes('@')) {
-        console.log('[JWT LOGIN DEBUG] Username looks like email, trying getUserByEmail...');
         user = await storage.getUserByEmail(username);
       }
-      
-      console.log('[JWT LOGIN DEBUG] User lookup result:', user ? `Found user: ${user.username}` : 'User not found');
       if (!user) {
         logger.debug(`JWT Login: User not found`);
         return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
       }
       
       // Check password
-      console.log('[JWT LOGIN DEBUG] Checking password. Stored hash:', user.password.substring(0, 20) + '...');
       const isPasswordValid = await comparePassword(password, user.password);
-      console.log('[JWT LOGIN DEBUG] Password valid:', isPasswordValid);
       if (!isPasswordValid) {
         logger.debug(`JWT Login: Invalid password`);
         return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
