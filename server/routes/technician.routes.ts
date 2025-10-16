@@ -347,10 +347,19 @@ export function registerTechnicianRoutes(app: Express) {
                 
                 console.log(`[SERVICE COMPLETE] 📱 Šalje SMS: "${message}"`);
                 
+                const appliance = serviceWithDetails.appliance;
+                const category = appliance ? await storage.getApplianceCategory(appliance.categoryId) : null;
+                const manufacturer = appliance?.manufacturerId ? await storage.getManufacturer(appliance.manufacturerId) : null;
+                const technician = serviceWithDetails.technicianId ? await storage.getTechnician(serviceWithDetails.technicianId) : null;
+                
                 await smsService.notifyServiceStatusChange({
                   serviceId: serviceId.toString(),
                   clientPhone: client.phone,
                   clientName: client.fullName,
+                  technicianName: technician?.fullName || 'Serviser',
+                  deviceType: category?.name || appliance?.name || 'Uređaj',
+                  manufacturerName: manufacturer?.name,
+                  oldStatus: service.status,
                   newStatus: 'completed',
                   statusDescription: 'Završen',
                   technicianNotes: `${workPerformed} | Cena: ${cost || 'Besplatno'} EUR`,

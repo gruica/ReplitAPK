@@ -106,7 +106,9 @@ export class SMSTemplates {
   // ADMINISTRATORSKI SMS OBAVEŠTENJA (KOMPAKTNI FORMAT)
   
   static adminStatusChange(data: SMSTemplateData): string {
-    const message = `PROMENA - Servis #${data.serviceId}: ${data.clientName} (${data.clientPhone}), ${data.deviceType} ${data.manufacturerName || ''}, ${data.oldStatus}->${data.newStatus}, Tehnicar: ${data.technicianName}`;
+    const clientInfo = data.clientPhone ? `${data.clientName} (${data.clientPhone})` : data.clientName;
+    const deviceInfo = data.manufacturerName ? `${data.deviceType} ${data.manufacturerName}` : data.deviceType;
+    const message = `PROMENA - Servis #${data.serviceId}: ${clientInfo}, ${deviceInfo}, ${data.oldStatus}->${data.newStatus}, Serviser: ${data.technicianName}`;
     return this.validateSMSLength(message, 'admin_status_change');
   }
 
