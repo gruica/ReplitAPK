@@ -1782,7 +1782,25 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    console.log(`[DB] getUserByEmail called with: "${email}"`);
+    
+    // DEBUG: Check total users and users with this email
+    const allUsersCount = await db.execute(sql`SELECT COUNT(*) as count FROM users`);
+    console.log(`[DB] Total users in database:`, allUsersCount.rows[0]);
+    
+    const usersWithEmail = await db.execute(sql`SELECT id, username, email FROM users WHERE email LIKE '%eurotehnika%'`);
+    console.log(`[DB] Users with 'eurotehnika' in email:`, usersWithEmail.rows);
+    
+    // Try exact match
+    const rawResult = await db.execute(sql`SELECT id, username, email FROM users WHERE email = ${email} LIMIT 1`);
+    console.log(`[DB] RAW SQL for exact email "${email}":`, rawResult.rows);
+    
+    const result = await db.select().from(users).where(eq(users.email, email));
+    console.log(`[DB] Drizzle query returned ${result.length} results`);
+    if (result.length > 0) {
+      console.log(`[DB] getUserByEmail found:`, { id: result[0].id, username: result[0].username, email: result[0].email });
+    }
+    const [user] = result;
     return user;
   }
   
