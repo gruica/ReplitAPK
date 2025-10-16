@@ -132,16 +132,17 @@ export function registerAuthRoutes(app: Express) {
       // 🔒 SECURITY: Ne logujemo username zbog sigurnosnih razloga
       logger.debug(`JWT Login attempt from IP: ${req.ip}`);
       
-      // Find user
+      // Find user - try username first, then email if username contains @
       console.log('[JWT LOGIN DEBUG] Looking up username:', username);
       
-      // DEBUG: Try finding by ID first to verify Drizzle works
-      if (username === 'servis@eurotehnikamn.me') {
-        const testUser = await storage.getUser(65);
-        console.log('[JWT LOGIN DEBUG] Test getUser(65):', testUser ? `Found: ${testUser.username}` : 'Not found');
+      let user = await storage.getUserByUsername(username);
+      
+      // WORKAROUND: If username looks like email and not found, try getUserByEmail
+      if (!user && username.includes('@')) {
+        console.log('[JWT LOGIN DEBUG] Username looks like email, trying getUserByEmail...');
+        user = await storage.getUserByEmail(username);
       }
       
-      const user = await storage.getUserByUsername(username);
       console.log('[JWT LOGIN DEBUG] User lookup result:', user ? `Found user: ${user.username}` : 'User not found');
       if (!user) {
         logger.debug(`JWT Login: User not found`);
