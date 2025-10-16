@@ -134,13 +134,16 @@ export function registerAuthRoutes(app: Express) {
       
       // Find user
       const user = await storage.getUserByUsername(username);
+      console.log('[JWT LOGIN DEBUG] User lookup result:', user ? `Found user: ${user.username}` : 'User not found');
       if (!user) {
         logger.debug(`JWT Login: User not found`);
         return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
       }
       
       // Check password
+      console.log('[JWT LOGIN DEBUG] Checking password. Stored hash:', user.password.substring(0, 20) + '...');
       const isPasswordValid = await comparePassword(password, user.password);
+      console.log('[JWT LOGIN DEBUG] Password valid:', isPasswordValid);
       if (!isPasswordValid) {
         logger.debug(`JWT Login: Invalid password`);
         return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
