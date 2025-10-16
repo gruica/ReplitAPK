@@ -3,6 +3,10 @@
 ## Overview
 This is a comprehensive service management application for Frigo Sistem Todosijević, an appliance repair company in Montenegro. Its purpose is to streamline service operations, improve technician efficiency, and enhance customer communication. The application manages clients, services, technicians, and maintenance schedules for white goods appliances, offering both web and mobile (Android) interfaces for field technicians. The core API and user management are fully functional, with active email and mobile photo systems, and excellent server performance.
 
+## Recent Changes (October 16, 2025)
+- **Email Settings API Fixed**: Added missing `/api/email-settings` endpoints (GET/POST) and `/api/send-test-email` endpoint for admin email configuration management
+- **Login Flow Optimization**: Fixed white screen issue after technician login by removing unnecessary `refetch()` call and changing query `enabled` flag to always-on with null return when no token exists. This eliminates race conditions between token storage and user data loading.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 The existing codebase and logic must not be changed.
