@@ -123,4 +123,10 @@ export const systemSettings = pgTable("system_settings", {
   updatedBy: integer("updated_by"),
 });
 
+export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit({
+  id: true,
+  updatedAt: true
+});
+
+export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
 export type SystemSetting = typeof systemSettings.$inferSelect;
