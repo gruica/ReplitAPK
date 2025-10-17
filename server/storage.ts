@@ -50,6 +50,7 @@ import {
   DeletedService, InsertDeletedService, deletedServices
 } from "@shared/schema";
 import { supplierStorage } from "./storage/supplier.storage.js";
+import { technicianStorage } from "./storage/technician.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -612,48 +613,6 @@ export class MemStorage implements IStorage {
     return user;
   }
   
-  // Technician methods
-  async getAllTechnicians(): Promise<Technician[]> {
-    return Array.from(this.technicians.values());
-  }
-
-  async getTechnician(id: number): Promise<Technician | undefined> {
-    return this.technicians.get(id);
-  }
-  
-  async createTechnician(insertTechnician: InsertTechnician): Promise<Technician> {
-    const id = this.technicianId++;
-    const technician: Technician = {
-      id,
-      fullName: insertTechnician.fullName,
-      phone: insertTechnician.phone || null,
-      email: insertTechnician.email || null,
-      specialization: insertTechnician.specialization || null,
-      active: insertTechnician.active !== undefined ? insertTechnician.active : true
-    };
-    this.technicians.set(id, technician);
-    return technician;
-  }
-  
-  async updateTechnician(id: number, insertTechnician: InsertTechnician): Promise<Technician | undefined> {
-    const existingTechnician = this.technicians.get(id);
-    if (!existingTechnician) return undefined;
-    
-    const updatedTechnician: Technician = {
-      id,
-      fullName: insertTechnician.fullName,
-      phone: insertTechnician.phone || null,
-      email: insertTechnician.email || null,
-      specialization: insertTechnician.specialization || null,
-      active: insertTechnician.active !== undefined ? insertTechnician.active : true
-    };
-    
-    this.technicians.set(id, updatedTechnician);
-    return updatedTechnician;
-  }
-  
-
-
   // Client methods
   async getAllClients(): Promise<Client[]> {
     return Array.from(this.clients.values());
@@ -2037,35 +1996,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Technician methods
+  // ===== TECHNICIAN METHODS - Delegated to TechnicianStorage =====
   async getAllTechnicians(): Promise<Technician[]> {
-    return await db.select().from(technicians);
+    return technicianStorage.getAllTechnicians();
   }
 
   async getTechnician(id: number): Promise<Technician | undefined> {
-    const [technician] = await db.select().from(technicians).where(eq(technicians.id, id));
-    return technician;
+    return technicianStorage.getTechnician(id);
   }
 
   async createTechnician(insertTechnician: InsertTechnician): Promise<Technician> {
-    const [technician] = await db.insert(technicians).values(insertTechnician).returning();
-    return technician;
+    return technicianStorage.createTechnician(insertTechnician);
   }
 
   async updateTechnician(id: number, data: InsertTechnician): Promise<Technician | undefined> {
-    const [updatedTechnician] = await db
-      .update(technicians)
-      .set(data)
-      .where(eq(technicians.id, id))
-      .returning();
-    return updatedTechnician;
+    return technicianStorage.updateTechnician(id, data);
   }
   
   async getUserByTechnicianId(technicianId: number): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.technicianId, technicianId));
-    return user;
+    return technicianStorage.getUserByTechnicianId(technicianId);
   }
 
   // Client methods
