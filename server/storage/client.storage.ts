@@ -1,10 +1,11 @@
 import { db } from "../db.js";
 import { 
   clients,
+  services,
   Client,
   InsertClient
 } from "../../shared/schema/index.js";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 
 /**
  * Client Storage Module
@@ -53,11 +54,31 @@ class ClientStorage {
   // ===== CLIENT QUERY METHODS =====
   
   async getClientsByPartner(partnerId: number): Promise<Client[]> {
-    const [clients] = await db
-      .select()
-      .from(clients)
-      .where(eq(clients.partnerId, partnerId));
-    return clients || [];
+    try {
+      // Dobijam ID-jeve klijenata iz servisa ovog partnera
+      const partnerServices = await db
+        .select({ clientId: services.clientId })
+        .from(services)
+        .where(eq(services.businessPartnerId, partnerId));
+      
+      const clientIds = [...new Set(partnerServices.map(s => s.clientId).filter(id => id !== null))];
+      
+      if (clientIds.length === 0) {
+        return [];
+      }
+      
+      // Vraćam klijente povezane sa tim servisima
+      const partnersClients = await db
+        .select()
+        .from(clients)
+        .where(inArray(clients.id, clientIds))
+        .orderBy(clients.fullName);
+      
+      return partnersClients;
+    } catch (error) {
+      console.error('Greška pri dohvatanju klijenata za poslovnog partnera:', error);
+      return [];
+    }
   }
 }
 

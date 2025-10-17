@@ -59,6 +59,7 @@ import { applianceStorage } from "./storage/appliance.storage.js";
 import { maintenanceStorage } from "./storage/maintenance.storage.js";
 import { serviceStorage } from "./storage/service.storage.js";
 import { sparePartsStorage } from "./storage/spare-parts.storage.js";
+import { clientStorage } from "./storage/client.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -621,173 +622,6 @@ export class MemStorage implements IStorage {
     return user;
   }
   
-  // Client methods
-  async getAllClients(): Promise<Client[]> {
-    return Array.from(this.clients.values());
-  }
-
-  async getClient(id: number): Promise<Client | undefined> {
-    return this.clients.get(id);
-  }
-  
-
-  
-  /**
-   * Dobavlja detaljne informacije o klijentu sa aparatima i istorijom servisa
-   */
-  async getClientWithDetails(id: number): Promise<any | undefined> {
-    const client = this.clients.get(id);
-    if (!client) return undefined;
-    
-    // Dobavljanje svih uređaja klijenta
-    const appliances = await this.getAppliancesByClient(id);
-    
-    // Priprema objekata za proširivanje informacija
-    const appliancesWithDetails = [];
-    
-    // Za svaki uređaj dobavljamo kategoriju i proizvođača
-    for (const appliance of appliances) {
-      const category = this.applianceCategories.get(appliance.categoryId);
-      const manufacturer = this.manufacturers.get(appliance.manufacturerId);
-      
-      // Dobavljanje svih servisa povezanih sa ovim uređajem
-      const applianceServices = Array.from(this.services.values()).filter(
-        (service) => service.applianceId === appliance.id
-      );
-      
-      // Za svaki servis dobavljamo informacije o serviseru
-      const servicesWithTechnicians = [];
-      
-      for (const service of applianceServices) {
-        let technicianInfo = null;
-        
-        if (service.technicianId) {
-          const technician = this.technicians.get(service.technicianId);
-          if (technician) {
-            technicianInfo = {
-              id: technician.id,
-              fullName: technician.fullName,
-              specialization: technician.specialization,
-              phone: technician.phone,
-              email: technician.email
-            };
-          }
-        }
-        
-        // Dobavljanje istorije statusa servisa
-        const statusHistory = await this.getServiceStatusHistory(service.id);
-        
-        servicesWithTechnicians.push({
-          ...service,
-          technician: technicianInfo,
-          statusHistory
-        });
-      }
-      
-      appliancesWithDetails.push({
-        ...appliance,
-        category: category || { name: "Nepoznata kategorija" },
-        manufacturer: manufacturer || { name: "Nepoznat proizvođač" },
-        services: servicesWithTechnicians
-      });
-    }
-    
-    // Dobavljanje svih servisa klijenta
-    const clientServices = Array.from(this.services.values()).filter(
-      (service) => service.clientId === id
-    );
-    
-    // Za svaki servis dobavljamo informacije o serviseru i aparatu
-    const servicesWithDetails = [];
-    
-    for (const service of clientServices) {
-      let technicianInfo = null;
-      let applianceInfo = null;
-      
-      if (service.technicianId) {
-        const technician = this.technicians.get(service.technicianId);
-        if (technician) {
-          technicianInfo = {
-            id: technician.id,
-            fullName: technician.fullName,
-            specialization: technician.specialization,
-            phone: technician.phone,
-            email: technician.email
-          };
-        }
-      }
-      
-      if (service.applianceId) {
-        const appliance = this.appliances.get(service.applianceId);
-        if (appliance) {
-          const category = this.applianceCategories.get(appliance.categoryId);
-          const manufacturer = this.manufacturers.get(appliance.manufacturerId);
-          
-          applianceInfo = {
-            ...appliance,
-            category: category || { name: "Nepoznata kategorija" },
-            manufacturer: manufacturer || { name: "Nepoznat proizvođač" }
-          };
-        }
-      }
-      
-      // Dobavljanje istorije statusa servisa
-      const statusHistory = await this.getServiceStatusHistory(service.id);
-      
-      servicesWithDetails.push({
-        ...service,
-        technician: technicianInfo,
-        appliance: applianceInfo,
-        statusHistory
-      });
-    }
-    
-    return {
-      ...client,
-      appliances: appliancesWithDetails,
-      services: servicesWithDetails
-    };
-  }
-
-  async createClient(insertClient: InsertClient): Promise<Client> {
-    const id = this.clientId++;
-    const client: Client = { 
-      id,
-      fullName: insertClient.fullName,
-      phone: insertClient.phone,
-      email: insertClient.email || null,
-      address: insertClient.address || null,
-      city: insertClient.city || null
-    };
-    this.clients.set(id, client);
-    return client;
-  }
-
-  async updateClient(id: number, insertClient: Partial<InsertClient>): Promise<Client | undefined> {
-    const existingClient = this.clients.get(id);
-    if (!existingClient) return undefined;
-    
-    const updatedClient: Client = { 
-      id,
-      fullName: insertClient.fullName ?? existingClient.fullName,
-      phone: insertClient.phone ?? existingClient.phone,
-      email: insertClient.email !== undefined ? (insertClient.email || null) : existingClient.email,
-      address: insertClient.address !== undefined ? (insertClient.address || null) : existingClient.address,
-      city: insertClient.city !== undefined ? (insertClient.city || null) : existingClient.city
-    };
-    this.clients.set(id, updatedClient);
-    return updatedClient;
-  }
-
-  async deleteClient(id: number): Promise<void> {
-    this.clients.delete(id);
-  }
-  
-  async getRecentClients(limit: number): Promise<Client[]> {
-    return Array.from(this.clients.values())
-      .slice(-limit)
-      .reverse();
-  }
 
   // Appliance Category methods
   async getAllApplianceCategories(): Promise<ApplianceCategory[]> {
@@ -2025,41 +1859,33 @@ export class DatabaseStorage implements IStorage {
     return technicianStorage.getUserByTechnicianId(technicianId);
   }
 
-  // Client methods
+  // ===== CLIENT METHODS - Delegated to ClientStorage =====
   async getAllClients(): Promise<Client[]> {
-    return await db.select().from(clients);
+    return clientStorage.getAllClients();
   }
 
   async getClient(id: number): Promise<Client | undefined> {
-    const [client] = await db.select().from(clients).where(eq(clients.id, id));
-    return client;
+    return clientStorage.getClient(id);
   }
   
   async getClientByEmail(email: string): Promise<Client | undefined> {
-    const [client] = await db.select().from(clients).where(eq(clients.email, email));
-    return client;
+    return clientStorage.getClientByEmail(email);
   }
 
   async createClient(insertClient: InsertClient): Promise<Client> {
-    const [client] = await db.insert(clients).values(insertClient).returning();
-    return client;
+    return clientStorage.createClient(insertClient);
   }
 
   async updateClient(id: number, data: Partial<InsertClient>): Promise<Client | undefined> {
-    const [updatedClient] = await db
-      .update(clients)
-      .set(data)
-      .where(eq(clients.id, id))
-      .returning();
-    return updatedClient;
+    return clientStorage.updateClient(id, data);
   }
 
   async deleteClient(id: number): Promise<void> {
-    await db.delete(clients).where(eq(clients.id, id));
+    return clientStorage.deleteClient(id);
   }
 
   async getRecentClients(limit: number): Promise<Client[]> {
-    return await db.select().from(clients).orderBy(desc(clients.id)).limit(limit);
+    return clientStorage.getRecentClients(limit);
   }
 
   // ===== APPLIANCE METHODS - Delegated to ApplianceStorage =====
@@ -2178,31 +2004,7 @@ export class DatabaseStorage implements IStorage {
 
   // Dobijanje klijenata poslovnog partnera (samo oni klijenti koji su povezani sa servisima tog partnera)
   async getClientsByPartner(partnerId: number): Promise<Client[]> {
-    try {
-      // Dobijam ID-jeve klijenata iz servisa ovog partnera
-      const partnerServices = await db
-        .select({ clientId: services.clientId })
-        .from(services)
-        .where(eq(services.businessPartnerId, partnerId));
-      
-      const clientIds = [...new Set(partnerServices.map(s => s.clientId).filter(id => id !== null))];
-      
-      if (clientIds.length === 0) {
-        return [];
-      }
-      
-      // Vraćam klijente povezane sa tim servisima
-      const partnersClients = await db
-        .select()
-        .from(clients)
-        .where(inArray(clients.id, clientIds))
-        .orderBy(clients.fullName);
-      
-      return partnersClients;
-    } catch (error) {
-      console.error('Greška pri dohvatanju klijenata za poslovnog partnera:', error);
-      return [];
-    }
+    return clientStorage.getClientsByPartner(partnerId);
   }
   
   async getServiceWithDetails(serviceId: number): Promise<any> {
