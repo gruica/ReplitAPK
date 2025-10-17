@@ -54,6 +54,7 @@ import { technicianStorage } from "./storage/technician.storage.js";
 import { systemStorage } from "./storage/system.storage.js";
 import { securityStorage } from "./storage/security.storage.js";
 import { aiStorage } from "./storage/ai.storage.js";
+import { notificationStorage } from "./storage/notification.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -5927,136 +5928,42 @@ export class DatabaseStorage implements IStorage {
     return aiStorage.deleteAiAnalysisResult(id);
   }
 
-  // Notification methods
+  // ===== NOTIFICATION METHODS - Delegated to NotificationStorage =====
+  
   async getAllNotifications(userId?: number): Promise<Notification[]> {
-    try {
-      if (userId) {
-        return await db.select()
-          .from(notifications)
-          .where(eq(notifications.userId, userId))
-          .orderBy(desc(notifications.createdAt));
-      } else {
-        return await db.select()
-          .from(notifications)
-          .orderBy(desc(notifications.createdAt));
-      }
-    } catch (error) {
-      console.error('Greška pri dohvatanju svih notifikacija:', error);
-      return [];
-    }
+    return notificationStorage.getAllNotifications(userId);
   }
 
   async getNotification(id: number): Promise<Notification | undefined> {
-    try {
-      const [notification] = await db.select()
-        .from(notifications)
-        .where(eq(notifications.id, id))
-        .limit(1);
-      return notification;
-    } catch (error) {
-      console.error('Greška pri dohvatanju notifikacije:', error);
-      return undefined;
-    }
+    return notificationStorage.getNotification(id);
   }
 
   async getNotificationsByUser(userId: number): Promise<Notification[]> {
-    try {
-      return await db.select()
-        .from(notifications)
-        .where(eq(notifications.userId, userId))
-        .orderBy(desc(notifications.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju notifikacija korisnika:', error);
-      return [];
-    }
+    return notificationStorage.getNotificationsByUser(userId);
   }
 
   async getUnreadNotifications(userId: number): Promise<Notification[]> {
-    try {
-      return await db.select()
-        .from(notifications)
-        .where(and(
-          eq(notifications.userId, userId),
-          eq(notifications.isRead, false)
-        ))
-        .orderBy(desc(notifications.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju nepročitanih notifikacija:', error);
-      return [];
-    }
+    return notificationStorage.getUnreadNotifications(userId);
   }
 
   async createNotification(notification: InsertNotification): Promise<Notification> {
-    try {
-      const [newNotification] = await db.insert(notifications)
-        .values({
-          ...notification,
-          createdAt: new Date(),
-          isRead: false
-        })
-        .returning();
-      return newNotification;
-    } catch (error) {
-      console.error('Greška pri kreiranju notifikacije:', error);
-      throw error;
-    }
+    return notificationStorage.createNotification(notification);
   }
 
   async updateNotification(id: number, notification: Partial<Notification>): Promise<Notification | undefined> {
-    try {
-      const [updatedNotification] = await db.update(notifications)
-        .set(notification)
-        .where(eq(notifications.id, id))
-        .returning();
-      return updatedNotification;
-    } catch (error) {
-      console.error('Greška pri ažuriranju notifikacije:', error);
-      return undefined;
-    }
+    return notificationStorage.updateNotification(id, notification);
   }
 
   async markNotificationAsRead(id: number): Promise<Notification | undefined> {
-    try {
-      const [updatedNotification] = await db.update(notifications)
-        .set({ 
-          isRead: true,
-          readAt: new Date()
-        })
-        .where(eq(notifications.id, id))
-        .returning();
-      return updatedNotification;
-    } catch (error) {
-      console.error('Greška pri označavanju notifikacije kao pročitane:', error);
-      return undefined;
-    }
+    return notificationStorage.markNotificationAsRead(id);
   }
 
   async markAllNotificationsAsRead(userId: number): Promise<void> {
-    try {
-      await db.update(notifications)
-        .set({ 
-          isRead: true,
-          readAt: new Date()
-        })
-        .where(and(
-          eq(notifications.userId, userId),
-          eq(notifications.isRead, false)
-        ));
-    } catch (error) {
-      console.error('Greška pri označavanju svih notifikacija kao pročitane:', error);
-      throw error;
-    }
+    return notificationStorage.markAllNotificationsAsRead(userId);
   }
 
   async deleteNotification(id: number): Promise<boolean> {
-    try {
-      const result = await db.delete(notifications)
-        .where(eq(notifications.id, id));
-      return true;
-    } catch (error) {
-      console.error('Greška pri brisanju notifikacije:', error);
-      return false;
-    }
+    return notificationStorage.deleteNotification(id);
   }
 
   // Dodaj nedostajuće metode za kompatibilnost
