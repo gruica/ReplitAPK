@@ -152,49 +152,34 @@ export function registerAdminRoutes(app: Express) {
 
   /**
    * @swagger
-   * /api/users/{id}:
+   * /api/users/unverified:
    *   get:
    *     tags: [Admin - Users]
-   *     summary: Get user by ID
-   *     description: Retrieve a specific user by their ID (Admin only)
+   *     summary: Get unverified users
+   *     description: Retrieve all users pending verification (Admin only)
    *     security:
    *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: integer
-   *         description: User ID
    *     responses:
    *       200:
-   *         description: User retrieved successfully
+   *         description: Unverified users retrieved successfully
    *       403:
    *         description: Admin access required
-   *       404:
-   *         description: User not found
    *       500:
    *         $ref: '#/components/responses/ServerError'
    */
-  // GET /api/users/:id - Get user by ID (Admin only)
-  app.get("/api/users/:id", jwtAuth, async (req, res) => {
+  // GET /api/users/unverified - Get unverified users (MUST be before /api/users/:id for correct routing)
+  app.get("/api/users/unverified", jwtAuth, async (req, res) => {
     try {
       const userRole = (req.user as any)?.role;
       if (userRole !== 'admin') {
-        return res.status(403).json({ error: "Nemate dozvolu za pristup korisniku" });
+        return res.status(403).json({ error: "Nemate dozvolu za pristup neverifikovanim korisnicima" });
       }
 
-      const userId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: "Korisnik nije pronađen" });
-      }
-
-      res.json(user);
+      const users = await storage.getUnverifiedUsers();
+      res.json(users);
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ error: "Greška pri dohvatanju korisnika" });
+      console.error("Error fetching unverified users:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju neverifikovanih korisnika" });
     }
   });
 
@@ -223,7 +208,7 @@ export function registerAdminRoutes(app: Express) {
    *       500:
    *         $ref: '#/components/responses/ServerError'
    */
-  // GET /api/users/role/:role - Get users by role (Admin only)
+  // GET /api/users/role/:role - Get users by role (MUST be before /api/users/:id for correct routing)
   app.get("/api/users/role/:role", jwtAuth, async (req, res) => {
     try {
       const userRole = (req.user as any)?.role;
@@ -237,39 +222,6 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching users by role:", error);
       res.status(500).json({ error: "Greška pri dohvatanju korisnika po ulozi" });
-    }
-  });
-
-  /**
-   * @swagger
-   * /api/users/unverified:
-   *   get:
-   *     tags: [Admin - Users]
-   *     summary: Get unverified users
-   *     description: Retrieve all users pending verification (Admin only)
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: Unverified users retrieved successfully
-   *       403:
-   *         description: Admin access required
-   *       500:
-   *         $ref: '#/components/responses/ServerError'
-   */
-  // GET /api/users/unverified - Get unverified users (Admin only)
-  app.get("/api/users/unverified", jwtAuth, async (req, res) => {
-    try {
-      const userRole = (req.user as any)?.role;
-      if (userRole !== 'admin') {
-        return res.status(403).json({ error: "Nemate dozvolu za pristup neverifikovanim korisnicima" });
-      }
-
-      const users = await storage.getUnverifiedUsers();
-      res.json(users);
-    } catch (error) {
-      console.error("Error fetching unverified users:", error);
-      res.status(500).json({ error: "Greška pri dohvatanju neverifikovanih korisnika" });
     }
   });
 
@@ -299,7 +251,7 @@ export function registerAdminRoutes(app: Express) {
    *       500:
    *         $ref: '#/components/responses/ServerError'
    */
-  // GET /api/users/:id/permissions - Get user permissions (Admin only)
+  // GET /api/users/:id/permissions - Get user permissions (MUST be before /api/users/:id for correct routing)
   app.get("/api/users/:id/permissions", jwtAuth, async (req, res) => {
     try {
       const userRole = (req.user as any)?.role;
@@ -318,6 +270,54 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching user permissions:", error);
       res.status(500).json({ error: "Greška pri dohvatanju permisija" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/users/{id}:
+   *   get:
+   *     tags: [Admin - Users]
+   *     summary: Get user by ID
+   *     description: Retrieve a specific user by their ID (Admin only)
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: User ID
+   *     responses:
+   *       200:
+   *         description: User retrieved successfully
+   *       403:
+   *         description: Admin access required
+   *       404:
+   *         description: User not found
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
+  // GET /api/users/:id - Get user by ID (MUST be LAST among user GET routes)
+  app.get("/api/users/:id", jwtAuth, async (req, res) => {
+    try {
+      const userRole = (req.user as any)?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ error: "Nemate dozvolu za pristup korisniku" });
+      }
+
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "Korisnik nije pronađen" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju korisnika" });
     }
   });
 
