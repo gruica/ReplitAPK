@@ -33,7 +33,7 @@ The frontend uses React.js with TypeScript, styled with Shadcn/UI (built on Radi
 ### Technical Implementations
 The frontend uses React.js, Wouter for routing, and React Query for server state management. The backend is built with Node.js, Express.js, TypeScript, and ES modules.
 **Core Architectural Patterns:**
-- **Modular Architecture**: Server routes are organized into 10 specialized modules. The database schema is refactored into 17 specialized modules (max 150 lines each), and the storage layer is modularized into 11 independent modules (Phases 1-4 complete: Service, Supplier, Spare Parts, Client - 104 methods total) for improved maintainability and scalability. Current storage.ts size: 4,006 lines (reduced from 5,007 lines via 4 phases delegation - total 1,001 lines removed, -20%).
+- **Modular Architecture**: Server routes are organized into 10 specialized modules. The database schema is refactored into 17 specialized modules (max 150 lines each), and the storage layer is modularized into 12 independent modules (Phases 1-5 complete: Service, Supplier, Spare Parts, Client, User & Authentication - 129 methods total) for improved maintainability and scalability. Current storage.ts size: 3,669 lines (reduced from 5,007 lines via 5 phases delegation - total 1,338 lines removed, -27%).
 - **Database**: PostgreSQL with Drizzle ORM, utilizing Neon serverless PostgreSQL for production, with strict separation between development and production environments.
 - **Authentication**: Hybrid system supporting Passport.js session-based and JWT token authentication with Scrypt for password hashing and PostgreSQL for session storage.
 - **API Design**: RESTful API with role-based access control and comprehensive Swagger/OpenAPI documentation. Versioning is structured with `/api/v1/*` endpoints.
@@ -57,6 +57,11 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
     - **Warranty**: Administrators can modify billing prices and add documentation for partner invoicing (ComPlus, Beko) with custom price overrides.
     - **Out-of-Warranty**: Separate billing reports with admin override capabilities, documentation, and service exclusion.
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
+
+## Recent Changes
+- **Phase 5 Complete (User & Authentication Module)**: Delegated 15 user and authentication methods to `server/storage/user.storage.ts` (333 lines). Added 4 new GET user endpoints with JWT auth (`/api/users/:id`, `/api/users/role/:role`, `/api/users/unverified`, `/api/users/:id/permissions`). Resolved duplicate endpoint conflict in `auth.ts`. storage.ts reduced from 4,018L to 3,669L (-349L, -8.7%). All endpoints tested and functional.
+- **Import Pattern Standardization**: All storage modules use `@shared/schema` imports for consistency and compilation safety.
+- **MemStorage Cleanup**: Removed 130L of unused MemStorage user methods (DatabaseStorage is active instance).
 
 ## External Dependencies
 - **Email Service**: Nodemailer
