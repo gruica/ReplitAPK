@@ -58,6 +58,7 @@ import { notificationStorage } from "./storage/notification.storage.js";
 import { applianceStorage } from "./storage/appliance.storage.js";
 import { maintenanceStorage } from "./storage/maintenance.storage.js";
 import { serviceStorage } from "./storage/service.storage.js";
+import { sparePartsStorage } from "./storage/spare-parts.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -2374,481 +2375,58 @@ export class DatabaseStorage implements IStorage {
     return serviceStorage.assignTechnicianToService(serviceId, technicianId);
   }
 
-  // Spare parts methods
-  // NOVI OPTIMIZOVANI WORKFLOW STORAGE METODE
+  // Spare parts methods - Delegated to SparePartsStorage
   async getTechnicianSparePartRequests(technicianId: number): Promise<SparePartOrder[]> {
-    const orders = await db.select().from(sparePartOrders).where(eq(sparePartOrders.technicianId, technicianId)).orderBy(desc(sparePartOrders.createdAt));
-    return orders;
+    return sparePartsStorage.getTechnicianSparePartRequests(technicianId);
   }
 
   async getSparePartsByStatus(status: string): Promise<SparePartOrder[]> {
-    const orders = await db.select().from(sparePartOrders).where(eq(sparePartOrders.status, status)).orderBy(desc(sparePartOrders.createdAt));
-    return orders;
+    return sparePartsStorage.getSparePartsByStatus(status);
   }
 
 
   async getAllSparePartOrders(): Promise<any[]> {
-    try {
-      console.log('🔍 [SPARE PARTS] Dohvatanje svih porudžbina sa povezanim podacima...');
-      
-      // RAW SQL pristup sa pravilnim snake_case mapiranjem
-      const result = await pool.query(`
-        SELECT id, part_name, part_number, quantity, status, urgency, created_at, updated_at,
-               service_id, technician_id, appliance_id, description, 
-               estimated_cost, actual_cost, supplier_name, admin_notes,
-               'technician' as requester_type,
-               technician_id as requester_user_id,
-               'Serviser' as requester_name
-        FROM spare_part_orders 
-        ORDER BY created_at DESC
-      `);
-      const orders = result.rows;
-      console.log(`📋 [SPARE PARTS] Pronađeno ${orders.length} porudžbina u bazi`);
-
-      // Zatim dodaj povezane podatke za svaki order
-      const enrichedOrders = await Promise.all(
-        orders.map(async (order) => {
-          let serviceData = undefined;
-          let technicianData = undefined;
-
-          console.log(`🔗 [SPARE PARTS] Obogaćujem porudžbinu #${order.id} (serviceId: ${order.service_id}, technicianId: ${order.technician_id})`);
-
-          // Dodaj service podatke ako postoji serviceId - ISPRAVKA: koristim order.service_id umesto order.serviceId
-          if (order.service_id) {
-            try {
-              const service = await this.getAdminServiceById(order.service_id);
-              if (service) {
-                serviceData = service;
-                console.log(`✅ [SPARE PARTS] Servis #${order.service_id} povezan sa klijentom: ${service.client?.fullName}`);
-              } else {
-                console.log(`⚠️ [SPARE PARTS] Servis #${order.service_id} nije pronađen u bazi`);
-              }
-            } catch (error) {
-              console.log(`❌ [SPARE PARTS] Greška pri dohvatanju servisa ${order.service_id}:`, error);
-            }
-          }
-
-          // Dodaj technician podatke ako postoji technicianId - ISPRAVKA: koristim order.technician_id
-          if (order.technician_id) {
-            try {
-              const technician = await this.getTechnician(order.technician_id);
-              if (technician) {
-                technicianData = {
-                  fullName: technician.fullName, // Frontend traži fullName
-                  name: technician.fullName,     // Backup za kompatibilnost  
-                  phone: technician.phone || '',
-                  email: technician.email || '',
-                  specialization: technician.specialization || ''
-                };
-                console.log(`✅ [SPARE PARTS] Tehniker #${order.technician_id} povezan: ${technicianData.name}`);
-              } else {
-                console.log(`⚠️ [SPARE PARTS] Tehniker #${order.technician_id} nije pronađen u bazi`);
-              }
-            } catch (error) {
-              console.log(`❌ [SPARE PARTS] Greška pri dohvatanju tehnikara ${order.technician_id}:`, error);
-            }
-          }
-
-          // Pravilno mapiranje snake_case iz baze u camelCase za frontend
-          const mappedOrder = {
-            id: order.id,
-            partName: order.part_name,
-            partNumber: order.part_number,
-            quantity: order.quantity,
-            description: order.description,
-            urgency: order.urgency,
-            status: order.status,
-            estimatedCost: order.estimated_cost,
-            actualCost: order.actual_cost,
-            supplierName: order.supplier_name,
-            adminNotes: order.admin_notes,
-            serviceId: order.service_id,
-            technicianId: order.technician_id,
-            applianceId: order.appliance_id,
-            createdAt: order.created_at,
-            updatedAt: order.updated_at,
-            service: serviceData,
-            technician: technicianData
-          };
-
-          return mappedOrder;
-        })
-      );
-
-      console.log(`🎯 [SPARE PARTS] Uspešno obogaćeno ${enrichedOrders.length} porudžbina`);
-      return enrichedOrders;
-    } catch (error) {
-      console.error('❌ [SPARE PARTS] Greška pri dohvatanju svih porudžbina rezervnih delova:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAllSparePartOrders();
   }
 
   async getSparePartOrder(id: number): Promise<SparePartOrder | undefined> {
-    try {
-      const [order] = await db
-        .select({
-          id: sparePartOrders.id,
-          serviceId: sparePartOrders.serviceId,
-          technicianId: sparePartOrders.technicianId,
-          applianceId: sparePartOrders.applianceId,
-          partName: sparePartOrders.partName,
-          partNumber: sparePartOrders.partNumber,
-          quantity: sparePartOrders.quantity,
-          description: sparePartOrders.description,
-          urgency: sparePartOrders.urgency,
-          status: sparePartOrders.status,
-          estimatedCost: sparePartOrders.estimatedCost,
-          actualCost: sparePartOrders.actualCost,
-          supplierName: sparePartOrders.supplierName,
-          orderDate: sparePartOrders.orderDate,
-          expectedDelivery: sparePartOrders.expectedDelivery,
-          receivedDate: sparePartOrders.receivedDate,
-          adminNotes: sparePartOrders.adminNotes,
-          createdAt: sparePartOrders.createdAt,
-          updatedAt: sparePartOrders.updatedAt
-        })
-        .from(sparePartOrders)
-        .where(eq(sparePartOrders.id, id));
-      return order;
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbine rezervnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.getSparePartOrder(id);
   }
 
   async getSparePartOrdersByService(serviceId: number): Promise<SparePartOrder[]> {
-    try {
-      const orders = await db
-        .select()
-        .from(sparePartOrders)
-        .where(eq(sparePartOrders.serviceId, serviceId))
-        .orderBy(desc(sparePartOrders.createdAt));
-      return orders;
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbina po servisu:', error);
-      throw error;
-    }
+    return sparePartsStorage.getSparePartOrdersByService(serviceId);
   }
 
   async getSparePartOrdersByTechnician(technicianId: number): Promise<SparePartOrder[]> {
-    try {
-      const orders = await db
-        .select()
-        .from(sparePartOrders)
-        .where(eq(sparePartOrders.technicianId, technicianId))
-        .orderBy(desc(sparePartOrders.createdAt));
-      return orders;
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbina po tehničaru:', error);
-      throw error;
-    }
+    return sparePartsStorage.getSparePartOrdersByTechnician(technicianId);
   }
 
   async getSparePartOrdersByStatus(status: SparePartStatus): Promise<any[]> {
-    try {
-      console.log(`🔍 [SPARE PARTS STATUS] Dohvatanje porudžbina sa statusom: ${status}`);
-      
-      // RAW SQL pristup sa postojećim kolonama - dodeli default vrednosti za requester polja
-      const result = await pool.query(`
-        SELECT id, part_name, part_number, quantity, status, urgency, created_at, updated_at, 
-               supplier_name, estimated_cost, actual_cost, admin_notes, description,
-               service_id, technician_id,
-               'technician' as requester_type,
-               technician_id as requester_user_id,
-               'Serviser' as requester_name
-        FROM spare_part_orders 
-        WHERE status = $1
-        ORDER BY created_at DESC
-      `, [status]);
-      
-      console.log(`📋 [SPARE PARTS STATUS] Pronađeno ${result.rows.length} porudžbina sa statusom ${status}`);
-
-      // Obogaćuj podatke sa povezanim servisima i tehničarima
-      const enrichedOrders = await Promise.all(
-        result.rows.map(async (row) => {
-          let serviceData = undefined;
-          let technicianData = undefined;
-
-          console.log(`🔗 [SPARE PARTS STATUS] Obogaćujem porudžbinu #${row.id} (serviceId: ${row.service_id}, technicianId: ${row.technician_id})`);
-
-          // Dodaj service podatke ako postoji serviceId
-          if (row.service_id) {
-            try {
-              const service = await this.getAdminServiceById(row.service_id);
-              if (service) {
-                serviceData = service;
-                console.log(`✅ [SPARE PARTS STATUS] Servis #${row.service_id} povezan sa klijentom: ${service.client?.fullName}`);
-              } else {
-                console.log(`⚠️ [SPARE PARTS STATUS] Servis #${row.service_id} nije pronađen u bazi`);
-              }
-            } catch (error) {
-              console.log(`❌ [SPARE PARTS STATUS] Greška pri dohvatanju servisa ${row.service_id}:`, error);
-            }
-          }
-
-          // Dodaj technician podatke ako postoji technicianId
-          if (row.technician_id) {
-            try {
-              const technician = await this.getTechnician(row.technician_id);
-              if (technician) {
-                technicianData = {
-                  fullName: technician.fullName, // Frontend traži fullName
-                  name: technician.fullName,     // Backup za kompatibilnost  
-                  phone: technician.phone || '',
-                  email: technician.email || '',
-                  specialization: technician.specialization || ''
-                };
-                console.log(`✅ [SPARE PARTS STATUS] Tehniker #${row.technician_id} povezan: ${technicianData.name}`);
-              } else {
-                console.log(`⚠️ [SPARE PARTS STATUS] Tehniker #${row.technician_id} nije pronađen u bazi`);
-              }
-            } catch (error) {
-              console.log(`❌ [SPARE PARTS STATUS] Greška pri dohvatanju tehnikara ${row.technician_id}:`, error);
-            }
-          }
-
-          // Mapuj snake_case iz baze u camelCase za frontend
-          return {
-            id: row.id,
-            partName: row.part_name,
-            partNumber: row.part_number,
-            quantity: row.quantity,
-            status: row.status,
-            urgency: row.urgency,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            supplierName: row.supplier_name,
-            estimatedCost: row.estimated_cost,
-            actualCost: row.actual_cost,
-            adminNotes: row.admin_notes,
-            description: row.description,
-            serviceId: row.service_id,
-            technicianId: row.technician_id,
-            requesterType: row.requester_type,
-            requesterUserId: row.requester_user_id,
-            requesterName: row.requester_name,
-            service: serviceData,
-            technician: technicianData
-          };
-        })
-      );
-
-      console.log(`🎯 [SPARE PARTS STATUS] Uspešno obogaćeno ${enrichedOrders.length} porudžbina sa statusom ${status}`);
-      return enrichedOrders;
-    } catch (error) {
-      console.error('❌ [SPARE PARTS STATUS] Greška pri dohvatanju porudžbina po statusu:', error);
-      throw error;
-    }
+    return sparePartsStorage.getSparePartOrdersByStatus(status);
   }
 
   async getPendingSparePartOrders(): Promise<SparePartOrder[]> {
-    try {
-      // Jednostavan pristup - koristi samo postojeće kolone, dodeli default vrednosti za requester
-      const result = await pool.query(`
-        SELECT id, part_name, part_number, quantity, status, urgency, created_at, updated_at,
-               supplier_name, estimated_cost, actual_cost, admin_notes, description,
-               service_id, technician_id,
-               'technician' as requester_type,
-               technician_id as requester_user_id,
-               'Serviser' as requester_name
-        FROM spare_part_orders 
-        WHERE status = 'pending'
-        ORDER BY created_at DESC
-      `);
-      
-      // Mapuj snake_case iz baze u camelCase za frontend
-      return result.rows.map(row => ({
-        id: row.id,
-        partName: row.part_name,
-        partNumber: row.part_number,
-        quantity: row.quantity,
-        status: row.status,
-        urgency: row.urgency,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        supplierName: row.supplier_name,
-        estimatedCost: row.estimated_cost,
-        actualCost: row.actual_cost,
-        adminNotes: row.admin_notes,
-        description: row.description,
-        serviceId: row.service_id,
-        technicianId: row.technician_id,
-        requesterType: row.requester_type,
-        requesterUserId: row.requester_user_id,
-        requesterName: row.requester_name
-      }));
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbina na čekanju:', error);
-      throw error;
-    }
+    return sparePartsStorage.getPendingSparePartOrders();
   }
 
   async getAllRequestsSparePartOrders(): Promise<any[]> {
-    try {
-      console.log('🔍 [ALL-REQUESTS] Dohvatanje svih zahteva (pending + requested) sa povezanim podacima...');
-      
-      // Dohvati sve zahteve: i "pending" i "requested" statuse
-      const result = await pool.query(`
-        SELECT id, part_name, part_number, quantity, status, urgency, created_at, updated_at,
-               supplier_name, estimated_cost, actual_cost, admin_notes, description,
-               service_id, technician_id,
-               'technician' as requester_type,
-               technician_id as requester_user_id,
-               'Serviser' as requester_name
-        FROM spare_part_orders 
-        WHERE status IN ('pending', 'requested')
-        ORDER BY created_at DESC
-      `);
-      
-      console.log(`📋 [ALL-REQUESTS] Pronađeno ${result.rows.length} zahteva (pending + requested)`);
-
-      // Obogaćuj podatke sa povezanim servisima i tehničarima
-      const enrichedOrders = await Promise.all(
-        result.rows.map(async (row) => {
-          let serviceData = undefined;
-          let technicianData = undefined;
-
-          console.log(`🔗 [ALL-REQUESTS] Obogaćujem porudžbinu #${row.id} (serviceId: ${row.service_id}, technicianId: ${row.technician_id})`);
-
-          // Dodaj service podatke ako postoji serviceId
-          if (row.service_id) {
-            try {
-              const service = await this.getAdminServiceById(row.service_id);
-              if (service) {
-                serviceData = service;
-                console.log(`✅ [ALL-REQUESTS] Servis #${row.service_id} povezan sa klijentom: ${service.client?.fullName}`);
-              } else {
-                console.log(`⚠️ [ALL-REQUESTS] Servis #${row.service_id} nije pronađen u bazi`);
-              }
-            } catch (error) {
-              console.log(`❌ [ALL-REQUESTS] Greška pri dohvatanju servisa ${row.service_id}:`, error);
-            }
-          }
-
-          // Dodaj technician podatke ako postoji technicianId
-          if (row.technician_id) {
-            try {
-              const technician = await this.getTechnician(row.technician_id);
-              if (technician) {
-                technicianData = {
-                  fullName: technician.fullName, // Frontend traži fullName
-                  name: technician.fullName,     // Backup za kompatibilnost  
-                  phone: technician.phone || '',
-                  email: technician.email || '',
-                  specialization: technician.specialization || ''
-                };
-                console.log(`✅ [ALL-REQUESTS] Tehniker #${row.technician_id} povezan: ${technicianData.name}`);
-              } else {
-                console.log(`⚠️ [ALL-REQUESTS] Tehniker #${row.technician_id} nije pronađen u bazi`);
-              }
-            } catch (error) {
-              console.log(`❌ [ALL-REQUESTS] Greška pri dohvatanju tehnikara ${row.technician_id}:`, error);
-            }
-          }
-
-          // Mapuj snake_case iz baze u camelCase za frontend
-          return {
-            id: row.id,
-            partName: row.part_name,
-            partNumber: row.part_number,
-            quantity: row.quantity,
-            status: row.status,
-            urgency: row.urgency,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            supplierName: row.supplier_name,
-            estimatedCost: row.estimated_cost,
-            actualCost: row.actual_cost,
-            adminNotes: row.admin_notes,
-            description: row.description,
-            serviceId: row.service_id,
-            technicianId: row.technician_id,
-            requesterType: row.requester_type,
-            requesterUserId: row.requester_user_id,
-            requesterName: row.requester_name,
-            service: serviceData,
-            technician: technicianData
-          };
-        })
-      );
-
-      console.log(`🎯 [ALL-REQUESTS] Uspešno obogaćeno ${enrichedOrders.length} zahteva`);
-      return enrichedOrders;
-    } catch (error) {
-      console.error('❌ [ALL-REQUESTS] Greška pri dohvatanju svih zahteva:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAllRequestsSparePartOrders();
   }
 
   async createSparePartOrder(order: InsertSparePartOrder): Promise<SparePartOrder> {
-    try {
-      const [newOrder] = await db
-        .insert(sparePartOrders)
-        .values(order)
-        .returning();
-      return newOrder;
-    } catch (error) {
-      console.error('Greška pri kreiranju porudžbine rezervnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.createSparePartOrder(order);
   }
 
   async updateSparePartOrder(id: number, order: Partial<SparePartOrder>): Promise<SparePartOrder | undefined> {
-    try {
-      const [updatedOrder] = await db
-        .update(sparePartOrders)
-        .set(order)
-        .where(eq(sparePartOrders.id, id))
-        .returning();
-      return updatedOrder;
-    } catch (error) {
-      console.error('Greška pri ažuriranju porudžbine rezervnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.updateSparePartOrder(id, order);
   }
 
   async updateSparePartOrderStatus(id: number, updates: Partial<SparePartOrder>): Promise<SparePartOrder | undefined> {
-    try {
-      // Dodaj updatedAt timestamp
-      const updateData = {
-        ...updates,
-        updatedAt: new Date()
-      };
-
-      const [updatedOrder] = await db
-        .update(sparePartOrders)
-        .set(updateData)
-        .where(eq(sparePartOrders.id, id))
-        .returning();
-      
-      if (!updatedOrder) {
-        console.warn(`❌ [WORKFLOW] Rezervni deo sa ID ${id} nije pronađen za ažuriranje`);
-        return undefined;
-      }
-
-      console.log(`📦 [WORKFLOW] Uspešno ažuriran rezervni deo ID: ${id}, novi status: ${updates.status}`);
-      return updatedOrder;
-    } catch (error) {
-      console.error('❌ [WORKFLOW] Greška pri ažuriranju statusa rezervnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.updateSparePartOrderStatus(id, updates);
   }
 
   async deleteSparePartOrder(id: number): Promise<boolean> {
-    try {
-      // First delete any related notifications using RAW SQL to avoid schema issues
-      await pool.query('DELETE FROM notifications WHERE related_spare_part_id = $1', [id]);
-      
-      // Then delete the spare part order
-      const result = await db
-        .delete(sparePartOrders)
-        .where(eq(sparePartOrders.id, id))
-        .returning();
-      return result.length > 0;
-    } catch (error) {
-      console.error('Greška pri brisanju porudžbine rezervnog dela:', error);
-      return false;
-    }
+    return sparePartsStorage.deleteSparePartOrder(id);
   }
 
   async markSparePartAsReceived(orderId: number, adminId: number, receivedData: { actualCost?: string; location?: string; notes?: string }): Promise<{ order: SparePartOrder; availablePart: AvailablePart } | undefined> {
@@ -3618,19 +3196,8 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Method for getting spare parts orders by service ID for business partner details
   async getSparePartsByService(serviceId: number): Promise<SparePartOrder[]> {
-    try {
-      const spareParts = await db
-        .select()
-        .from(sparePartOrders)
-        .where(eq(sparePartOrders.serviceId, serviceId))
-        .orderBy(desc(sparePartOrders.createdAt));
-      return spareParts;
-    } catch (error) {
-      console.error('Greška pri dohvatanju rezervnih delova za servis:', error);
-      return [];
-    }
+    return sparePartsStorage.getSparePartsByService(serviceId);
   }
 
   // Parts Activity Log methods
@@ -5004,3 +4571,6 @@ export class DatabaseStorage implements IStorage {
 
 // Koristimo PostgreSQL implementaciju umesto MemStorage
 export const storage = new DatabaseStorage();
+
+// Set circular dependency for sparePartsStorage (needs access to storage methods)
+sparePartsStorage.setStorageInstance(storage);
