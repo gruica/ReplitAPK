@@ -884,44 +884,6 @@ export class MemStorage implements IStorage {
     return history;
   }
   
-  // Additional user management methods
-  async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
-  }
-
-  async getUsersByRole(role: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => user.role === role);
-  }
-  
-  async updateUser(id: number, updateUserData: Partial<User>): Promise<User | undefined> {
-    const existingUser = this.users.get(id);
-    if (!existingUser) return undefined;
-    
-    // If the password is provided and not already hashed, hash it
-    let password = updateUserData.password || existingUser.password;
-    if (updateUserData.password && !updateUserData.password.includes('.')) {
-      password = await this.hashPassword(updateUserData.password);
-    }
-    
-    const updatedUser: User = {
-      ...existingUser,
-      ...updateUserData,
-      password,
-      id
-    };
-    
-    this.users.set(id, updatedUser);
-    return updatedUser;
-  }
-  
-  async deleteUser(id: number): Promise<boolean> {
-    // Check if user exists
-    if (!this.users.has(id)) return false;
-    
-    // Delete the user
-    return this.users.delete(id);
-  }
-  
   // Maintenance Schedule methods
   private maintenanceSchedules = new Map<number, MaintenanceSchedule>();
   private maintenanceScheduleId = 1;
