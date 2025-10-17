@@ -49,6 +49,7 @@ import {
   UserPermission, InsertUserPermission, userPermissions,
   DeletedService, InsertDeletedService, deletedServices
 } from "@shared/schema";
+import { supplierStorage } from "./storage/supplier.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -5356,241 +5357,89 @@ export class DatabaseStorage implements IStorage {
     return service.technicianId;
   }
 
-  // ===== SUPPLIER METHODS =====
+  // ===== SUPPLIER METHODS ===== (Delegated to supplierStorage module)
   
   async getAllSuppliers(): Promise<Supplier[]> {
-    try {
-      return await db.select().from(suppliers).orderBy(suppliers.name);
-    } catch (error) {
-      console.error('Greška pri dohvatanju dobavljača:', error);
-      return [];
-    }
+    return supplierStorage.getAllSuppliers();
   }
 
   async getSupplier(id: number): Promise<Supplier | undefined> {
-    try {
-      const [supplier] = await db.select().from(suppliers).where(eq(suppliers.id, id));
-      return supplier;
-    } catch (error) {
-      console.error('Greška pri dohvatanju dobavljača:', error);
-      return undefined;
-    }
+    return supplierStorage.getSupplier(id);
   }
 
   async getSupplierByEmail(email: string): Promise<Supplier | undefined> {
-    try {
-      const [supplier] = await db.select().from(suppliers).where(eq(suppliers.email, email));
-      return supplier;
-    } catch (error) {
-      console.error('Greška pri dohvatanju dobavljača po email-u:', error);
-      return undefined;
-    }
+    return supplierStorage.getSupplierByEmail(email);
   }
 
   async getActiveSuppliers(): Promise<Supplier[]> {
-    try {
-      return await db.select()
-        .from(suppliers)
-        .where(eq(suppliers.isActive, true))
-        .orderBy(desc(suppliers.priority), suppliers.name);
-    } catch (error) {
-      console.error('Greška pri dohvatanju aktivnih dobavljača:', error);
-      return [];
-    }
+    return supplierStorage.getActiveSuppliers();
   }
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
-    try {
-      const [newSupplier] = await db.insert(suppliers).values(supplier).returning();
-      return newSupplier;
-    } catch (error) {
-      console.error('Greška pri kreiranju dobavljača:', error);
-      throw error;
-    }
+    return supplierStorage.createSupplier(supplier);
   }
 
   async updateSupplier(id: number, supplier: Partial<Supplier>): Promise<Supplier | undefined> {
-    try {
-      const [updatedSupplier] = await db.update(suppliers)
-        .set({ ...supplier, updatedAt: new Date() })
-        .where(eq(suppliers.id, id))
-        .returning();
-      return updatedSupplier;
-    } catch (error) {
-      console.error('Greška pri ažuriranju dobavljača:', error);
-      return undefined;
-    }
+    return supplierStorage.updateSupplier(id, supplier);
   }
 
   async deleteSupplier(id: number): Promise<boolean> {
-    try {
-      await db.delete(suppliers).where(eq(suppliers.id, id));
-      return true;
-    } catch (error) {
-      console.error('Greška pri brisanju dobavljača:', error);
-      return false;
-    }
+    return supplierStorage.deleteSupplier(id);
   }
 
-  // ===== SUPPLIER ORDER METHODS =====
+  // ===== SUPPLIER ORDER METHODS ===== (Delegated to supplierStorage module)
 
   async getAllSupplierOrders(): Promise<SupplierOrder[]> {
-    try {
-      return await db.select().from(supplierOrders).orderBy(desc(supplierOrders.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbina dobavljača:', error);
-      return [];
-    }
+    return supplierStorage.getAllSupplierOrders();
   }
 
   async getSupplierOrder(id: number): Promise<SupplierOrder | undefined> {
-    try {
-      const [order] = await db.select().from(supplierOrders).where(eq(supplierOrders.id, id));
-      return order;
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbine dobavljača:', error);
-      return undefined;
-    }
+    return supplierStorage.getSupplierOrder(id);
   }
 
   async getSupplierOrdersBySupplier(supplierId: number): Promise<SupplierOrder[]> {
-    try {
-      return await db.select()
-        .from(supplierOrders)
-        .where(eq(supplierOrders.supplierId, supplierId))
-        .orderBy(desc(supplierOrders.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbina za dobavljača:', error);
-      return [];
-    }
+    return supplierStorage.getSupplierOrdersBySupplier(supplierId);
   }
 
   async getSupplierOrdersBySparePartOrder(sparePartOrderId: number): Promise<SupplierOrder[]> {
-    try {
-      return await db.select()
-        .from(supplierOrders)
-        .where(eq(supplierOrders.sparePartOrderId, sparePartOrderId))
-        .orderBy(desc(supplierOrders.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju porudžbina za rezervni deo:', error);
-      return [];
-    }
+    return supplierStorage.getSupplierOrdersBySparePartOrder(sparePartOrderId);
   }
 
   async getActiveSupplierOrders(): Promise<SupplierOrder[]> {
-    try {
-      return await db.select()
-        .from(supplierOrders)
-        .where(or(
-          eq(supplierOrders.status, 'pending'),
-          eq(supplierOrders.status, 'separated'),
-          eq(supplierOrders.status, 'sent')
-        ))
-        .orderBy(desc(supplierOrders.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju aktivnih porudžbina:', error);
-      return [];
-    }
+    return supplierStorage.getActiveSupplierOrders();
   }
 
   async getPendingSupplierOrdersCount(): Promise<number> {
-    try {
-      const [result] = await db.select({ count: count() })
-        .from(supplierOrders)
-        .where(eq(supplierOrders.status, 'pending'));
-      return result.count;
-    } catch (error) {
-      console.error('Greška pri brojanju porudžbina na čekanju:', error);
-      return 0;
-    }
+    return supplierStorage.getPendingSupplierOrdersCount();
   }
 
   async createSupplierOrder(order: InsertSupplierOrder): Promise<SupplierOrder> {
-    try {
-      const [newOrder] = await db.insert(supplierOrders).values(order).returning();
-      return newOrder;
-    } catch (error) {
-      console.error('Greška pri kreiranju porudžbine dobavljača:', error);
-      throw error;
-    }
+    return supplierStorage.createSupplierOrder(order);
   }
 
   async updateSupplierOrder(id: number, order: Partial<SupplierOrder>): Promise<SupplierOrder | undefined> {
-    try {
-      const [updatedOrder] = await db.update(supplierOrders)
-        .set({ ...order, updatedAt: new Date() })
-        .where(eq(supplierOrders.id, id))
-        .returning();
-      return updatedOrder;
-    } catch (error) {
-      console.error('Greška pri ažuriranju porudžbine dobavljača:', error);
-      return undefined;
-    }
+    return supplierStorage.updateSupplierOrder(id, order);
   }
 
   async deleteSupplierOrder(id: number): Promise<boolean> {
-    try {
-      await db.delete(supplierOrders).where(eq(supplierOrders.id, id));
-      return true;
-    } catch (error) {
-      console.error('Greška pri brisanju porudžbine dobavljača:', error);
-      return false;
-    }
+    return supplierStorage.deleteSupplierOrder(id);
   }
 
-  // ===== SUPPLIER PORTAL METHODS =====
+  // ===== SUPPLIER PORTAL METHODS ===== (Delegated to supplierStorage module)
+  
   async getSupplierTasks(supplierId: number): Promise<SupplierOrder[]> {
-    try {
-      const tasks = await db
-        .select()
-        .from(supplierOrders)
-        .where(eq(supplierOrders.supplierId, supplierId))
-        .orderBy(desc(supplierOrders.createdAt));
-      return tasks;
-    } catch (error) {
-      console.error('Greška pri dohvatanju supplier zadataka:', error);
-      throw error;
-    }
+    return supplierStorage.getSupplierTasks(supplierId);
   }
 
   async getSupplierTask(taskId: number): Promise<SupplierOrder | undefined> {
-    try {
-      const [task] = await db
-        .select()
-        .from(supplierOrders)
-        .where(eq(supplierOrders.id, taskId));
-      return task;
-    } catch (error) {
-      console.error('Greška pri dohvatanju supplier zadatka:', error);
-      throw error;
-    }
+    return supplierStorage.getSupplierTask(taskId);
   }
 
   async updateSupplierTaskStatus(
     taskId: number, 
     status: 'pending' | 'separated' | 'sent' | 'delivered' | 'cancelled'
   ): Promise<SupplierOrder> {
-    try {
-      const updateData: any = { status };
-      
-      // Set appropriate timestamp based on status
-      if (status === 'separated') {
-        updateData.confirmedAt = new Date();
-      } else if (status === 'sent') {
-        updateData.sentAt = new Date();
-      }
-
-      const [updated] = await db
-        .update(supplierOrders)
-        .set(updateData)
-        .where(eq(supplierOrders.id, taskId))
-        .returning();
-      
-      return updated;
-    } catch (error) {
-      console.error('Greška pri ažuriranju supplier task statusa:', error);
-      throw error;
-    }
+    return supplierStorage.updateSupplierTaskStatus(taskId, status);
   }
 
   // ===== PARTS CATALOG METHODS =====
