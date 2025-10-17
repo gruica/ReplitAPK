@@ -55,6 +55,24 @@ export const notifications = pgTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 
+export const insertNotificationSchema = createInsertSchema(notifications).pick({
+  userId: true,
+  type: true,
+  title: true,
+  message: true,
+  relatedServiceId: true,
+  relatedSparePartId: true,
+  relatedUserId: true,
+  priority: true,
+}).extend({
+  userId: z.number().int().positive("ID korisnika mora biti pozitivan broj"),
+  type: z.string().min(1, "Tip notifikacije je obavezan"),
+  title: z.string().min(1, "Naslov je obavezan"),
+  message: z.string().min(1, "Poruka je obavezna"),
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
 export const conversationMessages = pgTable("conversation_messages", {
   id: serial("id").primaryKey(),
   serviceId: integer("service_id").notNull().references(() => services.id),
