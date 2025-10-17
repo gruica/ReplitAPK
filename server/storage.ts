@@ -174,6 +174,10 @@ export interface IStorage {
   getServiceWithDetails(serviceId: number): Promise<any>;
   getServiceStatusHistory(serviceId: number): Promise<any[]>;
   
+  // Service statistics and export methods
+  getServiceStats(): Promise<any>;
+  exportServicesToCSV(): Promise<string>;
+  
   // Request tracking methods (rate limiting)
   getRequestCount(userId: number, requestType: string, windowStart: Date): Promise<number>;
   addRequestTracking(tracking: InsertRequestTracking): Promise<RequestTracking>;
@@ -2013,6 +2017,14 @@ export class DatabaseStorage implements IStorage {
   
   async getServiceStatusHistory(serviceId: number): Promise<any[]> {
     return serviceStorage.getServiceStatusHistory(serviceId);
+  }
+
+  async getServiceStats(): Promise<any> {
+    return serviceStorage.getServiceStats();
+  }
+
+  async exportServicesToCSV(): Promise<string> {
+    return serviceStorage.exportServicesToCSV();
   }
 
   // ===== MAINTENANCE METHODS - Delegated to MaintenanceStorage =====

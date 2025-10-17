@@ -157,6 +157,60 @@ export function registerServiceRoutes(app: Express) {
   
   /**
    * @swagger
+   * /api/services/stats:
+   *   get:
+   *     tags: [Services]
+   *     summary: Get service statistics
+   *     description: Get statistics about services by status
+   *     responses:
+   *       200:
+   *         description: Statistics retrieved successfully
+   *       500:
+   *         description: Server error
+   */
+  // GET /api/services/stats - Get service statistics
+  app.get("/api/services/stats", async (req, res) => {
+    try {
+      const stats = await storage.getServiceStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("[GET /api/services/stats] Greška:", error);
+      res.status(500).json({ error: "Greška pri dobijanju statistike servisa" });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/services/export-csv:
+   *   get:
+   *     tags: [Services]
+   *     summary: Export services to CSV
+   *     description: Export all services to CSV format for download
+   *     responses:
+   *       200:
+   *         description: CSV file generated successfully
+   *         content:
+   *           text/csv:
+   *             schema:
+   *               type: string
+   *       500:
+   *         description: Server error
+   */
+  // GET /api/services/export-csv - Export services to CSV
+  app.get("/api/services/export-csv", async (req, res) => {
+    try {
+      const csv = await storage.exportServicesToCSV();
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="servisi-export.csv"');
+      res.send(csv);
+    } catch (error) {
+      console.error("[GET /api/services/export-csv] Greška:", error);
+      res.status(500).json({ error: "Greška pri exportu servisa" });
+    }
+  });
+  
+  /**
+   * @swagger
    * /api/services/{id}:
    *   get:
    *     tags: [Services]
@@ -182,6 +236,8 @@ export function registerServiceRoutes(app: Express) {
    *         $ref: '#/components/responses/ServerError'
    */
   // GET /api/services/:id - Get single service
+  // NAPOMENA: Ova ruta MORA biti posle specifičnih ruta (/stats, /export-csv)
+  // jer Express obrađuje rute po redosledu registracije
   app.get("/api/services/:id", async (req, res) => {
     try {
       const serviceId = parseInt(req.params.id);
