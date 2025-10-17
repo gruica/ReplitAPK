@@ -33,7 +33,7 @@ The frontend uses React.js with TypeScript, styled with Shadcn/UI (built on Radi
 ### Technical Implementations
 The frontend uses React.js, Wouter for routing, and React Query for server state management. The backend is built with Node.js, Express.js, TypeScript, and ES modules.
 **Core Architectural Patterns:**
-- **Modular Architecture**: Server routes are organized into 10 specialized modules. The database schema is refactored into 17 specialized modules (max 150 lines each), and the storage layer is modularized into 10 independent modules (Phase 3a+3b complete: Spare Parts with 34 methods) for improved maintainability and scalability. Current storage.ts size: 4,204 lines (reduced from 5,007 lines via Phase 3a+3b delegation - total 803 lines removed, -16%).
+- **Modular Architecture**: Server routes are organized into 10 specialized modules. The database schema is refactored into 17 specialized modules (max 150 lines each), and the storage layer is modularized into 11 independent modules (Phases 1-4 complete: Service, Supplier, Spare Parts, Client - 104 methods total) for improved maintainability and scalability. Current storage.ts size: 4,006 lines (reduced from 5,007 lines via 4 phases delegation - total 1,001 lines removed, -20%).
 - **Database**: PostgreSQL with Drizzle ORM, utilizing Neon serverless PostgreSQL for production, with strict separation between development and production environments.
 - **Authentication**: Hybrid system supporting Passport.js session-based and JWT token authentication with Scrypt for password hashing and PostgreSQL for session storage.
 - **API Design**: RESTful API with role-based access control and comprehensive Swagger/OpenAPI documentation. Versioning is structured with `/api/v1/*` endpoints.
