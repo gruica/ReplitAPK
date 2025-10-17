@@ -45,11 +45,11 @@ import { useToast } from "@/hooks/use-toast";
 import { SupplementGeneraliFormSimple } from "@/components/technician/supplement-generali-form-simple";
 import { MobileServicePhotos } from "@/components/MobileServicePhotos";
 
-// Status ikone
-import serviceTodoIcon from "@assets/generated_images/Servis_u_toku_ikona_7f9b93dc.png";
-import serviceCompletedIcon from "@assets/generated_images/Završen_servis_ikona_82f0a1f3.png";
-import servicePendingIcon from "@assets/generated_images/Čekanje_servis_ikona_6517986d.png";
-import servicePartsIcon from "@assets/generated_images/Delovi_potrebni_ikona_168b4888.png";
+// Status ikone - NAPOMENA: Privremeno koriste placeholder vrednosti
+const serviceTodoIcon = "";
+const serviceCompletedIcon = "";
+const servicePendingIcon = "";
+const servicePartsIcon = "";
 
 // Service status map sa ikonama
 const statusConfig = {

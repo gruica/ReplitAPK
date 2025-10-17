@@ -1,44 +1,45 @@
 // Centralni sistem grafika za Frigo Sistem aplikaciju
 // Sve generirane grafike organizovane po ulogama i kategorijama
 
+// NAPOMENA: Privremeno koriste placeholder vrednosti dok se slike ne dodaju
 // Status indikatori (već integrisani u mobile app)
-import serviceTodoIcon from "@assets/generated_images/Servis_u_toku_ikona_7f9b93dc.png";
-import serviceCompletedIcon from "@assets/generated_images/Završen_servis_ikona_82f0a1f3.png";
-import servicePendingIcon from "@assets/generated_images/Čekanje_servis_ikona_6517986d.png";
-import servicePartsIcon from "@assets/generated_images/Delovi_potrebni_ikona_168b4888.png";
+const serviceTodoIcon = "";
+const serviceCompletedIcon = "";
+const servicePendingIcon = "";
+const servicePartsIcon = "";
 
 // Admin grafike
-import adminDashboardIcon from "@assets/generated_images/Admin_dashboard_ikona_9a17cdd8.png";
-import analyticsIcon from "@assets/generated_images/Analytics_ikona_672fc743.png";
-import serviceManagementIcon from "@assets/generated_images/Service_management_ikona_45f5d002.png";
+const adminDashboardIcon = "";
+const analyticsIcon = "";
+const serviceManagementIcon = "";
 
 // Technician grafike
-import fridgeServiceIcon from "@assets/generated_images/Frižider_servis_ikona_5321aedb.png";
-import washingMachineServiceIcon from "@assets/generated_images/Veš_mašina_servis_ikona_535d6e05.png";
-import dishwasherServiceIcon from "@assets/generated_images/Sudopera_servis_ikona_4debec4c.png";
-import stoveServiceIcon from "@assets/generated_images/Šporet_servis_ikona_e33078bf.png";
-import mobileTechnicianIcon from "@assets/generated_images/Mobilni_tehničar_ikona_364ad5cd.png";
+const fridgeServiceIcon = "";
+const washingMachineServiceIcon = "";
+const dishwasherServiceIcon = "";
+const stoveServiceIcon = "";
+const mobileTechnicianIcon = "";
 
 // Business i Customer grafike
-import businessPartnerIcon from "@assets/generated_images/Business_partner_ikona_95818f55.png";
-import customerIcon from "@assets/generated_images/Customer_ikona_7346fc7b.png";
-import serviceTrackingIcon from "@assets/generated_images/Service_tracking_ikona_e4e32d91.png";
-import communicationIcon from "@assets/generated_images/Komunikacija_ikona_87ebc7ca.png";
+const businessPartnerIcon = "";
+const customerIcon = "";
+const serviceTrackingIcon = "";
+const communicationIcon = "";
 
 // Brand grafike
-import bekoIcon from "@assets/generated_images/Beko_brand_ikona_c310bb31.png";
-import candyIcon from "@assets/generated_images/Candy_brand_ikona_7fa20f84.png";
+const bekoIcon = "";
+const candyIcon = "";
 
 // Dashboard hero grafike
-import dashboardHeroGraphic from "@assets/generated_images/Dashboard_hero_grafika_92fc5be5.png";
+const dashboardHeroGraphic = "";
 
 // Additional system icons
-import warehouseIcon from "@assets/generated_images/Warehouse_storage_icon_03c320d6.png";
-import partsCatalogIcon from "@assets/generated_images/Parts_catalog_icon_68b7bf44.png";
-import webScrapingIcon from "@assets/generated_images/Web_scraping_icon_273603b7.png";
-import userManagementIcon from "@assets/generated_images/User_management_icon_ad4e61f4.png";
-import bulkSMSIcon from "@assets/generated_images/Bulk_SMS_icon_193f0432.png";
-import aiPredictiveIcon from "@assets/generated_images/AI_prediktivna_analitika_ikona_7634794c.png";
+const warehouseIcon = "";
+const partsCatalogIcon = "";
+const webScrapingIcon = "";
+const userManagementIcon = "";
+const bulkSMSIcon = "";
+const aiPredictiveIcon = "";
 
 // App Icons organizovane po kategorijama
 export const AppIcons = {
