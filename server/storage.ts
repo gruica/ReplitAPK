@@ -57,6 +57,7 @@ import { aiStorage } from "./storage/ai.storage.js";
 import { notificationStorage } from "./storage/notification.storage.js";
 import { applianceStorage } from "./storage/appliance.storage.js";
 import { maintenanceStorage } from "./storage/maintenance.storage.js";
+import { serviceStorage } from "./storage/service.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -2125,142 +2126,26 @@ export class DatabaseStorage implements IStorage {
     return applianceStorage.getApplianceStats();
   }
 
-  // Service methods
+  // ===== SERVICE METHODS - Delegated to ServiceStorage =====
+  
   async getAllServices(limit?: number): Promise<ServiceWithDetails[]> {
-    try {
-      console.log('Dohvatanje svih servisa...');
-      
-      // Koristimo innerJoin za validaciju veza između tabela
-      // Ovo će osigurati da servisi imaju validne reference na klijente i uređaje
-      let query = db.select({
-        id: services.id,
-        clientId: services.clientId,
-        applianceId: services.applianceId,
-        technicianId: services.technicianId,
-        description: services.description,
-        status: services.status,
-        warrantyStatus: services.warrantyStatus,
-        createdAt: services.createdAt,
-        scheduledDate: services.scheduledDate,
-        completedDate: services.completedDate,
-        technicianNotes: services.technicianNotes,
-        cost: services.cost,
-        usedParts: services.usedParts,
-        machineNotes: services.machineNotes,
-        isCompletelyFixed: services.isCompletelyFixed,
-        businessPartnerId: services.businessPartnerId,
-        partnerCompanyName: services.partnerCompanyName,
-        // Dodajemo podatke o klijentu za prikaz u tabeli
-        clientName: clients.fullName,
-        clientCity: clients.city,
-        clientAddress: clients.address,
-        clientPhone: clients.phone,
-        clientEmail: clients.email,
-        // Dodajemo podatke o uređaju za prikaz
-        applianceName: appliances.model,
-        applianceSerialNumber: appliances.serialNumber,
-        // Dodajemo kategoriju i proizvođača za Complus filtriranje
-        categoryName: applianceCategories.name,
-        manufacturerName: manufacturers.name,
-        // Dodajemo ime servisera za prikaz
-        technicianName: technicians.fullName
-      })
-      .from(services)
-      .innerJoin(clients, eq(services.clientId, clients.id))
-      .innerJoin(appliances, eq(services.applianceId, appliances.id))
-      .leftJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
-      .leftJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
-      .leftJoin(technicians, eq(services.technicianId, technicians.id))
-      .orderBy(desc(services.createdAt));
-      
-      // Dodamo limit ako je specificiran za optimizaciju
-      if (limit && limit > 0) {
-        query = query.limit(limit) as any;
-      }
-      
-      const result = await query;
-      
-      // Vodimo zapisnik o ključevima prvog rezultata za debug
-      if (result.length > 0) {
-        console.log("Ključevi prvog servisa:", Object.keys(result[0]));
-        if (result[0].createdAt) {
-          console.log("Prvi servis createdAt:", new Date(result[0].createdAt).toISOString().split('T')[0]);
-        }
-      }
-      
-      console.log(`Uspješno dohvaćeno ${result.length} servisa sa validnim referencama`);
-      
-      // Transformacija naziva iz snake_case u camelCase ako je potrebno
-      const transformedResult = result.map(service => {
-        const transformed = { ...service };
-        
-        // Ako je slučajno createdAt transformirano iz created_at nazad u snake_case od strane orm-a
-        if (!transformed.createdAt && (transformed as any).created_at) {
-          transformed.createdAt = (transformed as any).created_at;
-        }
-        
-        // Ako je slučajno completedDate transformirano iz completed_date nazad u snake_case od strane orm-a
-        if (!transformed.completedDate && (transformed as any).completed_date) {
-          transformed.completedDate = (transformed as any).completed_date;
-        }
-        
-        return transformed;
-      });
-      
-      return transformedResult;
-    } catch (error) {
-      console.error("Greška pri dobijanju svih servisa sa validacijom veza:", error);
-      // Fallback na osnovni upit bez validacije
-      console.log("Korištenje fallback upita za dohvatanje servisa");
-      return await db.select().from(services);
-    }
+    return serviceStorage.getAllServices(limit);
   }
 
   async getService(id: number): Promise<Service | undefined> {
-    console.log(`[storage.getService] Pozvan za ID: ${id}, tip: ${typeof id}`);
-    
-    // Test raw SQL
-    try {
-      const rawResult = await db.execute(sql`SELECT * FROM services WHERE id = ${id}`);
-      console.log(`[storage.getService] RAW SQL rezultat:`, rawResult.rows?.length || 0, 'redova');
-    } catch (e) {
-      console.error(`[storage.getService] RAW SQL greška:`, e);
-    }
-    
-    // Drizzle query
-    const result = await db.select()
-      .from(services)
-      .where(eq(services.id, id));
-    
-    console.log(`[storage.getService] Drizzle rezultat - pronađeno ${result.length} rezultata`);
-    if (result.length > 0) {
-      console.log(`[storage.getService] Prvi rezultat ID:`, result[0].id);
-    }
-    
-    const service = result[0];
-    console.log(`[storage.getService] Vraćam:`, service ? `Servis ID ${service.id}` : 'undefined');
-    return service;
+    return serviceStorage.getService(id);
   }
 
   async getServicesByClient(clientId: number): Promise<Service[]> {
-    return await db.select().from(services).where(eq(services.clientId, clientId));
+    return serviceStorage.getServicesByClient(clientId);
   }
 
   async getServicesByStatus(status: ServiceStatus, limit?: number): Promise<Service[]> {
-    let query = db.select().from(services).where(eq(services.status, status));
-    
-    // Dodamo limit ako je specificiran za optimizaciju
-    if (limit && limit > 0) {
-      query = query.limit(limit) as any;
-    }
-    
-    return await query;
+    return serviceStorage.getServicesByStatus(status, limit);
   }
 
   async getServicesByStatusDetailed(status: ServiceStatus): Promise<any[]> {
-    // Temporary: Return empty array while debugging Drizzle ORM issues
-    console.log(`getServicesByStatusDetailed called with status: ${status}`);
-    return [];
+    return serviceStorage.getServicesByStatusDetailed(status);
   }
 
   async getServicesByTechnician(technicianId: number, limit?: number): Promise<ServiceWithDetails[]> {
@@ -2355,17 +2240,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createService(data: InsertService): Promise<Service> {
-    const [service] = await db.insert(services).values(data).returning();
-    return service;
+    return serviceStorage.createService(data);
   }
 
   async updateService(id: number, data: InsertService): Promise<Service | undefined> {
-    const [updatedService] = await db
-      .update(services)
-      .set(data)
-      .where(eq(services.id, id))
-      .returning();
-    return updatedService;
+    return serviceStorage.updateService(id, data);
   }
 
   async getRecentServices(limit: number): Promise<ServiceWithDetails[]> {
