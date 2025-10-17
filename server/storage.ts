@@ -2430,114 +2430,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markSparePartAsReceived(orderId: number, adminId: number, receivedData: { actualCost?: string; location?: string; notes?: string }): Promise<{ order: SparePartOrder; availablePart: AvailablePart } | undefined> {
-    try {
-      // Get the order first
-      const order = await this.getSparePartOrder(orderId);
-      if (!order) {
-        throw new Error('Porudžbina nije pronađena');
-      }
-
-      // Update the order status to 'received'
-      const updatedOrder = await this.updateSparePartOrder(orderId, {
-        status: 'received',
-        receivedDate: new Date(),
-        actualCost: receivedData.actualCost || order.actualCost
-      });
-
-      if (!updatedOrder) {
-        throw new Error('Nije moguće ažurirati porudžbinu');
-      }
-
-      // Gather service information if available
-      let serviceInfo = {
-        serviceId: null as number | null,
-        clientName: null as string | null,
-        clientPhone: null as string | null,
-        applianceInfo: null as string | null,
-        serviceDescription: null as string | null
-      };
-
-      if (order.serviceId) {
-        try {
-          const service = await this.getService(order.serviceId);
-          if (service) {
-            serviceInfo.serviceId = service.id;
-            serviceInfo.serviceDescription = service.description;
-
-            // Get client info
-            if (service.clientId) {
-              const client = await this.getClient(service.clientId);
-              if (client) {
-                serviceInfo.clientName = client.fullName;
-                serviceInfo.clientPhone = client.phone;
-              }
-            }
-
-            // Get appliance info
-            if (service.applianceId) {
-              const appliance = await this.getAppliance(service.applianceId);
-              if (appliance) {
-                const category = appliance.categoryId ? await this.getApplianceCategory(appliance.categoryId) : null;
-                const manufacturer = appliance.manufacturerId ? await this.getManufacturer(appliance.manufacturerId) : null;
-                
-                serviceInfo.applianceInfo = [
-                  manufacturer?.name,
-                  category?.name,
-                  appliance.model
-                ].filter(Boolean).join(' - ');
-              }
-            }
-          }
-        } catch (serviceError) {
-          console.error('Greška pri dohvatanju informacija o servisu:', serviceError);
-          // Nastavljamo bez servisnih informacija
-        }
-      }
-
-      // Create available part from the order
-      const availablePartData = {
-        partName: order.partName,
-        partNumber: order.partNumber || null,
-        quantity: order.quantity,
-        description: order.description || null,
-        supplierName: order.supplierName || null,
-        unitCost: receivedData.actualCost || order.estimatedCost || null,
-        location: receivedData.location || 'Glavno skladište',
-        warrantyStatus: order.warrantyStatus as "u garanciji" | "van garancije",
-        categoryId: null, // Could be extracted from appliance if needed
-        manufacturerId: null, // Could be extracted from appliance if needed
-        originalOrderId: orderId,
-        addedBy: adminId,
-        notes: receivedData.notes || null,
-        // Add service information
-        serviceId: serviceInfo.serviceId,
-        clientName: serviceInfo.clientName,
-        clientPhone: serviceInfo.clientPhone,
-        applianceInfo: serviceInfo.applianceInfo,
-        serviceDescription: serviceInfo.serviceDescription
-      };
-
-      const availablePart = await this.createAvailablePart(availablePartData);
-
-      return { order: updatedOrder, availablePart };
-    } catch (error) {
-      console.error('Greška pri označavanju dela kao primljenog:', error);
-      throw error;
-    }
+    return sparePartsStorage.markSparePartAsReceived(orderId, adminId, receivedData);
   }
 
   // Parts Allocation Methods
   async createPartsAllocation(allocationData: InsertPartsAllocation): Promise<PartsAllocation> {
-    try {
-      const [allocation] = await db
-        .insert(partsAllocations)
-        .values(allocationData)
-        .returning();
-      return allocation;
-    } catch (error) {
-      console.error('Greška pri kreiranju alokacije delova:', error);
-      throw error;
-    }
+    return sparePartsStorage.createPartsAllocation(allocationData);
   }
 
   async getAllocatePartToTechnician(
@@ -2547,223 +2445,60 @@ export class DatabaseStorage implements IStorage {
     quantity: number,
     allocatedBy: number
   ): Promise<{ allocation: PartsAllocation; remainingQuantity: number } | undefined> {
-    try {
-      // Get the available part
-      const part = await this.getAvailablePart(partId);
-      if (!part) {
-        throw new Error('Deo nije pronađen');
-      }
-
-      if (part.quantity < quantity) {
-        throw new Error('Nema dovoljno delova na stanju');
-      }
-
-      // Create allocation record
-      const allocationData = {
-        availablePartId: partId,
-        serviceId,
-        technicianId,
-        quantity,
-        allocatedDate: new Date(),
-        allocatedBy,
-        status: 'allocated' as const
-      };
-
-      const allocation = await this.createPartsAllocation(allocationData);
-
-      // Update available part quantity
-      const newQuantity = part.quantity - quantity;
-      await this.updateAvailablePart(partId, { quantity: newQuantity });
-
-      return { allocation, remainingQuantity: newQuantity };
-    } catch (error) {
-      console.error('Greška pri dodeli dela serviseru:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAllocatePartToTechnician(partId, serviceId, technicianId, quantity, allocatedBy);
   }
 
   async getPartsAllocationsByService(serviceId: number): Promise<PartsAllocation[]> {
-    try {
-      return await db
-        .select()
-        .from(partsAllocations)
-        .where(eq(partsAllocations.serviceId, serviceId))
-        .orderBy(desc(partsAllocations.allocatedDate));
-    } catch (error) {
-      console.error('Greška pri dohvatanju alokacija delova za servis:', error);
-      return [];
-    }
+    return sparePartsStorage.getPartsAllocationsByService(serviceId);
   }
 
   async getPartsAllocationsByTechnician(technicianId: number): Promise<PartsAllocation[]> {
-    try {
-      return await db
-        .select()
-        .from(partsAllocations)
-        .where(eq(partsAllocations.technicianId, technicianId))
-        .orderBy(desc(partsAllocations.allocatedDate));
-    } catch (error) {
-      console.error('Greška pri dohvatanju alokacija delova za servisera:', error);
-      return [];
-    }
+    return sparePartsStorage.getPartsAllocationsByTechnician(technicianId);
   }
 
   async getAllPartsAllocations(): Promise<PartsAllocation[]> {
-    try {
-      return await db
-        .select()
-        .from(partsAllocations)
-        .orderBy(desc(partsAllocations.allocatedDate));
-    } catch (error) {
-      console.error('Greška pri dohvatanju svih alokacija delova:', error);
-      return [];
-    }
+    return sparePartsStorage.getAllPartsAllocations();
   }
 
   // Available parts methods
   async getAllAvailableParts(): Promise<AvailablePart[]> {
-    try {
-      const parts = await db
-        .select()
-        .from(availableParts)
-        .orderBy(desc(availableParts.addedDate));
-      return parts;
-    } catch (error) {
-      console.error('Greška pri dohvatanju dostupnih delova:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAllAvailableParts();
   }
 
   async getAvailablePart(id: number): Promise<AvailablePart | undefined> {
-    try {
-      const [part] = await db
-        .select()
-        .from(availableParts)
-        .where(eq(availableParts.id, id));
-      return part;
-    } catch (error) {
-      console.error('Greška pri dohvatanju dostupnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAvailablePart(id);
   }
 
   async getAvailablePartsByCategory(categoryId: number): Promise<AvailablePart[]> {
-    try {
-      const parts = await db
-        .select()
-        .from(availableParts)
-        .where(eq(availableParts.categoryId, categoryId))
-        .orderBy(desc(availableParts.addedDate));
-      return parts;
-    } catch (error) {
-      console.error('Greška pri dohvatanju delova po kategoriji:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAvailablePartsByCategory(categoryId);
   }
 
   async getAvailablePartsByManufacturer(manufacturerId: number): Promise<AvailablePart[]> {
-    try {
-      const parts = await db
-        .select()
-        .from(availableParts)
-        .where(eq(availableParts.manufacturerId, manufacturerId))
-        .orderBy(desc(availableParts.addedDate));
-      return parts;
-    } catch (error) {
-      console.error('Greška pri dohvatanju delova po proizvođaču:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAvailablePartsByManufacturer(manufacturerId);
   }
 
   async getAvailablePartsByWarrantyStatus(warrantyStatus: string): Promise<AvailablePart[]> {
-    try {
-      const parts = await db
-        .select()
-        .from(availableParts)
-        .where(eq(availableParts.warrantyStatus, warrantyStatus))
-        .orderBy(desc(availableParts.addedDate));
-      return parts;
-    } catch (error) {
-      console.error('Greška pri dohvatanju delova po garanciji:', error);
-      throw error;
-    }
+    return sparePartsStorage.getAvailablePartsByWarrantyStatus(warrantyStatus);
   }
 
   async searchAvailableParts(searchTerm: string): Promise<AvailablePart[]> {
-    try {
-      const parts = await db
-        .select()
-        .from(availableParts)
-        .where(
-          sql`LOWER(${availableParts.partName}) LIKE LOWER(${'%' + searchTerm + '%'}) OR 
-              LOWER(${availableParts.partNumber}) LIKE LOWER(${'%' + searchTerm + '%'}) OR
-              LOWER(${availableParts.description}) LIKE LOWER(${'%' + searchTerm + '%'})`
-        )
-        .orderBy(desc(availableParts.addedDate));
-      return parts;
-    } catch (error) {
-      console.error('Greška pri pretrazi dostupnih delova:', error);
-      throw error;
-    }
+    return sparePartsStorage.searchAvailableParts(searchTerm);
   }
 
   async createAvailablePart(part: InsertAvailablePart): Promise<AvailablePart> {
-    try {
-      const [newPart] = await db
-        .insert(availableParts)
-        .values(part)
-        .returning();
-      return newPart;
-    } catch (error) {
-      console.error('Greška pri kreiranju dostupnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.createAvailablePart(part);
   }
 
   async updateAvailablePart(id: number, part: Partial<AvailablePart>): Promise<AvailablePart | undefined> {
-    try {
-      const [updatedPart] = await db
-        .update(availableParts)
-        .set({...part, updatedAt: new Date()})
-        .where(eq(availableParts.id, id))
-        .returning();
-      return updatedPart;
-    } catch (error) {
-      console.error('Greška pri ažuriranju dostupnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.updateAvailablePart(id, part);
   }
 
   async deleteAvailablePart(id: number): Promise<boolean> {
-    try {
-      const result = await db
-        .delete(availableParts)
-        .where(eq(availableParts.id, id))
-        .returning();
-      return result.length > 0;
-    } catch (error) {
-      console.error('Greška pri brisanju dostupnog dela:', error);
-      return false;
-    }
+    return sparePartsStorage.deleteAvailablePart(id);
   }
 
   async updateAvailablePartQuantity(id: number, quantityChange: number): Promise<AvailablePart | undefined> {
-    try {
-      const part = await this.getAvailablePart(id);
-      if (!part) {
-        throw new Error('Deo nije pronađen');
-      }
-
-      const newQuantity = part.quantity + quantityChange;
-      if (newQuantity < 0) {
-        throw new Error('Količina ne može biti negativna');
-      }
-
-      return await this.updateAvailablePart(id, { quantity: newQuantity });
-    } catch (error) {
-      console.error('Greška pri ažuriranju količine dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.updateAvailablePartQuantity(id, quantityChange);
   }
 
   // ===== SYSTEM SETTINGS METHODS - Delegated to SystemStorage =====
@@ -2799,79 +2534,11 @@ export class DatabaseStorage implements IStorage {
 
   // Parts Allocation methods
   async allocatePartToTechnician(allocation: InsertPartsAllocation): Promise<any> {
-    try {
-      // Check available part exists and has sufficient quantity
-      const availablePart = await this.getAvailablePart(allocation.availablePartId);
-      if (!availablePart) {
-        throw new Error('Dostupni deo nije pronađen');
-      }
-      
-      if (availablePart.quantity < allocation.allocatedQuantity) {
-        throw new Error('Nedovoljna količina dostupnog dela');
-      }
-
-      // Create allocation record
-      const [newAllocation] = await db
-        .insert(partsAllocations)
-        .values(allocation)
-        .returning();
-
-      // Update available part quantity
-      await this.updateAvailablePartQuantity(allocation.availablePartId, -allocation.allocatedQuantity);
-
-      // Log activity
-      await this.logPartActivity({
-        partId: allocation.availablePartId,
-        action: 'allocated',
-        previousQuantity: availablePart.quantity,
-        newQuantity: availablePart.quantity - allocation.allocatedQuantity,
-        technicianId: allocation.technicianId,
-        serviceId: allocation.serviceId,
-        userId: allocation.allocatedBy,
-        description: `Deo dodeljen serviseru za servis #${allocation.serviceId}: ${allocation.allocatedQuantity} kom`
-      });
-
-      return newAllocation;
-    } catch (error) {
-      console.error('Greška pri dodeli dela serviseru:', error);
-      throw error;
-    }
+    return sparePartsStorage.allocatePartToTechnician(allocation);
   }
 
   async getPartAllocations(serviceId?: number, technicianId?: number): Promise<any[]> {
-    try {
-      let query = db
-        .select({
-          id: partsAllocations.id,
-          availablePartId: partsAllocations.availablePartId,
-          serviceId: partsAllocations.serviceId,
-          technicianId: partsAllocations.technicianId,
-          allocatedQuantity: partsAllocations.allocatedQuantity,
-          allocatedBy: partsAllocations.allocatedBy,
-          allocationNotes: partsAllocations.allocationNotes,
-          status: partsAllocations.status,
-          allocatedDate: partsAllocations.allocatedDate,
-          partName: availableParts.partName,
-          partNumber: availableParts.partNumber,
-          technicianName: users.fullName,
-          allocatedByName: users.fullName
-        })
-        .from(partsAllocations)
-        .leftJoin(availableParts, eq(partsAllocations.availablePartId, availableParts.id))
-        .leftJoin(users, eq(partsAllocations.technicianId, users.id));
-
-      if (serviceId) {
-        query = query.where(eq(partsAllocations.serviceId, serviceId));
-      }
-      if (technicianId) {
-        query = query.where(eq(partsAllocations.technicianId, technicianId));
-      }
-
-      return await query.orderBy(desc(partsAllocations.allocatedDate));
-    } catch (error) {
-      console.error('Greška pri dohvatanju dodela delova:', error);
-      return [];
-    }
+    return sparePartsStorage.getPartAllocations(serviceId, technicianId);
   }
 
   async getAllRemovedParts(): Promise<RemovedPart[]> {
@@ -3202,50 +2869,11 @@ export class DatabaseStorage implements IStorage {
 
   // Parts Activity Log methods
   async logPartActivity(data: InsertPartsActivityLog): Promise<PartsActivityLog> {
-    try {
-      const [activityLog] = await db
-        .insert(partsActivityLog)
-        .values(data)
-        .returning();
-      return activityLog;
-    } catch (error) {
-      console.error('Greška pri upisu aktivnosti rezervnog dela:', error);
-      throw error;
-    }
+    return sparePartsStorage.logPartActivity(data);
   }
 
   async getPartActivityLog(partId?: number, limit: number = 50): Promise<any[]> {
-    try {
-      let query = db
-        .select({
-          id: partsActivityLog.id,
-          partId: partsActivityLog.partId,
-          action: partsActivityLog.action,
-          previousQuantity: partsActivityLog.previousQuantity,
-          newQuantity: partsActivityLog.newQuantity,
-          technicianId: partsActivityLog.technicianId,
-          serviceId: partsActivityLog.serviceId,
-          userId: partsActivityLog.userId,
-          description: partsActivityLog.description,
-          timestamp: partsActivityLog.timestamp,
-          userName: users.fullName,
-          partName: availableParts.partName,
-        })
-        .from(partsActivityLog)
-        .leftJoin(users, eq(partsActivityLog.userId, users.id))
-        .leftJoin(availableParts, eq(partsActivityLog.partId, availableParts.id))
-        .orderBy(desc(partsActivityLog.timestamp));
-
-      if (partId) {
-        query = query.where(eq(partsActivityLog.partId, partId));
-      }
-
-      const activities = await query.limit(limit);
-      return activities;
-    } catch (error) {
-      console.error('Greška pri dohvatanju log aktivnosti:', error);
-      return [];
-    }
+    return sparePartsStorage.getPartActivityLog(partId, limit);
   }
 
   // PartKeepr Catalog methods implementation
