@@ -910,6 +910,91 @@ export class ServiceStorage {
       return undefined;
     }
   }
+
+  /**
+   * GET SERVICE STATISTICS
+   * Vraća statistiku servisa po statusu
+   */
+  async getServiceStats() {
+    try {
+      const [activeServices, completedServices, pendingServices, assignedServices, failedServices] = await Promise.all([
+        db.select().from(services).where(eq(services.status, 'in_progress')),
+        db.select().from(services).where(eq(services.status, 'completed')),
+        db.select().from(services).where(eq(services.status, 'pending')),
+        db.select().from(services).where(eq(services.status, 'assigned')),
+        db.select().from(services).where(eq(services.status, 'repair_failed'))
+      ]);
+
+      return {
+        total: activeServices.length + completedServices.length + pendingServices.length + assignedServices.length + failedServices.length,
+        active: activeServices.length,
+        completed: completedServices.length,
+        pending: pendingServices.length,
+        assigned: assignedServices.length,
+        failed: failedServices.length,
+        byStatus: {
+          in_progress: activeServices.length,
+          completed: completedServices.length,
+          pending: pendingServices.length,
+          assigned: assignedServices.length,
+          repair_failed: failedServices.length
+        }
+      };
+    } catch (error) {
+      console.error('[ServiceStorage.getServiceStats] Greška:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * EXPORT SERVICES TO CSV
+   * Exportuje servise u CSV format
+   */
+  async exportServicesToCSV(): Promise<string> {
+    try {
+      const allServices = await this.getAllServices();
+      
+      // CSV header
+      const headers = [
+        'ID', 'Status', 'Klijent', 'Telefon', 'Grad', 'Adresa',
+        'Uređaj', 'Kategorija', 'Proizvođač', 'Serijski broj',
+        'Serviser', 'Opis', 'Datum kreiranja', 'Zakazan datum', 'Završen datum',
+        'Garancija', 'Trošak', 'Delovi', 'Napomene'
+      ];
+
+      const csvRows = [headers.join(',')];
+
+      for (const service of allServices) {
+        const row = [
+          service.id,
+          service.status || '',
+          `"${(service.clientName || '').replace(/"/g, '""')}"`,
+          service.clientPhone || '',
+          service.clientCity || '',
+          `"${(service.clientAddress || '').replace(/"/g, '""')}"`,
+          `"${(service.applianceName || '').replace(/"/g, '""')}"`,
+          service.categoryName || '',
+          service.manufacturerName || '',
+          service.applianceSerialNumber || '',
+          service.technicianName || '',
+          `"${(service.description || '').replace(/"/g, '""')}"`,
+          service.createdAt || '',
+          service.scheduledDate || '',
+          service.completedDate || '',
+          service.warrantyStatus || '',
+          service.cost || '',
+          service.usedParts ? `"${service.usedParts.replace(/"/g, '""')}"` : '',
+          service.technicianNotes ? `"${service.technicianNotes.replace(/"/g, '""')}"` : ''
+        ];
+        csvRows.push(row.join(','));
+      }
+
+      return csvRows.join('\n');
+    } catch (error) {
+      console.error('[ServiceStorage.exportServicesToCSV] Greška:', error);
+      throw error;
+    }
+  }
 }
 
 // Singleton instance
