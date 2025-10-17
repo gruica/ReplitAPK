@@ -8,9 +8,9 @@ import { db } from "../db.js";
 import { pool } from "../db.js";
 import { 
   services, clients, appliances, applianceCategories, 
-  manufacturers, technicians 
+  manufacturers, technicians, removedParts, notifications
 } from "../../shared/schema/index.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import type { 
   Service,
   InsertService,
@@ -236,6 +236,678 @@ export class ServiceStorage {
     } catch (error) {
       console.error(`Greška pri dohvatanju servisa za tehničara ${technicianId} sa statusom '${status}':`, error);
       throw error;
+    }
+  }
+
+  async getRecentServices(limit: number): Promise<ServiceWithDetails[]> {
+    const results = await db
+      .select({
+        id: services.id,
+        clientId: services.clientId,
+        applianceId: services.applianceId,
+        technicianId: services.technicianId,
+        description: services.description,
+        status: services.status,
+        createdAt: services.createdAt,
+        scheduledDate: services.scheduledDate,
+        completedDate: services.completedDate,
+        technicianNotes: services.technicianNotes,
+        cost: services.cost,
+        usedParts: services.usedParts,
+        machineNotes: services.machineNotes,
+        isCompletelyFixed: services.isCompletelyFixed,
+        businessPartnerId: services.businessPartnerId,
+        partnerCompanyName: services.partnerCompanyName,
+        warrantyStatus: services.warrantyStatus,
+        clientFullName: clients.fullName,
+        clientPhone: clients.phone,
+        clientEmail: clients.email,
+        clientAddress: clients.address,
+        clientCity: clients.city,
+        applianceModel: appliances.model,
+        applianceSerialNumber: appliances.serialNumber,
+        categoryName: applianceCategories.name,
+        categoryIcon: applianceCategories.icon,
+        manufacturerName: manufacturers.name
+      })
+      .from(services)
+      .leftJoin(clients, eq(services.clientId, clients.id))
+      .leftJoin(appliances, eq(services.applianceId, appliances.id))
+      .leftJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
+      .leftJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
+      .orderBy(desc(services.createdAt))
+      .limit(limit);
+
+    return results.map(row => ({
+      id: row.id,
+      clientId: row.clientId,
+      applianceId: row.applianceId,
+      technicianId: row.technicianId,
+      description: row.description,
+      status: row.status,
+      createdAt: row.createdAt,
+      scheduledDate: row.scheduledDate,
+      completedDate: row.completedDate,
+      technicianNotes: row.technicianNotes,
+      cost: row.cost,
+      usedParts: row.usedParts,
+      machineNotes: row.machineNotes,
+      isCompletelyFixed: row.isCompletelyFixed,
+      businessPartnerId: row.businessPartnerId,
+      partnerCompanyName: row.partnerCompanyName,
+      warrantyStatus: row.warrantyStatus,
+      devicePickedUp: false,
+      pickupDate: null,
+      pickupNotes: null,
+      isWarrantyService: false,
+      clientRating: null,
+      clientFeedback: null,
+      feedbackDate: null,
+      feedbackNotes: null,
+      hasApplianceDefect: false,
+      defectDescription: null,
+      defectDetectionDate: null,
+      warrantyExpirationDate: null,
+      partsNeeded: false,
+      estimatedCost: null,
+      repairPossible: true,
+      repairFailureReason: null,
+      repairFailureDate: null,
+      priority: 'medium' as const,
+      notes: null,
+      client: row.clientFullName ? {
+        id: row.clientId,
+        fullName: row.clientFullName,
+        phone: row.clientPhone,
+        email: row.clientEmail,
+        address: row.clientAddress,
+        city: row.clientCity,
+        companyName: null
+      } : undefined,
+      appliance: row.applianceModel || row.categoryName ? {
+        id: row.applianceId,
+        model: row.applianceModel,
+        serialNumber: row.applianceSerialNumber,
+        category: row.categoryName ? {
+          id: row.applianceId,
+          name: row.categoryName,
+          icon: row.categoryIcon
+        } : undefined,
+        manufacturer: row.manufacturerName ? {
+          name: row.manufacturerName
+        } : undefined
+      } : undefined
+    })) as Service[];
+  }
+
+  async getServicesByPartner(partnerId: number): Promise<any[]> {
+    const startTime = Date.now();
+    
+    try {
+      const poolResult = await pool.query(`
+        SELECT id, created_at, description 
+        FROM services 
+        WHERE business_partner_id = $1 
+        ORDER BY created_at DESC 
+        LIMIT 5
+      `, [partnerId]);
+      console.log(`[DEBUG] POOL - Top 5 servisa:`, poolResult.rows.map(r => `ID ${r.id} (${r.created_at})`).join(', '));
+      
+      const drizzleServices = await db
+        .select({
+          id: services.id,
+          createdAt: services.createdAt,
+          description: services.description
+        })
+        .from(services)
+        .where(eq(services.businessPartnerId, partnerId))
+        .orderBy(desc(services.createdAt))
+        .limit(5);
+      
+      console.log(`[DEBUG] DRIZZLE - Top 5 servisa:`, drizzleServices.map(r => `ID ${r.id} (${r.createdAt})`).join(', '));
+      
+      const rawServices = await db
+        .select({
+          id: services.id,
+          clientId: services.clientId,
+          applianceId: services.applianceId,
+          technicianId: services.technicianId,
+          description: services.description,
+          status: services.status,
+          createdAt: services.createdAt,
+          scheduledDate: services.scheduledDate,
+          completedDate: services.completedDate,
+          technicianNotes: services.technicianNotes,
+          cost: services.cost,
+          isCompletelyFixed: services.isCompletelyFixed,
+          businessPartnerId: services.businessPartnerId,
+          partnerCompanyName: services.partnerCompanyName,
+          clientFullName: clients.fullName,
+          clientEmail: clients.email,
+          clientPhone: clients.phone,
+          clientAddress: clients.address,
+          clientCity: clients.city,
+          applianceModel: appliances.model,
+          applianceSerialNumber: appliances.serialNumber,
+          applianceCategoryId: appliances.categoryId,
+          applianceManufacturerId: appliances.manufacturerId,
+          categoryName: applianceCategories.name,
+          categoryIcon: applianceCategories.icon,
+          manufacturerName: manufacturers.name,
+          technicianFullName: technicians.fullName,
+          technicianSpecialization: technicians.specialization
+        })
+        .from(services)
+        .leftJoin(clients, eq(services.clientId, clients.id))
+        .leftJoin(appliances, eq(services.applianceId, appliances.id))
+        .leftJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
+        .leftJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
+        .leftJoin(technicians, eq(services.technicianId, technicians.id))
+        .where(eq(services.businessPartnerId, partnerId))
+        .orderBy(desc(services.createdAt));
+
+      const servicesWithDetails = rawServices.map(row => ({
+        id: row.id,
+        clientId: row.clientId,
+        applianceId: row.applianceId,
+        technicianId: row.technicianId,
+        description: row.description,
+        status: row.status,
+        createdAt: row.createdAt,
+        scheduledDate: row.scheduledDate,
+        completedDate: row.completedDate,
+        technicianNotes: row.technicianNotes,
+        cost: row.cost,
+        isCompletelyFixed: row.isCompletelyFixed,
+        businessPartnerId: row.businessPartnerId,
+        partnerCompanyName: row.partnerCompanyName,
+        client: row.clientFullName ? {
+          id: row.clientId,
+          fullName: row.clientFullName,
+          email: row.clientEmail,
+          phone: row.clientPhone,
+          address: row.clientAddress,
+          city: row.clientCity,
+          companyName: null
+        } : null,
+        appliance: row.applianceModel ? {
+          model: row.applianceModel,
+          serialNumber: row.applianceSerialNumber,
+          categoryId: row.applianceCategoryId,
+          manufacturerId: row.applianceManufacturerId
+        } : null,
+        category: row.categoryName ? {
+          name: row.categoryName,
+          icon: row.categoryIcon
+        } : null,
+        manufacturer: row.manufacturerName ? {
+          name: row.manufacturerName
+        } : null,
+        technician: row.technicianFullName ? {
+          fullName: row.technicianFullName,
+          specialization: row.technicianSpecialization
+        } : null
+      }));
+
+      const responseTime = Date.now() - startTime;
+      console.log(`[PERFORMANCE] getServicesByPartner(${partnerId}): ${responseTime}ms for ${servicesWithDetails.length} services`);
+      console.log(`[DEBUG] Raw services from DB: ${rawServices.length}, After transformation: ${servicesWithDetails.length}`);
+      if (rawServices.length > 0) {
+        console.log(`[DEBUG] First service ID: ${rawServices[0].id}, Last service ID: ${rawServices[rawServices.length-1].id}`);
+      }
+
+      return servicesWithDetails;
+    } catch (error) {
+      console.error('Greška pri dobijanju servisa za poslovnog partnera:', error);
+      return [];
+    }
+  }
+
+  async getServiceWithDetails(serviceId: number): Promise<any> {
+    const [service] = await db.select().from(services).where(eq(services.id, serviceId));
+    
+    if (!service) return null;
+    
+    let client = null;
+    if (service.clientId) {
+      const [clientData] = await db.select().from(clients).where(eq(clients.id, service.clientId));
+      if (clientData) {
+        client = {
+          id: clientData.id,
+          fullName: clientData.fullName,
+          phone: clientData.phone,
+          email: clientData.email,
+          address: clientData.address,
+          city: clientData.city
+        };
+      }
+    }
+    
+    let appliance = null;
+    let category = null;
+    let manufacturer = null;
+    
+    if (service.applianceId) {
+      const [applianceData] = await db.select().from(appliances).where(eq(appliances.id, service.applianceId));
+      
+      if (applianceData) {
+        appliance = {
+          id: applianceData.id,
+          model: applianceData.model,
+          serialNumber: applianceData.serialNumber
+        };
+        
+        if (applianceData.categoryId) {
+          const [categoryData] = await db.select().from(applianceCategories).where(eq(applianceCategories.id, applianceData.categoryId));
+          if (categoryData) {
+            category = {
+              id: categoryData.id,
+              name: categoryData.name
+            };
+          }
+        }
+        
+        if (applianceData.manufacturerId) {
+          const [manufacturerData] = await db.select().from(manufacturers).where(eq(manufacturers.id, applianceData.manufacturerId));
+          if (manufacturerData) {
+            manufacturer = {
+              id: manufacturerData.id,
+              name: manufacturerData.name
+            };
+          }
+        }
+      }
+    }
+    
+    let technician = null;
+    if (service.technicianId) {
+      const [technicianData] = await db.select().from(technicians).where(eq(technicians.id, service.technicianId));
+      if (technicianData) {
+        technician = {
+          id: technicianData.id,
+          fullName: technicianData.fullName,
+          phone: technicianData.phone,
+          email: technicianData.email,
+          specialization: technicianData.specialization
+        };
+      }
+    }
+    
+    const removedPartsList = await db.select().from(removedParts).where(eq(removedParts.serviceId, serviceId));
+    
+    return {
+      ...service,
+      client,
+      appliance,
+      technician,
+      category,
+      manufacturer,
+      removedParts: removedPartsList
+    };
+  }
+
+  async getServiceStatusHistory(serviceId: number): Promise<any[]> {
+    const [service] = await db.select().from(services).where(eq(services.id, serviceId));
+    
+    if (!service) return [];
+    
+    const history = [];
+    
+    history.push({
+      id: 1,
+      serviceId,
+      oldStatus: "",
+      newStatus: "on_hold",
+      notes: "Servis kreiran",
+      createdAt: service.createdAt,
+      createdBy: "Poslovni partner"
+    });
+    
+    if (service.status !== "on_hold") {
+      history.push({
+        id: 2,
+        serviceId,
+        oldStatus: "on_hold",
+        newStatus: "pending",
+        notes: "Servis primljen na razmatranje",
+        createdAt: new Date(new Date(service.createdAt).getTime() + 86400000).toISOString(),
+        createdBy: "Administrator"
+      });
+    }
+    
+    if (service.status === "in_progress" || service.status === "completed" || service.status === "canceled") {
+      history.push({
+        id: 3,
+        serviceId,
+        oldStatus: "pending",
+        newStatus: "in_progress",
+        notes: "Serviser dodeljen",
+        createdAt: service.scheduledDate || new Date(new Date(service.createdAt).getTime() + 172800000).toISOString(),
+        createdBy: service.technicianId ? `Serviser ${service.technicianId}` : "Administrator"
+      });
+    }
+    
+    if (service.status === "completed") {
+      history.push({
+        id: 4,
+        serviceId,
+        oldStatus: "in_progress",
+        newStatus: "completed",
+        notes: service.technicianNotes || "Servis završen",
+        createdAt: service.completedDate || new Date().toISOString(),
+        createdBy: service.technicianId ? `Serviser ${service.technicianId}` : "Administrator"
+      });
+    } else if (service.status === "canceled") {
+      history.push({
+        id: 4,
+        serviceId,
+        oldStatus: "in_progress",
+        newStatus: "canceled",
+        notes: "Servis otkazan",
+        createdAt: new Date().toISOString(),
+        createdBy: "Administrator"
+      });
+    }
+    
+    return history;
+  }
+
+  async getAdminServices(): Promise<any[]> {
+    try {
+      const allServices = await db
+        .select()
+        .from(services)
+        .orderBy(desc(services.createdAt));
+      
+      if (allServices.length === 0) {
+        return [];
+      }
+
+      const clientIds = [...new Set(allServices.map(s => s.clientId))];
+      const applianceIds = [...new Set(allServices.map(s => s.applianceId))];
+      const technicianIds = [...new Set(allServices.map(s => s.technicianId).filter(id => id !== null))];
+
+      const clientsData = await db
+        .select()
+        .from(clients)
+        .where(inArray(clients.id, clientIds));
+
+      const appliancesData = await db
+        .select({
+          id: appliances.id,
+          model: appliances.model,
+          serialNumber: appliances.serialNumber,
+          categoryId: appliances.categoryId,
+          manufacturerId: appliances.manufacturerId,
+          categoryName: applianceCategories.name,
+          categoryIcon: applianceCategories.icon,
+          manufacturerName: manufacturers.name,
+        })
+        .from(appliances)
+        .innerJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
+        .innerJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
+        .where(inArray(appliances.id, applianceIds));
+
+      const techniciansData = technicianIds.length > 0 
+        ? await db
+            .select()
+            .from(technicians)
+            .where(inArray(technicians.id, technicianIds))
+        : [];
+
+      const clientsMap = new Map(clientsData.map(c => [c.id, c]));
+      const appliancesMap = new Map(appliancesData.map(a => [a.id, a]));
+      const techniciansMap = new Map(techniciansData.map(t => [t.id, t]));
+
+      return allServices.map(service => {
+        const client = clientsMap.get(service.clientId);
+        const appliance = appliancesMap.get(service.applianceId);
+        const technician = service.technicianId ? techniciansMap.get(service.technicianId) : null;
+
+        return {
+          id: service.id,
+          status: service.status,
+          description: service.description,
+          createdAt: service.createdAt,
+          updatedAt: service.createdAt,
+          scheduledDate: service.scheduledDate,
+          completedDate: service.completedDate,
+          isWarrantyService: service.isWarrantyService,
+          devicePickedUp: service.devicePickedUp || false,
+          pickupDate: service.pickupDate,
+          pickupNotes: service.pickupNotes,
+          technicianId: service.technicianId,
+          clientId: service.clientId,
+          applianceId: service.applianceId,
+          priority: 'medium',
+          notes: null,
+          technicianNotes: service.technicianNotes,
+          usedParts: service.usedParts,
+          machineNotes: service.machineNotes,
+          cost: service.cost,
+          isCompletelyFixed: service.isCompletelyFixed,
+          warrantyStatus: service.warrantyStatus,
+          businessPartnerId: service.businessPartnerId,
+          partnerCompanyName: service.partnerCompanyName,
+          client: client ? {
+            id: client.id,
+            fullName: client.fullName,
+            phone: client.phone,
+            email: client.email,
+            address: client.address,
+            city: client.city,
+            companyName: (client as any).companyName || null,
+          } : null,
+          appliance: appliance ? {
+            id: appliance.id,
+            model: appliance.model,
+            serialNumber: appliance.serialNumber,
+            category: {
+              id: appliance.categoryId,
+              name: appliance.categoryName,
+              icon: appliance.categoryIcon,
+            },
+            manufacturer: {
+              id: appliance.manufacturerId,
+              name: appliance.manufacturerName,
+            },
+          } : null,
+          technician: technician ? {
+            id: technician.id,
+            fullName: technician.fullName,
+            email: technician.email,
+            phone: technician.phone,
+            specialization: technician.specialization,
+          } : null,
+        };
+      });
+    } catch (error) {
+      console.error('Greška pri dohvatanju admin servisa:', error);
+      return [];
+    }
+  }
+
+  async getAdminServiceById(id: number): Promise<any | undefined> {
+    try {
+      const [service] = await db
+        .select()
+        .from(services)
+        .where(eq(services.id, id));
+
+      if (!service) return undefined;
+
+      const [client] = service.clientId ? await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, service.clientId)) : [null];
+
+      const [appliance] = service.applianceId ? await db
+        .select()
+        .from(appliances)
+        .where(eq(appliances.id, service.applianceId)) : [null];
+
+      const [technician] = service.technicianId ? await db
+        .select()
+        .from(technicians)
+        .where(eq(technicians.id, service.technicianId)) : [null];
+
+      let category = null;
+      let manufacturer = null;
+      if (appliance) {
+        if (appliance.categoryId) {
+          [category] = await db
+            .select()
+            .from(applianceCategories)
+            .where(eq(applianceCategories.id, appliance.categoryId));
+        }
+        if (appliance.manufacturerId) {
+          [manufacturer] = await db
+            .select()
+            .from(manufacturers)
+            .where(eq(manufacturers.id, appliance.manufacturerId));
+        }
+      }
+
+      return {
+        id: service.id,
+        status: service.status,
+        description: service.description,
+        createdAt: service.createdAt,
+        updatedAt: service.createdAt,
+        scheduledDate: service.scheduledDate,
+        completedDate: service.completedDate,
+        technicianId: service.technicianId,
+        clientId: service.clientId,
+        applianceId: service.applianceId,
+        priority: 'medium',
+        notes: null,
+        technicianNotes: service.technicianNotes,
+        usedParts: service.usedParts,
+        machineNotes: service.machineNotes,
+        cost: service.cost,
+        isCompletelyFixed: service.isCompletelyFixed,
+        warrantyStatus: service.warrantyStatus,
+        businessPartnerId: service.businessPartnerId,
+        partnerCompanyName: service.partnerCompanyName,
+        client: client ? {
+          id: client.id,
+          fullName: client.fullName,
+          phone: client.phone,
+          email: client.email,
+          address: client.address,
+          city: client.city,
+          companyName: (client as any).companyName || null,
+        } : null,
+        appliance: appliance ? {
+          id: appliance.id,
+          model: appliance.model,
+          serialNumber: appliance.serialNumber,
+          category: category ? {
+            id: category.id,
+            name: category.name,
+            icon: category.icon,
+          } : null,
+          manufacturer: manufacturer ? {
+            id: manufacturer.id,
+            name: manufacturer.name,
+          } : null,
+        } : null,
+        technician: technician ? {
+          id: technician.id,
+          fullName: technician.fullName,
+          email: technician.email,
+          phone: technician.phone,
+          specialization: technician.specialization,
+        } : null,
+      };
+    } catch (error) {
+      console.error('Greška pri dohvatanju admin servisa:', error);
+      return undefined;
+    }
+  }
+
+  async updateAdminService(id: number, updates: any): Promise<any | undefined> {
+    try {
+      const [updated] = await db
+        .update(services)
+        .set({
+          ...updates
+        })
+        .where(eq(services.id, id))
+        .returning();
+
+      if (!updated) return undefined;
+
+      return this.getAdminServiceById(id);
+    } catch (error) {
+      console.error('Greška pri ažuriranju admin servisa:', error);
+      return undefined;
+    }
+  }
+
+  async deleteAdminService(id: number): Promise<boolean> {
+    try {
+      console.log(`[DELETE SERVICE] Započinje brisanje servisa ID: ${id}`);
+      
+      if (isNaN(id) || id <= 0) {
+        console.error('Nevaljan ID servisa za brisanje:', id);
+        return false;
+      }
+
+      const existingService = await db
+        .select()
+        .from(services)
+        .where(eq(services.id, id))
+        .limit(1);
+      
+      console.log(`[DELETE SERVICE] Servis sa ID ${id} postoji:`, existingService.length > 0);
+      
+      if (existingService.length === 0) {
+        console.log(`[DELETE SERVICE] Servis sa ID ${id} ne postoji u bazi`);
+        return false;
+      }
+
+      console.log(`[DELETE SERVICE] Brišem povezane notifikacije za servis ${id}`);
+      const deletedNotifications = await db
+        .delete(notifications)
+        .where(eq(notifications.relatedServiceId, id))
+        .returning();
+      
+      console.log(`[DELETE SERVICE] Obrisano ${deletedNotifications.length} notifikacija`);
+
+      console.log(`[DELETE SERVICE] Brišem sam servis ${id}`);
+      const result = await db
+        .delete(services)
+        .where(eq(services.id, id))
+        .returning();
+
+      console.log(`[DELETE SERVICE] Rezultat brisanja servisa:`, result.length > 0 ? 'USPEŠNO' : 'NEUSPEŠNO');
+      console.log(`[DELETE SERVICE] Obrisani servis podaci:`, result.length > 0 ? result[0].id : 'nema podataka');
+
+      return result.length > 0;
+    } catch (error) {
+      console.error('Greška pri brisanju admin servisa:', error);
+      return false;
+    }
+  }
+
+  async assignTechnicianToService(serviceId: number, technicianId: number): Promise<any | undefined> {
+    try {
+      const [updated] = await db
+        .update(services)
+        .set({
+          technicianId,
+          status: 'assigned'
+        })
+        .where(eq(services.id, serviceId))
+        .returning();
+
+      if (!updated) return undefined;
+
+      return this.getAdminServiceById(serviceId);
+    } catch (error) {
+      console.error('Greška pri dodeli servisera:', error);
+      return undefined;
     }
   }
 }
