@@ -55,6 +55,7 @@ import { systemStorage } from "./storage/system.storage.js";
 import { securityStorage } from "./storage/security.storage.js";
 import { aiStorage } from "./storage/ai.storage.js";
 import { notificationStorage } from "./storage/notification.storage.js";
+import { applianceStorage } from "./storage/appliance.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -2058,93 +2059,69 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(clients).orderBy(desc(clients.id)).limit(limit);
   }
 
+  // ===== APPLIANCE METHODS - Delegated to ApplianceStorage =====
+  
   // Appliance Category methods
   async getAllApplianceCategories(): Promise<ApplianceCategory[]> {
-    return await db.select().from(applianceCategories);
+    return applianceStorage.getAllApplianceCategories();
   }
 
   async getApplianceCategory(id: number): Promise<ApplianceCategory | undefined> {
-    const [category] = await db
-      .select()
-      .from(applianceCategories)
-      .where(eq(applianceCategories.id, id));
-    return category;
+    return applianceStorage.getApplianceCategory(id);
   }
 
   async createApplianceCategory(data: InsertApplianceCategory): Promise<ApplianceCategory> {
-    const [category] = await db.insert(applianceCategories).values(data).returning();
-    return category;
+    return applianceStorage.createApplianceCategory(data);
   }
 
   // Manufacturer methods
   async getAllManufacturers(): Promise<Manufacturer[]> {
-    return await db.select().from(manufacturers);
+    return applianceStorage.getAllManufacturers();
   }
 
   async getManufacturer(id: number): Promise<Manufacturer | undefined> {
-    const [manufacturer] = await db
-      .select()
-      .from(manufacturers)
-      .where(eq(manufacturers.id, id));
-    return manufacturer;
+    return applianceStorage.getManufacturer(id);
   }
 
   async createManufacturer(data: InsertManufacturer): Promise<Manufacturer> {
-    const [manufacturer] = await db.insert(manufacturers).values(data).returning();
-    return manufacturer;
+    return applianceStorage.createManufacturer(data);
   }
 
   // Appliance methods
   async getAllAppliances(): Promise<Appliance[]> {
-    return await db.select().from(appliances);
+    return applianceStorage.getAllAppliances();
   }
 
   async getAppliance(id: number): Promise<Appliance | undefined> {
-    const [appliance] = await db.select().from(appliances).where(eq(appliances.id, id));
-    return appliance;
+    return applianceStorage.getAppliance(id);
   }
   
   async getApplianceBySerialNumber(serialNumber: string): Promise<Appliance | undefined> {
-    const [appliance] = await db.select().from(appliances).where(eq(appliances.serialNumber, serialNumber));
-    return appliance;
+    return applianceStorage.getApplianceBySerialNumber(serialNumber);
   }
 
   async getAppliancesByClient(clientId: number): Promise<Appliance[]> {
-    return await db.select().from(appliances).where(eq(appliances.clientId, clientId));
+    return applianceStorage.getAppliancesByClient(clientId);
   }
 
   async createAppliance(data: InsertAppliance): Promise<Appliance> {
-    const [appliance] = await db.insert(appliances).values(data).returning();
-    return appliance;
+    return applianceStorage.createAppliance(data);
   }
 
   async updateAppliance(id: number, data: Partial<InsertAppliance>): Promise<Appliance | undefined> {
-    const [updatedAppliance] = await db
-      .update(appliances)
-      .set(data)
-      .where(eq(appliances.id, id))
-      .returning();
-    return updatedAppliance;
+    return applianceStorage.updateAppliance(id, data);
   }
 
   async deleteAppliance(id: number): Promise<void> {
-    await db.delete(appliances).where(eq(appliances.id, id));
+    return applianceStorage.deleteAppliance(id);
   }
 
   async getServicesByAppliance(applianceId: number): Promise<Service[]> {
-    return await db.select().from(services).where(eq(services.applianceId, applianceId));
+    return applianceStorage.getServicesByAppliance(applianceId);
   }
 
   async getApplianceStats(): Promise<{categoryId: number, count: number}[]> {
-    const result = await db
-      .select({
-        categoryId: appliances.categoryId,
-        count: sql<number>`count(*)::int`
-      })
-      .from(appliances)
-      .groupBy(appliances.categoryId);
-    
-    return result;
+    return applianceStorage.getApplianceStats();
   }
 
   // Service methods
