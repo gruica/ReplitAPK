@@ -53,6 +53,7 @@ import { supplierStorage } from "./storage/supplier.storage.js";
 import { technicianStorage } from "./storage/technician.storage.js";
 import { systemStorage } from "./storage/system.storage.js";
 import { securityStorage } from "./storage/security.storage.js";
+import { aiStorage } from "./storage/ai.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -5854,222 +5855,76 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Predictive Insights methods
+  // ===== PREDICTIVE INSIGHTS METHODS - Delegated to AIStorage =====
+  
   async getAllPredictiveInsights(): Promise<PredictiveInsights[]> {
-    try {
-      return await db.select()
-        .from(predictiveInsights)
-        .orderBy(desc(predictiveInsights.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju svih prediktivnih uvida:', error);
-      return [];
-    }
+    return aiStorage.getAllPredictiveInsights();
   }
 
   async getPredictiveInsight(id: number): Promise<PredictiveInsights | undefined> {
-    try {
-      const [insight] = await db.select()
-        .from(predictiveInsights)
-        .where(eq(predictiveInsights.id, id))
-        .limit(1);
-      return insight;
-    } catch (error) {
-      console.error('Greška pri dohvatanju prediktivnog uvida:', error);
-      return undefined;
-    }
+    return aiStorage.getPredictiveInsight(id);
   }
 
   async getPredictiveInsightsByAppliance(applianceId: number): Promise<PredictiveInsights[]> {
-    try {
-      return await db.select()
-        .from(predictiveInsights)
-        .where(eq(predictiveInsights.applianceId, applianceId))
-        .orderBy(desc(predictiveInsights.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju prediktivnih uvida po aparatu:', error);
-      return [];
-    }
+    return aiStorage.getPredictiveInsightsByAppliance(applianceId);
   }
 
   async getPredictiveInsightsByClient(clientId: number): Promise<PredictiveInsights[]> {
-    try {
-      return await db.select()
-        .from(predictiveInsights)
-        .where(eq(predictiveInsights.clientId, clientId))
-        .orderBy(desc(predictiveInsights.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju prediktivnih uvida po klijentu:', error);
-      return [];
-    }
+    return aiStorage.getPredictiveInsightsByClient(clientId);
   }
 
   async getActivePredictiveInsights(): Promise<PredictiveInsights[]> {
-    try {
-      return await db.select()
-        .from(predictiveInsights)
-        .where(eq(predictiveInsights.isActive, true))
-        .orderBy(desc(predictiveInsights.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju aktivnih prediktivnih uvida:', error);
-      return [];
-    }
+    return aiStorage.getActivePredictiveInsights();
   }
 
   async getCriticalRiskInsights(): Promise<PredictiveInsights[]> {
-    try {
-      return await db.select()
-        .from(predictiveInsights)
-        .where(and(
-          eq(predictiveInsights.isActive, true),
-          or(
-            eq(predictiveInsights.riskLevel, 'critical'),
-            eq(predictiveInsights.riskLevel, 'high')
-          )
-        ))
-        .orderBy(desc(predictiveInsights.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju kritičnih rizičnih uvida:', error);
-      return [];
-    }
+    return aiStorage.getCriticalRiskInsights();
   }
 
   async createPredictiveInsight(insight: InsertPredictiveInsights): Promise<PredictiveInsights> {
-    try {
-      const [newInsight] = await db.insert(predictiveInsights)
-        .values({
-          ...insight,
-          createdAt: new Date()
-        })
-        .returning();
-      return newInsight;
-    } catch (error) {
-      console.error('Greška pri kreiranju prediktivnog uvida:', error);
-      throw error;
-    }
+    return aiStorage.createPredictiveInsight(insight);
   }
 
   async updatePredictiveInsight(id: number, insight: Partial<PredictiveInsights>): Promise<PredictiveInsights | undefined> {
-    try {
-      const [updatedInsight] = await db.update(predictiveInsights)
-        .set(insight)
-        .where(eq(predictiveInsights.id, id))
-        .returning();
-      return updatedInsight;
-    } catch (error) {
-      console.error('Greška pri ažuriranju prediktivnog uvida:', error);
-      return undefined;
-    }
+    return aiStorage.updatePredictiveInsight(id, insight);
   }
 
   async deletePredictiveInsight(id: number): Promise<boolean> {
-    try {
-      await db.delete(predictiveInsights)
-        .where(eq(predictiveInsights.id, id));
-      return true;
-    } catch (error) {
-      console.error('Greška pri brisanju prediktivnog uvida:', error);
-      return false;
-    }
+    return aiStorage.deletePredictiveInsight(id);
   }
 
-  // AI Analysis Results methods
+  // ===== AI ANALYSIS RESULTS METHODS - Delegated to AIStorage =====
+  
   async getAllAiAnalysisResults(): Promise<AiAnalysisResults[]> {
-    try {
-      return await db.select()
-        .from(aiAnalysisResults)
-        .orderBy(desc(aiAnalysisResults.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju svih AI analiza:', error);
-      return [];
-    }
+    return aiStorage.getAllAiAnalysisResults();
   }
 
   async getAiAnalysisResult(id: number): Promise<AiAnalysisResults | undefined> {
-    try {
-      const [result] = await db.select()
-        .from(aiAnalysisResults)
-        .where(eq(aiAnalysisResults.id, id))
-        .limit(1);
-      return result;
-    } catch (error) {
-      console.error('Greška pri dohvatanju AI analize:', error);
-      return undefined;
-    }
+    return aiStorage.getAiAnalysisResult(id);
   }
 
   async getAiAnalysisResultsByAppliance(applianceId: number): Promise<AiAnalysisResults[]> {
-    try {
-      return await db.select()
-        .from(aiAnalysisResults)
-        .where(eq(aiAnalysisResults.applianceId, applianceId))
-        .orderBy(desc(aiAnalysisResults.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju AI analiza po aparatu:', error);
-      return [];
-    }
+    return aiStorage.getAiAnalysisResultsByAppliance(applianceId);
   }
 
   async getAiAnalysisResultsByType(analysisType: string): Promise<AiAnalysisResults[]> {
-    try {
-      return await db.select()
-        .from(aiAnalysisResults)
-        .where(eq(aiAnalysisResults.analysisType, analysisType))
-        .orderBy(desc(aiAnalysisResults.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju AI analiza po tipu:', error);
-      return [];
-    }
+    return aiStorage.getAiAnalysisResultsByType(analysisType);
   }
 
   async getSuccessfulAiAnalysisResults(): Promise<AiAnalysisResults[]> {
-    try {
-      return await db.select()
-        .from(aiAnalysisResults)
-        .where(eq(aiAnalysisResults.success, true))
-        .orderBy(desc(aiAnalysisResults.createdAt));
-    } catch (error) {
-      console.error('Greška pri dohvatanju uspešnih AI analiza:', error);
-      return [];
-    }
+    return aiStorage.getSuccessfulAiAnalysisResults();
   }
 
   async createAiAnalysisResult(result: InsertAiAnalysisResults): Promise<AiAnalysisResults> {
-    try {
-      const [newResult] = await db.insert(aiAnalysisResults)
-        .values({
-          ...result,
-          createdAt: new Date()
-        })
-        .returning();
-      return newResult;
-    } catch (error) {
-      console.error('Greška pri kreiranju AI analize:', error);
-      throw error;
-    }
+    return aiStorage.createAiAnalysisResult(result);
   }
 
   async updateAiAnalysisResult(id: number, result: Partial<AiAnalysisResults>): Promise<AiAnalysisResults | undefined> {
-    try {
-      const [updatedResult] = await db.update(aiAnalysisResults)
-        .set(result)
-        .where(eq(aiAnalysisResults.id, id))
-        .returning();
-      return updatedResult;
-    } catch (error) {
-      console.error('Greška pri ažuriranju AI analize:', error);
-      return undefined;
-    }
+    return aiStorage.updateAiAnalysisResult(id, result);
   }
 
   async deleteAiAnalysisResult(id: number): Promise<boolean> {
-    try {
-      await db.delete(aiAnalysisResults)
-        .where(eq(aiAnalysisResults.id, id));
-      return true;
-    } catch (error) {
-      console.error('Greška pri brisanju AI analize:', error);
-      return false;
-    }
+    return aiStorage.deleteAiAnalysisResult(id);
   }
 
   // Notification methods
