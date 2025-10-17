@@ -2149,94 +2149,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getServicesByTechnician(technicianId: number, limit?: number): Promise<ServiceWithDetails[]> {
-    try {
-      console.log(`Dohvatam servise za tehničara ${technicianId} sa JOIN podacima`);
-      
-      // Koristimo istu logiku kao getAllServices sa JOIN-ovima za kompletne podatke
-      let query = db.select({
-        id: services.id,
-        clientId: services.clientId,
-        applianceId: services.applianceId,
-        technicianId: services.technicianId,
-        description: services.description,
-        status: services.status,
-        warrantyStatus: services.warrantyStatus,
-        createdAt: services.createdAt,
-        scheduledDate: services.scheduledDate,
-        completedDate: services.completedDate,
-        technicianNotes: services.technicianNotes,
-        cost: services.cost,
-        usedParts: services.usedParts,
-        machineNotes: services.machineNotes,
-        isCompletelyFixed: services.isCompletelyFixed,
-        businessPartnerId: services.businessPartnerId,
-        partnerCompanyName: services.partnerCompanyName,
-        // Podaci o klijentu za prikaz
-        clientName: clients.fullName,
-        clientCity: clients.city,
-        clientAddress: clients.address,
-        clientPhone: clients.phone,
-        clientEmail: clients.email,
-        // Podaci o uređaju za prikaz
-        applianceName: appliances.model,
-        applianceSerialNumber: appliances.serialNumber,
-        // Kategorija i proizvođač
-        categoryName: applianceCategories.name,
-        manufacturerName: manufacturers.name,
-        // Ime servisera
-        technicianName: technicians.fullName
-      })
-      .from(services)
-      .innerJoin(clients, eq(services.clientId, clients.id))
-      .innerJoin(appliances, eq(services.applianceId, appliances.id))
-      .leftJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
-      .leftJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
-      .leftJoin(technicians, eq(services.technicianId, technicians.id))
-      .where(eq(services.technicianId, technicianId))
-      .orderBy(desc(services.createdAt));
-        
-      // Dodamo limit ako je specificiran
-      if (limit && limit > 0) {
-        query = query.limit(limit) as any;
-      }
-      
-      const result = await query;
-      console.log(`Pronađeno ${result.length} servisa za tehničara ${technicianId} sa kompletnim podacima`);
-      
-      // Mapiranje rezultata sa baznim Service tipom
-      return result as Service[];
-    } catch (error) {
-      console.error(`Greška pri dohvatanju servisa za tehničara ${technicianId}:`, error);
-      throw error;
-    }
+    return serviceStorage.getServicesByTechnician(technicianId, limit);
   }
-  
-  // Nova optimizirana metoda za dohvaćanje servisa po tehničaru i statusu
+
   async getServicesByTechnicianAndStatus(technicianId: number, status: ServiceStatus, limit?: number): Promise<ServiceWithDetails[]> {
-    try {
-      console.log(`Dohvatam servise za tehničara ${technicianId} sa statusom '${status}'`);
-      
-      let query = db
-        .select()
-        .from(services)
-        .where(and(
-          eq(services.technicianId, technicianId),
-          eq(services.status, status)
-        ))
-        .orderBy(desc(services.createdAt));
-        
-      // Dodamo limit ako je specificiran
-      if (limit && limit > 0) {
-        query = query.limit(limit) as any;
-      }
-      
-      const results = await query;
-      console.log(`Pronađeno ${results.length} servisa za tehničara ${technicianId} sa statusom '${status}'`);
-      return results;
-    } catch (error) {
-      console.error(`Greška pri dohvatanju servisa za tehničara ${technicianId} sa statusom '${status}':`, error);
-      throw error;
-    }
+    return serviceStorage.getServicesByTechnicianAndStatus(technicianId, status, limit);
   }
 
   async createService(data: InsertService): Promise<Service> {
