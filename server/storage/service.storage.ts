@@ -156,6 +156,88 @@ export class ServiceStorage {
       .returning();
     return updatedService;
   }
+
+  async getServicesByTechnician(technicianId: number, limit?: number): Promise<ServiceWithDetails[]> {
+    try {
+      console.log(`Dohvatam servise za tehničara ${technicianId} sa JOIN podacima`);
+      
+      let query = db.select({
+        id: services.id,
+        clientId: services.clientId,
+        applianceId: services.applianceId,
+        technicianId: services.technicianId,
+        description: services.description,
+        status: services.status,
+        warrantyStatus: services.warrantyStatus,
+        createdAt: services.createdAt,
+        scheduledDate: services.scheduledDate,
+        completedDate: services.completedDate,
+        technicianNotes: services.technicianNotes,
+        cost: services.cost,
+        usedParts: services.usedParts,
+        machineNotes: services.machineNotes,
+        isCompletelyFixed: services.isCompletelyFixed,
+        businessPartnerId: services.businessPartnerId,
+        partnerCompanyName: services.partnerCompanyName,
+        clientName: clients.fullName,
+        clientCity: clients.city,
+        clientAddress: clients.address,
+        clientPhone: clients.phone,
+        clientEmail: clients.email,
+        applianceName: appliances.model,
+        applianceSerialNumber: appliances.serialNumber,
+        categoryName: applianceCategories.name,
+        manufacturerName: manufacturers.name,
+        technicianName: technicians.fullName
+      })
+      .from(services)
+      .innerJoin(clients, eq(services.clientId, clients.id))
+      .innerJoin(appliances, eq(services.applianceId, appliances.id))
+      .leftJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
+      .leftJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
+      .leftJoin(technicians, eq(services.technicianId, technicians.id))
+      .where(eq(services.technicianId, technicianId))
+      .orderBy(desc(services.createdAt));
+        
+      if (limit && limit > 0) {
+        query = query.limit(limit) as any;
+      }
+      
+      const result = await query;
+      console.log(`Pronađeno ${result.length} servisa za tehničara ${technicianId} sa kompletnim podacima`);
+      
+      return result as Service[];
+    } catch (error) {
+      console.error(`Greška pri dohvatanju servisa za tehničara ${technicianId}:`, error);
+      throw error;
+    }
+  }
+
+  async getServicesByTechnicianAndStatus(technicianId: number, status: ServiceStatus, limit?: number): Promise<ServiceWithDetails[]> {
+    try {
+      console.log(`Dohvatam servise za tehničara ${technicianId} sa statusom '${status}'`);
+      
+      let query = db
+        .select()
+        .from(services)
+        .where(and(
+          eq(services.technicianId, technicianId),
+          eq(services.status, status)
+        ))
+        .orderBy(desc(services.createdAt));
+        
+      if (limit && limit > 0) {
+        query = query.limit(limit) as any;
+      }
+      
+      const results = await query;
+      console.log(`Pronađeno ${results.length} servisa za tehničara ${technicianId} sa statusom '${status}'`);
+      return results;
+    } catch (error) {
+      console.error(`Greška pri dohvatanju servisa za tehničara ${technicianId} sa statusom '${status}':`, error);
+      throw error;
+    }
+  }
 }
 
 // Singleton instance
