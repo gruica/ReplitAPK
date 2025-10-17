@@ -314,32 +314,7 @@ export function setupAuth(app: Express) {
     res.json(userWithoutPassword);
   });
   
-  // API za dohvatanje neverifikovanih korisnika (samo za administratore)
-  app.get("/api/users/unverified", async (req, res, next) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ error: "Potrebna je prijava" });
-      }
-      
-      // Provera da li je prijavljeni korisnik administrator
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: "Pristup zabranjen. Potrebna je administratorska uloga." });
-      }
-      
-      // Dohvati neverifikovane korisnike
-      const unverifiedUsers = await storage.getUnverifiedUsers();
-      
-      // Ukloni osetljive podatke pre slanja
-      const safeUsers = unverifiedUsers.map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
-      
-      res.json(safeUsers);
-    } catch (error) {
-      next(error);
-    }
-  });
+  // NOTE: /api/users/unverified endpoint moved to admin.routes.ts with JWT auth
   
   // API za verifikaciju korisnika (samo za administratore)
   app.post("/api/users/:id/verify", async (req, res, next) => {
