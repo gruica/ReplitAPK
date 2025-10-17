@@ -17,7 +17,7 @@ import {
   SparePartOrder, InsertSparePartOrder,
   SparePartUrgency, SparePartStatus,
   AvailablePart, InsertAvailablePart,
-  PartsActivityLog, InsertPartsActivityLog,
+  PartsActivityLog,
   Notification, InsertNotification,
   SystemSetting, InsertSystemSetting,
   RemovedPart, InsertRemovedPart,
@@ -35,7 +35,7 @@ import {
   appliances, services, maintenanceSchedules, maintenanceAlerts,
   requestTracking, botVerification, emailVerification, sparePartOrders,
   availableParts, partsActivityLog, notifications, systemSettings, removedParts, partsAllocations,
-  sparePartsCatalog, PartsAllocation, InsertPartsAllocation,
+  sparePartsCatalog, PartsAllocation,
   webScrapingSources, webScrapingLogs, webScrapingQueue, serviceCompletionReports,
   suppliers, supplierOrders, partsCatalog,
   // AI Prediktivno održavanje tabele
@@ -45,9 +45,9 @@ import {
   // Conversation messages
   ConversationMessage, InsertConversationMessage, conversationMessages,
   // Sigurnosni sistem protiv brisanja servisa
-  ServiceAuditLog, InsertServiceAuditLog, serviceAuditLogs,
-  UserPermission, InsertUserPermission, userPermissions,
-  DeletedService, InsertDeletedService, deletedServices
+  ServiceAuditLog, serviceAuditLogs,
+  UserPermission, userPermissions,
+  DeletedService, deletedServices
 } from "@shared/schema";
 import { supplierStorage } from "./storage/supplier.storage.js";
 import { technicianStorage } from "./storage/technician.storage.js";
@@ -88,9 +88,9 @@ export interface IStorage {
   verifyUser(id: number, adminId: number): Promise<User | undefined>;
   
   // User Permissions methods
-  createUserPermission(permission: InsertUserPermission): Promise<UserPermission | undefined>;
+  createUserPermission(permission: Partial<UserPermission>): Promise<UserPermission | undefined>;
   getUserPermissions(userId: number): Promise<UserPermission | undefined>;
-  updateUserPermissions(userId: number, updates: Partial<InsertUserPermission>): Promise<UserPermission | undefined>;
+  updateUserPermissions(userId: number, updates: Partial<UserPermission>): Promise<UserPermission | undefined>;
   canUserDeleteServices(userId: number): Promise<boolean>;
   
   // Technician methods
@@ -379,12 +379,12 @@ export interface IStorage {
   getServiceConversationHistory(serviceId: number): Promise<ConversationMessage[]>;
   
   // Sigurnosni sistem protiv brisanja servisa - nove funkcije
-  createServiceAuditLog(log: InsertServiceAuditLog): Promise<ServiceAuditLog | undefined>;
+  createServiceAuditLog(log: Partial<ServiceAuditLog>): Promise<ServiceAuditLog | undefined>;
   getServiceAuditLogs(serviceId: number): Promise<ServiceAuditLog[]>;
   getAllAuditLogs(limit?: number): Promise<ServiceAuditLog[]>;
-  createUserPermission(permission: InsertUserPermission): Promise<UserPermission | undefined>;
+  createUserPermission(permission: Partial<UserPermission>): Promise<UserPermission | undefined>;
   getUserPermissions(userId: number): Promise<UserPermission | undefined>;
-  updateUserPermissions(userId: number, updates: Partial<InsertUserPermission>): Promise<UserPermission | undefined>;
+  updateUserPermissions(userId: number, updates: Partial<UserPermission>): Promise<UserPermission | undefined>;
   canUserDeleteServices(userId: number): Promise<boolean>;
   softDeleteService(serviceId: number, deletedBy: number, deletedByUsername: string, deletedByRole: string, reason?: string, ipAddress?: string, userAgent?: string): Promise<boolean>;
   restoreDeletedService(serviceId: number, restoredBy: number, restoredByUsername: string, restoredByRole: string): Promise<boolean>;
@@ -1941,7 +1941,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Parts Allocation Methods
-  async createPartsAllocation(allocationData: InsertPartsAllocation): Promise<PartsAllocation> {
+  async createPartsAllocation(allocationData: Partial<PartsAllocation>): Promise<PartsAllocation> {
     return sparePartsStorage.createPartsAllocation(allocationData);
   }
 
@@ -2040,7 +2040,7 @@ export class DatabaseStorage implements IStorage {
   // Removed Parts methods
 
   // Parts Allocation methods
-  async allocatePartToTechnician(allocation: InsertPartsAllocation): Promise<any> {
+  async allocatePartToTechnician(allocation: Partial<PartsAllocation>): Promise<any> {
     return sparePartsStorage.allocatePartToTechnician(allocation);
   }
 
@@ -2375,7 +2375,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Parts Activity Log methods
-  async logPartActivity(data: InsertPartsActivityLog): Promise<PartsActivityLog> {
+  async logPartActivity(data: Partial<PartsActivityLog>): Promise<PartsActivityLog> {
     return sparePartsStorage.logPartActivity(data);
   }
 
@@ -3212,7 +3212,7 @@ export class DatabaseStorage implements IStorage {
   // ===== SIGURNOSNI SISTEM PROTIV BRISANJA SERVISA - NOVE FUNKCIJE =====
 
   // Service Audit Log funkcije
-  async createServiceAuditLog(log: InsertServiceAuditLog): Promise<ServiceAuditLog | undefined> {
+  async createServiceAuditLog(log: Partial<ServiceAuditLog>): Promise<ServiceAuditLog | undefined> {
     try {
       const [auditLog] = await db
         .insert(serviceAuditLogs)
@@ -3252,7 +3252,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ===== USER PERMISSIONS - Delegated to UserStorage =====
-  async createUserPermission(permission: InsertUserPermission): Promise<UserPermission | undefined> {
+  async createUserPermission(permission: Partial<UserPermission>): Promise<UserPermission | undefined> {
     return userStorage.createUserPermission(permission);
   }
 
@@ -3260,7 +3260,7 @@ export class DatabaseStorage implements IStorage {
     return userStorage.getUserPermissions(userId);
   }
 
-  async updateUserPermissions(userId: number, updates: Partial<InsertUserPermission>): Promise<UserPermission | undefined> {
+  async updateUserPermissions(userId: number, updates: Partial<UserPermission>): Promise<UserPermission | undefined> {
     return userStorage.updateUserPermissions(userId, updates);
   }
 
@@ -3284,7 +3284,7 @@ export class DatabaseStorage implements IStorage {
       const originalServiceData = JSON.stringify(service);
 
       // 3. Unesi u deleted_services tabelu
-      const deletedServiceData: InsertDeletedService = {
+      const deletedServiceData: Partial<DeletedService> = {
         serviceId: serviceId,
         originalServiceData: originalServiceData,
         deletedBy: deletedBy,
