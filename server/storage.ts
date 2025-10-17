@@ -56,6 +56,7 @@ import { securityStorage } from "./storage/security.storage.js";
 import { aiStorage } from "./storage/ai.storage.js";
 import { notificationStorage } from "./storage/notification.storage.js";
 import { applianceStorage } from "./storage/appliance.storage.js";
+import { maintenanceStorage } from "./storage/maintenance.storage.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes } from "crypto";
@@ -2813,132 +2814,68 @@ export class DatabaseStorage implements IStorage {
     return history;
   }
 
+  // ===== MAINTENANCE METHODS - Delegated to MaintenanceStorage =====
+  
   // Maintenance Schedule methods
   async getAllMaintenanceSchedules(): Promise<MaintenanceSchedule[]> {
-    return await db.select().from(maintenanceSchedules);
+    return maintenanceStorage.getAllMaintenanceSchedules();
   }
 
   async getMaintenanceSchedule(id: number): Promise<MaintenanceSchedule | undefined> {
-    const [schedule] = await db
-      .select()
-      .from(maintenanceSchedules)
-      .where(eq(maintenanceSchedules.id, id));
-    return schedule;
+    return maintenanceStorage.getMaintenanceSchedule(id);
   }
 
   async getMaintenanceSchedulesByAppliance(applianceId: number): Promise<MaintenanceSchedule[]> {
-    return await db
-      .select()
-      .from(maintenanceSchedules)
-      .where(eq(maintenanceSchedules.applianceId, applianceId));
+    return maintenanceStorage.getMaintenanceSchedulesByAppliance(applianceId);
   }
 
   async createMaintenanceSchedule(data: InsertMaintenanceSchedule): Promise<MaintenanceSchedule> {
-    const [schedule] = await db.insert(maintenanceSchedules).values({
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }).returning();
-    return schedule;
+    return maintenanceStorage.createMaintenanceSchedule(data);
   }
 
   async updateMaintenanceSchedule(id: number, data: Partial<MaintenanceSchedule>): Promise<MaintenanceSchedule | undefined> {
-    const [updatedSchedule] = await db
-      .update(maintenanceSchedules)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(maintenanceSchedules.id, id))
-      .returning();
-    return updatedSchedule;
+    return maintenanceStorage.updateMaintenanceSchedule(id, data);
   }
 
   async deleteMaintenanceSchedule(id: number): Promise<boolean> {
-    try {
-      const result = await db.delete(maintenanceSchedules).where(eq(maintenanceSchedules.id, id));
-      return result.rowCount ? result.rowCount > 0 : false;
-    } catch (error) {
-      console.error("Greška pri brisanju rasporeda održavanja:", error);
-      return false;
-    }
+    return maintenanceStorage.deleteMaintenanceSchedule(id);
   }
 
   async getUpcomingMaintenanceSchedules(daysThreshold: number): Promise<MaintenanceSchedule[]> {
-    const now = new Date();
-    const thresholdDate = new Date();
-    thresholdDate.setDate(now.getDate() + daysThreshold);
-    
-    return await db
-      .select()
-      .from(maintenanceSchedules)
-      .where(
-        and(
-          eq(maintenanceSchedules.isActive, true),
-          gte(maintenanceSchedules.nextMaintenanceDate, now),
-          lte(maintenanceSchedules.nextMaintenanceDate, thresholdDate)
-        )
-      );
+    return maintenanceStorage.getUpcomingMaintenanceSchedules(daysThreshold);
   }
 
   // Maintenance Alert methods
   async getAllMaintenanceAlerts(): Promise<MaintenanceAlert[]> {
-    return await db.select().from(maintenanceAlerts);
+    return maintenanceStorage.getAllMaintenanceAlerts();
   }
 
   async getMaintenanceAlert(id: number): Promise<MaintenanceAlert | undefined> {
-    const [alert] = await db
-      .select()
-      .from(maintenanceAlerts)
-      .where(eq(maintenanceAlerts.id, id));
-    return alert;
+    return maintenanceStorage.getMaintenanceAlert(id);
   }
 
   async getMaintenanceAlertsBySchedule(scheduleId: number): Promise<MaintenanceAlert[]> {
-    return await db
-      .select()
-      .from(maintenanceAlerts)
-      .where(eq(maintenanceAlerts.scheduleId, scheduleId));
+    return maintenanceStorage.getMaintenanceAlertsBySchedule(scheduleId);
   }
 
   async createMaintenanceAlert(data: InsertMaintenanceAlert): Promise<MaintenanceAlert> {
-    const [alert] = await db.insert(maintenanceAlerts).values({
-      ...data,
-      createdAt: new Date()
-    }).returning();
-    return alert;
+    return maintenanceStorage.createMaintenanceAlert(data);
   }
 
   async updateMaintenanceAlert(id: number, data: Partial<MaintenanceAlert>): Promise<MaintenanceAlert | undefined> {
-    const [updatedAlert] = await db
-      .update(maintenanceAlerts)
-      .set(data)
-      .where(eq(maintenanceAlerts.id, id))
-      .returning();
-    return updatedAlert;
+    return maintenanceStorage.updateMaintenanceAlert(id, data);
   }
 
   async deleteMaintenanceAlert(id: number): Promise<boolean> {
-    try {
-      const result = await db.delete(maintenanceAlerts).where(eq(maintenanceAlerts.id, id));
-      return result.rowCount ? result.rowCount > 0 : false;
-    } catch (error) {
-      console.error("Greška pri brisanju alarma:", error);
-      return false;
-    }
+    return maintenanceStorage.deleteMaintenanceAlert(id);
   }
 
   async getUnreadMaintenanceAlerts(): Promise<MaintenanceAlert[]> {
-    return await db
-      .select()
-      .from(maintenanceAlerts)
-      .where(eq(maintenanceAlerts.isRead, false));
+    return maintenanceStorage.getUnreadMaintenanceAlerts();
   }
 
   async markMaintenanceAlertAsRead(id: number): Promise<MaintenanceAlert | undefined> {
-    const [updatedAlert] = await db
-      .update(maintenanceAlerts)
-      .set({ isRead: true })
-      .where(eq(maintenanceAlerts.id, id))
-      .returning();
-    return updatedAlert;
+    return maintenanceStorage.markMaintenanceAlertAsRead(id);
   }
 
   // Request tracking methods (rate limiting)
