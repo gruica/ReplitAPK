@@ -16,7 +16,7 @@ import { db } from "../db.js";
 import { pool } from "../db.js";
 import { 
   sparePartOrders, availableParts, sparePartsCatalog, 
-  partsCatalog
+  partsCatalog, partsAllocations, partsActivityLog
 } from "../../shared/schema/index.js";
 import { eq, desc, sql, inArray, like, or, and } from "drizzle-orm";
 import type { 
@@ -28,7 +28,11 @@ import type {
   SparePartsCatalog,
   InsertSparePartsCatalog,
   PartsCatalog,
-  InsertPartsCatalog
+  InsertPartsCatalog,
+  PartsAllocation,
+  InsertPartsAllocation,
+  PartsActivityLog,
+  InsertPartsActivityLog
 } from "../../shared/schema/index.js";
 
 /**
@@ -514,6 +518,457 @@ class SparePartsStorage {
       return spareParts;
     } catch (error) {
       console.error('Greška pri dohvatanju rezervnih delova za servis:', error);
+      return [];
+    }
+  }
+
+  // AVAILABLE PARTS & WAREHOUSE METHODS (Phase 3b)
+
+  async markSparePartAsReceived(orderId: number, adminId: number, receivedData: { actualCost?: string; location?: string; notes?: string }): Promise<{ order: SparePartOrder; availablePart: AvailablePart } | undefined> {
+    try {
+      const order = await this.getSparePartOrder(orderId);
+      if (!order) {
+        throw new Error('Porudžbina nije pronađena');
+      }
+
+      const updatedOrder = await this.updateSparePartOrder(orderId, {
+        status: 'received',
+        receivedDate: new Date(),
+        actualCost: receivedData.actualCost || order.actualCost
+      });
+
+      if (!updatedOrder) {
+        throw new Error('Nije moguće ažurirati porudžbinu');
+      }
+
+      let serviceInfo = {
+        serviceId: null as number | null,
+        clientName: null as string | null,
+        clientPhone: null as string | null,
+        applianceInfo: null as string | null,
+        serviceDescription: null as string | null
+      };
+
+      if (order.serviceId && this.storage) {
+        try {
+          const service = await this.storage.getService(order.serviceId);
+          if (service) {
+            serviceInfo.serviceId = service.id;
+            serviceInfo.serviceDescription = service.description;
+
+            if (service.clientId) {
+              const client = await this.storage.getClient(service.clientId);
+              if (client) {
+                serviceInfo.clientName = client.fullName;
+                serviceInfo.clientPhone = client.phone;
+              }
+            }
+
+            if (service.applianceId) {
+              const appliance = await this.storage.getAppliance(service.applianceId);
+              if (appliance) {
+                const category = appliance.categoryId ? await this.storage.getApplianceCategory(appliance.categoryId) : null;
+                const manufacturer = appliance.manufacturerId ? await this.storage.getManufacturer(appliance.manufacturerId) : null;
+                
+                serviceInfo.applianceInfo = [
+                  manufacturer?.name,
+                  category?.name,
+                  appliance.model
+                ].filter(Boolean).join(' - ');
+              }
+            }
+          }
+        } catch (serviceError) {
+          console.error('Greška pri dohvatanju informacija o servisu:', serviceError);
+        }
+      }
+
+      const availablePartData = {
+        partName: order.partName,
+        partNumber: order.partNumber || null,
+        quantity: order.quantity,
+        description: order.description || null,
+        supplierName: order.supplierName || null,
+        unitCost: receivedData.actualCost || order.estimatedCost || null,
+        location: receivedData.location || 'Glavno skladište',
+        warrantyStatus: order.warrantyStatus as "u garanciji" | "van garancije",
+        categoryId: null,
+        manufacturerId: null,
+        originalOrderId: orderId,
+        addedBy: adminId,
+        notes: receivedData.notes || null,
+        serviceId: serviceInfo.serviceId,
+        clientName: serviceInfo.clientName,
+        clientPhone: serviceInfo.clientPhone,
+        applianceInfo: serviceInfo.applianceInfo,
+        serviceDescription: serviceInfo.serviceDescription
+      };
+
+      const availablePart = await this.createAvailablePart(availablePartData);
+
+      return { order: updatedOrder, availablePart };
+    } catch (error) {
+      console.error('Greška pri označavanju dela kao primljenog:', error);
+      throw error;
+    }
+  }
+
+  async getAllAvailableParts(): Promise<AvailablePart[]> {
+    try {
+      const parts = await db.select().from(availableParts).orderBy(desc(availableParts.createdAt));
+      return parts;
+    } catch (error) {
+      console.error('Greška pri dohvatanju svih dostupnih delova:', error);
+      throw error;
+    }
+  }
+
+  async getAvailablePart(id: number): Promise<AvailablePart | undefined> {
+    try {
+      const [part] = await db.select().from(availableParts).where(eq(availableParts.id, id));
+      return part;
+    } catch (error) {
+      console.error('Greška pri dohvatanju dostupnog dela:', error);
+      throw error;
+    }
+  }
+
+  async getAvailablePartsByCategory(categoryId: number): Promise<AvailablePart[]> {
+    try {
+      const parts = await db
+        .select()
+        .from(availableParts)
+        .where(eq(availableParts.categoryId, categoryId))
+        .orderBy(desc(availableParts.createdAt));
+      return parts;
+    } catch (error) {
+      console.error('Greška pri dohvatanju delova po kategoriji:', error);
+      throw error;
+    }
+  }
+
+  async getAvailablePartsByManufacturer(manufacturerId: number): Promise<AvailablePart[]> {
+    try {
+      const parts = await db
+        .select()
+        .from(availableParts)
+        .where(eq(availableParts.manufacturerId, manufacturerId))
+        .orderBy(desc(availableParts.createdAt));
+      return parts;
+    } catch (error) {
+      console.error('Greška pri dohvatanju delova po proizvođaču:', error);
+      throw error;
+    }
+  }
+
+  async getAvailablePartsByWarrantyStatus(warrantyStatus: string): Promise<AvailablePart[]> {
+    try {
+      const parts = await db
+        .select()
+        .from(availableParts)
+        .where(eq(availableParts.warrantyStatus, warrantyStatus))
+        .orderBy(desc(availableParts.createdAt));
+      return parts;
+    } catch (error) {
+      console.error('Greška pri dohvatanju delova po garancijskom statusu:', error);
+      throw error;
+    }
+  }
+
+  async searchAvailableParts(searchTerm: string): Promise<AvailablePart[]> {
+    try {
+      const parts = await db
+        .select()
+        .from(availableParts)
+        .where(
+          or(
+            like(availableParts.partName, `%${searchTerm}%`),
+            like(availableParts.partNumber, `%${searchTerm}%`)
+          )
+        )
+        .orderBy(desc(availableParts.createdAt));
+      return parts;
+    } catch (error) {
+      console.error('Greška pri pretraživanju dostupnih delova:', error);
+      throw error;
+    }
+  }
+
+  async createAvailablePart(part: InsertAvailablePart): Promise<AvailablePart> {
+    try {
+      const [newPart] = await db.insert(availableParts).values(part).returning();
+      return newPart;
+    } catch (error) {
+      console.error('Greška pri kreiranju dostupnog dela:', error);
+      throw error;
+    }
+  }
+
+  async updateAvailablePart(id: number, part: Partial<AvailablePart>): Promise<AvailablePart | undefined> {
+    try {
+      const [updatedPart] = await db
+        .update(availableParts)
+        .set(part)
+        .where(eq(availableParts.id, id))
+        .returning();
+      return updatedPart;
+    } catch (error) {
+      console.error('Greška pri ažuriranju dostupnog dela:', error);
+      throw error;
+    }
+  }
+
+  async deleteAvailablePart(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(availableParts).where(eq(availableParts.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Greška pri brisanju dostupnog dela:', error);
+      return false;
+    }
+  }
+
+  async updateAvailablePartQuantity(id: number, quantityChange: number): Promise<AvailablePart | undefined> {
+    try {
+      const part = await this.getAvailablePart(id);
+      if (!part) {
+        throw new Error('Deo nije pronađen');
+      }
+
+      const newQuantity = part.quantity + quantityChange;
+      if (newQuantity < 0) {
+        throw new Error('Količina ne može biti negativna');
+      }
+
+      const [updatedPart] = await db
+        .update(availableParts)
+        .set({ quantity: newQuantity })
+        .where(eq(availableParts.id, id))
+        .returning();
+
+      return updatedPart;
+    } catch (error) {
+      console.error('Greška pri ažuriranju količine dela:', error);
+      throw error;
+    }
+  }
+
+  // PARTS ALLOCATION METHODS
+
+  async createPartsAllocation(allocationData: InsertPartsAllocation): Promise<PartsAllocation> {
+    try {
+      const [allocation] = await db
+        .insert(partsAllocations)
+        .values(allocationData)
+        .returning();
+      return allocation;
+    } catch (error) {
+      console.error('Greška pri kreiranju alokacije delova:', error);
+      throw error;
+    }
+  }
+
+  async getAllocatePartToTechnician(
+    partId: number,
+    serviceId: number,
+    technicianId: number,
+    quantity: number,
+    allocatedBy: number
+  ): Promise<{ allocation: PartsAllocation; remainingQuantity: number } | undefined> {
+    try {
+      const part = await this.getAvailablePart(partId);
+      if (!part) {
+        throw new Error('Deo nije pronađen');
+      }
+
+      if (part.quantity < quantity) {
+        throw new Error('Nedovoljno delova na lageru');
+      }
+
+      const updatedPart = await this.updateAvailablePartQuantity(partId, -quantity);
+
+      const allocationData = {
+        partId,
+        serviceId,
+        technicianId,
+        quantity,
+        allocatedBy,
+        allocationDate: new Date()
+      };
+
+      const allocation = await this.createPartsAllocation(allocationData);
+
+      return {
+        allocation,
+        remainingQuantity: updatedPart?.quantity || 0
+      };
+    } catch (error) {
+      console.error('Greška pri alokaciji dela tehničaru:', error);
+      throw error;
+    }
+  }
+
+  async getPartsAllocationsByService(serviceId: number): Promise<PartsAllocation[]> {
+    try {
+      const allocations = await db
+        .select()
+        .from(partsAllocations)
+        .where(eq(partsAllocations.serviceId, serviceId))
+        .orderBy(desc(partsAllocations.allocationDate));
+      return allocations;
+    } catch (error) {
+      console.error('Greška pri dohvatanju alokacija po servisu:', error);
+      throw error;
+    }
+  }
+
+  async getPartsAllocationsByTechnician(technicianId: number): Promise<PartsAllocation[]> {
+    try {
+      const allocations = await db
+        .select()
+        .from(partsAllocations)
+        .where(eq(partsAllocations.technicianId, technicianId))
+        .orderBy(desc(partsAllocations.allocationDate));
+      return allocations;
+    } catch (error) {
+      console.error('Greška pri dohvatanju alokacija po tehničaru:', error);
+      throw error;
+    }
+  }
+
+  async getAllPartsAllocations(): Promise<PartsAllocation[]> {
+    try {
+      const allocations = await db
+        .select()
+        .from(partsAllocations)
+        .orderBy(desc(partsAllocations.allocationDate));
+      return allocations;
+    } catch (error) {
+      console.error('Greška pri dohvatanju svih alokacija:', error);
+      throw error;
+    }
+  }
+
+  async allocatePartToTechnician(allocation: InsertPartsAllocation): Promise<any> {
+    try {
+      const part = allocation.partId ? await this.getAvailablePart(allocation.partId) : null;
+      
+      if (part && part.quantity < allocation.quantity) {
+        throw new Error('Nedovoljno delova na lageru');
+      }
+
+      const [newAllocation] = await db
+        .insert(partsAllocations)
+        .values({
+          ...allocation,
+          allocationDate: new Date()
+        })
+        .returning();
+
+      if (allocation.partId && this.storage) {
+        await this.storage.logPartActivity({
+          partId: allocation.partId,
+          action: 'allocated',
+          previousQuantity: part?.quantity || 0,
+          newQuantity: (part?.quantity || 0) - allocation.quantity,
+          technicianId: allocation.technicianId,
+          serviceId: allocation.serviceId,
+          userId: allocation.allocatedBy,
+          description: `Deo dodeljen tehničaru za servis #${allocation.serviceId}`,
+          timestamp: new Date()
+        });
+      }
+
+      if (part && allocation.partId) {
+        await this.updateAvailablePartQuantity(allocation.partId, -allocation.quantity);
+      }
+
+      return newAllocation;
+    } catch (error) {
+      console.error('Greška pri dodeli dela tehničaru:', error);
+      throw error;
+    }
+  }
+
+  async getPartAllocations(serviceId?: number, technicianId?: number): Promise<any[]> {
+    try {
+      let query = db
+        .select({
+          id: partsAllocations.id,
+          partId: partsAllocations.partId,
+          serviceId: partsAllocations.serviceId,
+          technicianId: partsAllocations.technicianId,
+          quantity: partsAllocations.quantity,
+          allocationDate: partsAllocations.allocationDate,
+          allocatedBy: partsAllocations.allocatedBy
+        })
+        .from(partsAllocations);
+
+      if (serviceId && technicianId) {
+        query = query.where(
+          and(
+            eq(partsAllocations.serviceId, serviceId),
+            eq(partsAllocations.technicianId, technicianId)
+          )
+        );
+      } else if (serviceId) {
+        query = query.where(eq(partsAllocations.serviceId, serviceId));
+      } else if (technicianId) {
+        query = query.where(eq(partsAllocations.technicianId, technicianId));
+      }
+
+      const allocations = await query.orderBy(desc(partsAllocations.allocationDate));
+      return allocations;
+    } catch (error) {
+      console.error('Greška pri dohvatanju alokacija delova:', error);
+      return [];
+    }
+  }
+
+  // PARTS ACTIVITY LOG METHODS
+
+  async logPartActivity(data: InsertPartsActivityLog): Promise<PartsActivityLog> {
+    try {
+      const [activityLog] = await db
+        .insert(partsActivityLog)
+        .values(data)
+        .returning();
+      return activityLog;
+    } catch (error) {
+      console.error('Greška pri upisu aktivnosti rezervnog dela:', error);
+      throw error;
+    }
+  }
+
+  async getPartActivityLog(partId?: number, limit: number = 50): Promise<any[]> {
+    try {
+      if (!this.storage) {
+        return [];
+      }
+
+      let query = db
+        .select({
+          id: partsActivityLog.id,
+          partId: partsActivityLog.partId,
+          action: partsActivityLog.action,
+          previousQuantity: partsActivityLog.previousQuantity,
+          newQuantity: partsActivityLog.newQuantity,
+          technicianId: partsActivityLog.technicianId,
+          serviceId: partsActivityLog.serviceId,
+          userId: partsActivityLog.userId,
+          description: partsActivityLog.description,
+          timestamp: partsActivityLog.timestamp
+        })
+        .from(partsActivityLog);
+
+      if (partId) {
+        query = query.where(eq(partsActivityLog.partId, partId));
+      }
+
+      const logs = await query.orderBy(desc(partsActivityLog.timestamp)).limit(limit);
+      return logs;
+    } catch (error) {
+      console.error('Greška pri dohvatanju loga aktivnosti delova:', error);
       return [];
     }
   }
