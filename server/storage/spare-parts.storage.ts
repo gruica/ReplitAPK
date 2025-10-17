@@ -503,6 +503,20 @@ class SparePartsStorage {
       return false;
     }
   }
+
+  async getSparePartsByService(serviceId: number): Promise<SparePartOrder[]> {
+    try {
+      const spareParts = await db
+        .select()
+        .from(sparePartOrders)
+        .where(eq(sparePartOrders.serviceId, serviceId))
+        .orderBy(desc(sparePartOrders.createdAt));
+      return spareParts;
+    } catch (error) {
+      console.error('Greška pri dohvatanju rezervnih delova za servis:', error);
+      return [];
+    }
+  }
 }
 
 // Singleton instance
