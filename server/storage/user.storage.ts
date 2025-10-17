@@ -10,7 +10,7 @@ import {
   type InsertUser,
   type UserPermission,
   type InsertUserPermission
-} from "../../shared/schema.js";
+} from "@shared/schema";
 
 const scryptAsyncPromisified = promisify(scryptAsync);
 
