@@ -613,18 +613,17 @@ export default function NewBusinessServiceRequest() {
                           <FormLabel>Status garancije</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Odaberite status garancije" />
+                              <SelectTrigger className={!field.value ? "border-red-300" : ""}>
+                                <SelectValue placeholder="⚠️ OBAVEZNO - Odaberite status garancije" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="u garanciji">U garanciji</SelectItem>
-                              <SelectItem value="van garancije">Van garancije</SelectItem>
-                              <SelectItem value="nepoznato">Nepoznato</SelectItem>
+                              <SelectItem value="u garanciji">🛡️ U garanciji</SelectItem>
+                              <SelectItem value="van garancije">💰 Van garancije</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            Obavezno polje - status garancije je važan za obradu zahteva
+                          <FormDescription className="text-amber-600 font-medium">
+                            ⚠️ OBAVEZNO POLJE - Morate odabrati da li je uređaj pod garancijom ili van garancije
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

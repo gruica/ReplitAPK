@@ -101,16 +101,16 @@ export function registerBusinessPartnerRoutes(app: Express) {
       if (!warrantyStatus) {
         return res.status(400).json({
           error: "Status garancije je obavezan",
-          message: "Molimo odaberite status garancije: 'u garanciji', 'van garancije' ili 'nepoznato'."
+          message: "Poslovni partneri moraju odabrati tačan status garancije: 'u garanciji' ili 'van garancije'."
         });
       }
 
-      // Validacija warranty status enum vrednosti
-      const validWarrantyStatuses = ["u garanciji", "van garancije", "nepoznato"];
-      if (!validWarrantyStatuses.includes(warrantyStatus)) {
+      // STRICT validacija - business partneri NE MOGU koristiti "nepoznato"
+      const validWarrantyStatusesForPartners = ["u garanciji", "van garancije"];
+      if (!validWarrantyStatusesForPartners.includes(warrantyStatus)) {
         return res.status(400).json({
           error: "Nevažeći status garancije",
-          message: "Status garancije mora biti: 'u garanciji', 'van garancije' ili 'nepoznato'."
+          message: "Poslovni partneri mogu odabrati samo: 'u garanciji' ili 'van garancije'. Opcija 'nepoznato' nije dozvoljena."
         });
       }
 
