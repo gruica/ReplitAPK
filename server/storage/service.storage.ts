@@ -27,6 +27,7 @@ export class ServiceStorage {
       console.log('Dohvatanje svih servisa...');
       
       let query = db.select({
+        // ALL service fields
         id: services.id,
         clientId: services.clientId,
         applianceId: services.applianceId,
@@ -39,11 +40,28 @@ export class ServiceStorage {
         completedDate: services.completedDate,
         technicianNotes: services.technicianNotes,
         cost: services.cost,
+        billingPrice: services.billingPrice,
+        billingPriceReason: services.billingPriceReason,
+        excludeFromBilling: services.excludeFromBilling,
         usedParts: services.usedParts,
         machineNotes: services.machineNotes,
         isCompletelyFixed: services.isCompletelyFixed,
         businessPartnerId: services.businessPartnerId,
         partnerCompanyName: services.partnerCompanyName,
+        clientUnavailableReason: services.clientUnavailableReason,
+        needsRescheduling: services.needsRescheduling,
+        reschedulingNotes: services.reschedulingNotes,
+        devicePickedUp: services.devicePickedUp,
+        pickupDate: services.pickupDate,
+        pickupNotes: services.pickupNotes,
+        customerRefusesRepair: services.customerRefusesRepair,
+        customerRefusalReason: services.customerRefusalReason,
+        repairFailed: services.repairFailed,
+        repairFailureReason: services.repairFailureReason,
+        replacedPartsBeforeFailure: services.replacedPartsBeforeFailure,
+        repairFailureDate: services.repairFailureDate,
+        isWarrantyService: services.isWarrantyService,
+        // JOIN fields
         clientName: clients.fullName,
         clientCity: clients.city,
         clientAddress: clients.address,
@@ -162,6 +180,7 @@ export class ServiceStorage {
       console.log(`Dohvatam servise za tehničara ${technicianId} sa JOIN podacima`);
       
       let query = db.select({
+        // ALL service fields
         id: services.id,
         clientId: services.clientId,
         applianceId: services.applianceId,
@@ -174,11 +193,28 @@ export class ServiceStorage {
         completedDate: services.completedDate,
         technicianNotes: services.technicianNotes,
         cost: services.cost,
+        billingPrice: services.billingPrice,
+        billingPriceReason: services.billingPriceReason,
+        excludeFromBilling: services.excludeFromBilling,
         usedParts: services.usedParts,
         machineNotes: services.machineNotes,
         isCompletelyFixed: services.isCompletelyFixed,
         businessPartnerId: services.businessPartnerId,
         partnerCompanyName: services.partnerCompanyName,
+        clientUnavailableReason: services.clientUnavailableReason,
+        needsRescheduling: services.needsRescheduling,
+        reschedulingNotes: services.reschedulingNotes,
+        devicePickedUp: services.devicePickedUp,
+        pickupDate: services.pickupDate,
+        pickupNotes: services.pickupNotes,
+        customerRefusesRepair: services.customerRefusesRepair,
+        customerRefusalReason: services.customerRefusalReason,
+        repairFailed: services.repairFailed,
+        repairFailureReason: services.repairFailureReason,
+        replacedPartsBeforeFailure: services.replacedPartsBeforeFailure,
+        repairFailureDate: services.repairFailureDate,
+        isWarrantyService: services.isWarrantyService,
+        // JOIN fields
         clientName: clients.fullName,
         clientCity: clients.city,
         clientAddress: clients.address,
@@ -337,7 +373,7 @@ export class ServiceStorage {
           name: row.manufacturerName
         } : undefined
       } : undefined
-    })) as Service[];
+    })) as any[]; // Type cast to any[] for complex JOIN mapping
   }
 
   async getServicesByPartner(partnerId: number): Promise<any[]> {
