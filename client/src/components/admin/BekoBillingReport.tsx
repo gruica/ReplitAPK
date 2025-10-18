@@ -15,6 +15,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
+interface UsedPartDetail {
+  partName: string;
+  partNumber: string;
+  quantity: number;
+  unitCost: string;
+}
+
 interface BekoBillingService {
   id: number;
   serviceNumber: string;
@@ -32,6 +39,8 @@ interface BekoBillingService {
   cost: number;
   description: string;
   technicianNotes?: string;
+  usedParts?: string;
+  usedPartsDetails?: UsedPartDetail[];
   warrantyStatus: string;
   isWarrantyService: boolean;
   isAutoDetected?: boolean;
@@ -255,11 +264,16 @@ export default function BekoBillingReport() {
   const handleExportToCSV = () => {
     if (!billingData?.services.length) return;
 
-    const csvHeaders = 'Broj servisa,Klijent,Telefon,Adresa,Grad,Uređaj,Brend,Model,Serijski broj,Serviser,Datum završetka,Cena,Opis problema,Izvršeni rad\n';
+    const csvHeaders = 'Broj servisa,Klijent,Telefon,Adresa,Grad,Uređaj,Brend,Model,Serijski broj,Serviser,Datum završetka,Cena,Opis problema,Izvršeni rad,Utrošeni rezervni dijelovi\n';
     
-    const csvData = billingData.services.map(service => 
-      `${service.serviceNumber},"${service.clientName}","${service.clientPhone}","${service.clientAddress}","${service.clientCity}","${service.applianceCategory}","${service.manufacturerName}","${service.applianceModel}","${service.serialNumber}","${service.technicianName}","${format(new Date(service.completedDate), 'dd.MM.yyyy')}","${(service.billingPrice || service.cost || 0).toFixed(2)}","${(service.description || '').replace(/"/g, '""')}","${(service.technicianNotes || '').replace(/"/g, '""')}"`
-    ).join('\n');
+    const csvData = billingData.services.map(service => {
+      // Formatiraj utrošene rezervne dijelove
+      const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
+        ? service.usedPartsDetails.map(p => `${p.partName} (${p.partNumber}) x${p.quantity}`).join('; ')
+        : (service.usedParts || 'Nema');
+        
+      return `${service.serviceNumber},"${service.clientName}","${service.clientPhone}","${service.clientAddress}","${service.clientCity}","${service.applianceCategory}","${service.manufacturerName}","${service.applianceModel}","${service.serialNumber}","${service.technicianName}","${format(new Date(service.completedDate), 'dd.MM.yyyy')}","${(service.billingPrice || service.cost || 0).toFixed(2)}","${(service.description || '').replace(/"/g, '""')}","${(service.technicianNotes || '').replace(/"/g, '""')}","${partsText.replace(/"/g, '""')}"`;
+    }).join('\n');
 
     const blob = new Blob([csvHeaders + csvData], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -365,22 +379,28 @@ export default function BekoBillingReport() {
           <table class="services-table">
             <thead>
               <tr>
-                <th style="width: 6%;">Servis #</th>
-                <th style="width: 14%;">Klijent</th>
-                <th style="width: 9%;">Telefon</th>
-                <th style="width: 12%;">Adresa</th>
-                <th style="width: 8%;">Grad</th>
-                <th style="width: 10%;">Uređaj</th>
-                <th style="width: 8%;">Brend</th>
-                <th style="width: 10%;">Model</th>
-                <th style="width: 9%;">Serijski #</th>
-                <th style="width: 9%;">Serviser</th>
-                <th style="width: 7%;">Završeno</th>
-                <th style="width: 6%;">Cena</th>
+                <th style="width: 4%;">Servis #</th>
+                <th style="width: 10%;">Klijent</th>
+                <th style="width: 7%;">Telefon</th>
+                <th style="width: 10%;">Adresa</th>
+                <th style="width: 6%;">Grad</th>
+                <th style="width: 8%;">Uređaj</th>
+                <th style="width: 6%;">Brend</th>
+                <th style="width: 8%;">Model</th>
+                <th style="width: 8%;">Serijski #</th>
+                <th style="width: 7%;">Serviser</th>
+                <th style="width: 5%;">Završeno</th>
+                <th style="width: 4%;">Cena</th>
+                <th style="width: 10%;">Izvršeni rad</th>
+                <th style="width: 10%;">Utrošeni dijelovi</th>
               </tr>
             </thead>
             <tbody>
-              ${billingData.services.map(service => `
+              ${billingData.services.map(service => {
+                const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
+                  ? service.usedPartsDetails.map(p => `${p.partName} x${p.quantity}`).join(', ')
+                  : (service.usedParts || '-');
+                return `
                 <tr>
                   <td class="service-number">#${service.serviceNumber}</td>
                   <td>${service.clientName}</td>
@@ -394,8 +414,11 @@ export default function BekoBillingReport() {
                   <td>${service.technicianName}</td>
                   <td>${format(new Date(service.completedDate), 'dd.MM.yy')}</td>
                   <td class="cost">${Number(service.billingPrice || service.cost || 0).toFixed(2)}€</td>
+                  <td style="font-size: 7px;">${service.technicianNotes || '-'}</td>
+                  <td style="font-size: 7px;">${partsText}</td>
                 </tr>
-              `).join('')}
+                `;
+              }).join('')}
             </tbody>
           </table>
           
