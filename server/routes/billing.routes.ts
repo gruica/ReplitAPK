@@ -1469,7 +1469,9 @@ export function registerBillingRoutes(app: Express) {
    *       403:
    *         description: Admin access required
    */
+
   app.get('/api/admin/billing/beko/enhanced/pdf/:year/:month', jwtAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+    console.log(`📄 [PDF GENERATION] PDF zahtjev za ${req.params.year}/${req.params.month}`);
     try {
       const year = parseInt(req.params.year);
       const month = parseInt(req.params.month);
@@ -1796,7 +1798,8 @@ export function registerBillingRoutes(app: Express) {
       console.log(`🚀 [PDF GENERATION] Pokretanje Puppeteer-a...`);
       const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process']
       });
 
       const page = await browser.newPage();
