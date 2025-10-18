@@ -40,7 +40,19 @@ class UserStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    console.error(`[USER_STORAGE_DEBUG] Looking for username: "${username}"`);
+    
+    // First, check ALL users in database
+    const allUsers = await db.select().from(users);
+    console.error(`[USER_STORAGE_DEBUG] Total users in DB: ${allUsers.length}`);
+    console.error(`[USER_STORAGE_DEBUG] ALL usernames:`, allUsers.map(u => u.username).join(", "));
+    
+    const result = await db.select().from(users).where(eq(users.username, username));
+    console.error(`[USER_STORAGE_DEBUG] Found ${result.length} users for username "${username}"`);
+    if (result.length > 0) {
+      console.error(`[USER_STORAGE_DEBUG] User found:`, result[0].id, result[0].username, result[0].role);
+    }
+    const [user] = result;
     return user;
   }
   
