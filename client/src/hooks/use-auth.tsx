@@ -152,6 +152,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      try {
+        await fetch("/api/logout", {
+          method: "POST",
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        });
+      } catch (error) {
+        console.error("Logout API call failed:", error);
+      }
+      
       localStorage.removeItem('auth_token');
       localStorage.removeItem("lastAuthRedirect");
       return Promise.resolve();
