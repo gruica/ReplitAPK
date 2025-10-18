@@ -66,7 +66,6 @@ class SparePartsStorage {
 
   async getAllSparePartOrders(): Promise<any[]> {
     try {
-      console.log('🔍 [SPARE PARTS] Dohvatanje svih porudžbina sa povezanim podacima...');
       
       const result = await pool.query(`
         SELECT id, part_name, part_number, quantity, status, urgency, created_at, updated_at,
@@ -79,26 +78,21 @@ class SparePartsStorage {
         ORDER BY created_at DESC
       `);
       const orders = result.rows;
-      console.log(`📋 [SPARE PARTS] Pronađeno ${orders.length} porudžbina u bazi`);
 
       const enrichedOrders = await Promise.all(
         orders.map(async (order) => {
           let serviceData = undefined;
           let technicianData = undefined;
 
-          console.log(`🔗 [SPARE PARTS] Obogaćujem porudžbinu #${order.id} (serviceId: ${order.service_id}, technicianId: ${order.technician_id})`);
 
           if (order.service_id && this.storage) {
             try {
               const service = await this.storage.getAdminServiceById(order.service_id);
               if (service) {
                 serviceData = service;
-                console.log(`✅ [SPARE PARTS] Servis #${order.service_id} povezan sa klijentom: ${service.client?.fullName}`);
               } else {
-                console.log(`⚠️ [SPARE PARTS] Servis #${order.service_id} nije pronađen u bazi`);
               }
             } catch (error) {
-              console.log(`❌ [SPARE PARTS] Greška pri dohvatanju servisa ${order.service_id}:`, error);
             }
           }
 
@@ -113,12 +107,9 @@ class SparePartsStorage {
                   email: technician.email || '',
                   specialization: technician.specialization || ''
                 };
-                console.log(`✅ [SPARE PARTS] Tehniker #${order.technician_id} povezan: ${technicianData.name}`);
               } else {
-                console.log(`⚠️ [SPARE PARTS] Tehniker #${order.technician_id} nije pronađen u bazi`);
               }
             } catch (error) {
-              console.log(`❌ [SPARE PARTS] Greška pri dohvatanju tehnikara ${order.technician_id}:`, error);
             }
           }
 
@@ -147,7 +138,6 @@ class SparePartsStorage {
         })
       );
 
-      console.log(`🎯 [SPARE PARTS] Uspešno obogaćeno ${enrichedOrders.length} porudžbina`);
       return enrichedOrders;
     } catch (error) {
       console.error('❌ [SPARE PARTS] Greška pri dohvatanju svih porudžbina rezervnih delova:', error);
@@ -218,7 +208,6 @@ class SparePartsStorage {
 
   async getSparePartOrdersByStatus(status: SparePartStatus): Promise<any[]> {
     try {
-      console.log(`🔍 [SPARE PARTS STATUS] Dohvatanje porudžbina sa statusom: ${status}`);
       
       const result = await pool.query(`
         SELECT id, part_name, part_number, quantity, status, urgency, created_at, updated_at, 
@@ -232,26 +221,21 @@ class SparePartsStorage {
         ORDER BY created_at DESC
       `, [status]);
       
-      console.log(`📋 [SPARE PARTS STATUS] Pronađeno ${result.rows.length} porudžbina sa statusom ${status}`);
 
       const enrichedOrders = await Promise.all(
         result.rows.map(async (row) => {
           let serviceData = undefined;
           let technicianData = undefined;
 
-          console.log(`🔗 [SPARE PARTS STATUS] Obogaćujem porudžbinu #${row.id} (serviceId: ${row.service_id}, technicianId: ${row.technician_id})`);
 
           if (row.service_id && this.storage) {
             try {
               const service = await this.storage.getAdminServiceById(row.service_id);
               if (service) {
                 serviceData = service;
-                console.log(`✅ [SPARE PARTS STATUS] Servis #${row.service_id} povezan sa klijentom: ${service.client?.fullName}`);
               } else {
-                console.log(`⚠️ [SPARE PARTS STATUS] Servis #${row.service_id} nije pronađen u bazi`);
               }
             } catch (error) {
-              console.log(`❌ [SPARE PARTS STATUS] Greška pri dohvatanju servisa ${row.service_id}:`, error);
             }
           }
 
@@ -266,12 +250,9 @@ class SparePartsStorage {
                   email: technician.email || '',
                   specialization: technician.specialization || ''
                 };
-                console.log(`✅ [SPARE PARTS STATUS] Tehniker #${row.technician_id} povezan: ${technicianData.name}`);
               } else {
-                console.log(`⚠️ [SPARE PARTS STATUS] Tehniker #${row.technician_id} nije pronađen u bazi`);
               }
             } catch (error) {
-              console.log(`❌ [SPARE PARTS STATUS] Greška pri dohvatanju tehnikara ${row.technician_id}:`, error);
             }
           }
 
@@ -300,7 +281,6 @@ class SparePartsStorage {
         })
       );
 
-      console.log(`🎯 [SPARE PARTS STATUS] Uspešno obogaćeno ${enrichedOrders.length} porudžbina sa statusom ${status}`);
       return enrichedOrders;
     } catch (error) {
       console.error('❌ [SPARE PARTS STATUS] Greška pri dohvatanju porudžbina po statusu:', error);
@@ -350,7 +330,6 @@ class SparePartsStorage {
 
   async getAllRequestsSparePartOrders(): Promise<any[]> {
     try {
-      console.log('🔍 [ALL-REQUESTS] Dohvatanje svih zahteva (pending + requested) sa povezanim podacima...');
       
       const result = await pool.query(`
         SELECT id, part_name, part_number, quantity, status, urgency, created_at, updated_at,
@@ -364,26 +343,21 @@ class SparePartsStorage {
         ORDER BY created_at DESC
       `);
       
-      console.log(`📋 [ALL-REQUESTS] Pronađeno ${result.rows.length} zahteva (pending + requested)`);
 
       const enrichedOrders = await Promise.all(
         result.rows.map(async (row) => {
           let serviceData = undefined;
           let technicianData = undefined;
 
-          console.log(`🔗 [ALL-REQUESTS] Obogaćujem porudžbinu #${row.id} (serviceId: ${row.service_id}, technicianId: ${row.technician_id})`);
 
           if (row.service_id && this.storage) {
             try {
               const service = await this.storage.getAdminServiceById(row.service_id);
               if (service) {
                 serviceData = service;
-                console.log(`✅ [ALL-REQUESTS] Servis #${row.service_id} povezan sa klijentom: ${service.client?.fullName}`);
               } else {
-                console.log(`⚠️ [ALL-REQUESTS] Servis #${row.service_id} nije pronađen u bazi`);
               }
             } catch (error) {
-              console.log(`❌ [ALL-REQUESTS] Greška pri dohvatanju servisa ${row.service_id}:`, error);
             }
           }
 
@@ -398,12 +372,9 @@ class SparePartsStorage {
                   email: technician.email || '',
                   specialization: technician.specialization || ''
                 };
-                console.log(`✅ [ALL-REQUESTS] Tehniker #${row.technician_id} povezan: ${technicianData.name}`);
               } else {
-                console.log(`⚠️ [ALL-REQUESTS] Tehniker #${row.technician_id} nije pronađen u bazi`);
               }
             } catch (error) {
-              console.log(`❌ [ALL-REQUESTS] Greška pri dohvatanju tehnikara ${row.technician_id}:`, error);
             }
           }
 
@@ -432,7 +403,6 @@ class SparePartsStorage {
         })
       );
 
-      console.log(`🎯 [ALL-REQUESTS] Uspešno obogaćeno ${enrichedOrders.length} zahteva`);
       return enrichedOrders;
     } catch (error) {
       console.error('❌ [ALL-REQUESTS] Greška pri dohvatanju svih zahteva:', error);
@@ -485,7 +455,6 @@ class SparePartsStorage {
         return undefined;
       }
 
-      console.log(`📦 [WORKFLOW] Uspešno ažuriran rezervni deo ID: ${id}, novi status: ${updates.status}`);
       return updatedOrder;
     } catch (error) {
       console.error('❌ [WORKFLOW] Greška pri ažuriranju statusa rezervnog dela:', error);
