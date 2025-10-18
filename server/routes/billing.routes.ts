@@ -93,6 +93,7 @@ export function registerBillingRoutes(app: Express) {
           technicianId: schema.services.technicianId,
           description: schema.services.description,
           technicianNotes: schema.services.technicianNotes,
+          usedParts: schema.services.usedParts,
           status: schema.services.status,
           warrantyStatus: schema.services.warrantyStatus,
           completedDate: schema.services.completedDate,
@@ -149,6 +150,35 @@ export function registerBillingRoutes(app: Express) {
           desc(schema.services.createdAt)
         );
       
+      // Povuci utrošene rezervne dijelove za sve servise
+      const serviceIds = services.map(s => s.serviceId);
+      const partsAllocations = serviceIds.length > 0 ? await db
+        .select({
+          serviceId: schema.partsAllocations.serviceId,
+          partName: schema.availableParts.partName,
+          partNumber: schema.availableParts.partNumber,
+          allocatedQuantity: schema.partsAllocations.allocatedQuantity,
+          unitCost: schema.availableParts.unitCost,
+        })
+        .from(schema.partsAllocations)
+        .leftJoin(schema.availableParts, eq(schema.partsAllocations.availablePartId, schema.availableParts.id))
+        .where(sql`${schema.partsAllocations.serviceId} IN (${sql.raw(serviceIds.join(','))})`)
+        : [];
+      
+      // Grupiši rezervne dijelove po servisima
+      const partsByService = partsAllocations.reduce((acc, part) => {
+        if (!acc[part.serviceId]) {
+          acc[part.serviceId] = [];
+        }
+        acc[part.serviceId].push({
+          partName: part.partName || '',
+          partNumber: part.partNumber || '',
+          quantity: part.allocatedQuantity || 0,
+          unitCost: part.unitCost || ''
+        });
+        return acc;
+      }, {} as Record<number, Array<{partName: string, partNumber: string, quantity: number, unitCost: string}>>);
+      
       const billingServices = services.map(service => {
         const hasCompletedDate = service.completedDate && service.completedDate.trim() !== '';
         const displayDate = hasCompletedDate ? service.completedDate : service.createdAt;
@@ -156,6 +186,10 @@ export function registerBillingRoutes(app: Express) {
         const billingAmount = (service.billingPrice !== null && service.billingPrice !== undefined && service.billingPrice !== '') 
           ? parseFloat(service.billingPrice) 
           : BEKO_STANDARD_TARIFF;
+        
+        // Formatiranje utrošenih rezervnih dijelova
+        const usedPartsData = partsByService[service.serviceId] || [];
+        const usedPartsText = service.usedParts || '';
         
         return {
           id: service.serviceId,
@@ -176,6 +210,8 @@ export function registerBillingRoutes(app: Express) {
           billingPriceReason: service.billingPriceReason || 'Standardna Beko tarifa',
           description: service.description || '',
           technicianNotes: service.technicianNotes || '',
+          usedParts: usedPartsText,
+          usedPartsDetails: usedPartsData,
           warrantyStatus: service.warrantyStatus || 'Nedefinirano',
           isWarrantyService: true,
           isAutoDetected: !hasCompletedDate,
@@ -258,6 +294,7 @@ export function registerBillingRoutes(app: Express) {
           technicianId: schema.services.technicianId,
           description: schema.services.description,
           technicianNotes: schema.services.technicianNotes,
+          usedParts: schema.services.usedParts,
           status: schema.services.status,
           warrantyStatus: schema.services.warrantyStatus,
           completedDate: schema.services.completedDate,
@@ -303,10 +340,42 @@ export function registerBillingRoutes(app: Express) {
           desc(schema.services.completedDate)
         );
 
+      // Povuci utrošene rezervne dijelove za sve servise
+      const serviceIds = services.map(s => s.serviceId);
+      const partsAllocations = serviceIds.length > 0 ? await db
+        .select({
+          serviceId: schema.partsAllocations.serviceId,
+          partName: schema.availableParts.partName,
+          partNumber: schema.availableParts.partNumber,
+          allocatedQuantity: schema.partsAllocations.allocatedQuantity,
+          unitCost: schema.availableParts.unitCost,
+        })
+        .from(schema.partsAllocations)
+        .leftJoin(schema.availableParts, eq(schema.partsAllocations.availablePartId, schema.availableParts.id))
+        .where(sql`${schema.partsAllocations.serviceId} IN (${sql.raw(serviceIds.join(','))})`)
+        : [];
+      
+      // Grupiši rezervne dijelove po servisima
+      const partsByService = partsAllocations.reduce((acc, part) => {
+        if (!acc[part.serviceId]) {
+          acc[part.serviceId] = [];
+        }
+        acc[part.serviceId].push({
+          partName: part.partName || '',
+          partNumber: part.partNumber || '',
+          quantity: part.allocatedQuantity || 0,
+          unitCost: part.unitCost || ''
+        });
+        return acc;
+      }, {} as Record<number, Array<{partName: string, partNumber: string, quantity: number, unitCost: string}>>);
+
       const billingServices = services.map(service => {
         const billingAmount = (service.billingPrice !== null && service.billingPrice !== undefined && service.billingPrice !== '') 
           ? parseFloat(service.billingPrice) 
           : BEKO_STANDARD_TARIFF;
+        
+        const usedPartsData = partsByService[service.serviceId] || [];
+        const usedPartsText = service.usedParts || '';
         
         return {
           id: service.serviceId,
@@ -326,6 +395,9 @@ export function registerBillingRoutes(app: Express) {
           billingPrice: billingAmount,
           billingPriceReason: service.billingPriceReason || 'Standardna Beko tarifa',
           description: service.description || '',
+          technicianNotes: service.technicianNotes || '',
+          usedParts: usedPartsText,
+          usedPartsDetails: usedPartsData,
           warrantyStatus: service.warrantyStatus || 'Nedefinirano',
           isWarrantyService: true,
           isAutoDetected: false,
