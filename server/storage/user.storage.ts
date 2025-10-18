@@ -79,15 +79,6 @@ class UserStorage {
       // Posebno pronađimo poslovne partnere radi logovanja
       const businessPartners = result.filter(user => user.role === 'business');
       
-      if (businessPartners.length > 0) {
-          id: p.id,
-          username: p.username,
-          fullName: p.fullName,
-          companyName: p.companyName,
-          registeredAt: p.registeredAt
-        })));
-      }
-      
       return result;
     } catch (error) {
       console.error("Greška pri dohvatanju neverifikovanih korisnika:", error);
@@ -101,14 +92,6 @@ class UserStorage {
   
   async createUser(insertUser: InsertUser): Promise<User> {
     try {
-        username: insertUser.username,
-        fullName: insertUser.fullName,
-        role: insertUser.role,
-        email: insertUser.email,
-        companyName: insertUser.companyName,
-        phone: insertUser.phone
-      });
-      
       // Proveri da li je lozinka već validno heširana (ima format 'hash.salt')
       let password = insertUser.password;
       const parts = password.split('.');
@@ -149,12 +132,6 @@ class UserStorage {
         verifiedAt: verifiedDate,
         verifiedBy: null
       };
-      
-        username: userToInsert.username,
-        role: userToInsert.role,
-        email: userToInsert.email,
-        companyName: userToInsert.companyName
-      });
 
       // Koristimo Drizzle ORM sa type-safe insert().returning() pattern
       
@@ -202,12 +179,6 @@ class UserStorage {
         verifiedAt: userResult.verifiedAt ? new Date(userResult.verifiedAt) : null,
         verifiedBy: userResult.verifiedBy
       };
-      
-        id: user.id,
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role
-      });
       
       return user;
     } catch (error) {
