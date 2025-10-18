@@ -65,7 +65,6 @@ class UserStorage {
   
   async getUnverifiedUsers(): Promise<User[]> {
     try {
-      console.log("Dohvatanje neverifikovanih korisnika...");
       
       // Kombinujemo upite za business partnere i druge korisnike
       const result = await db
@@ -79,10 +78,8 @@ class UserStorage {
       
       // Posebno pronađimo poslovne partnere radi logovanja
       const businessPartners = result.filter(user => user.role === 'business');
-      console.log(`Pronađeno ${result.length} neverifikovanih korisnika, od toga ${businessPartners.length} poslovnih partnera`);
       
       if (businessPartners.length > 0) {
-        console.log("Poslovni partneri koji čekaju verifikaciju:", businessPartners.map(p => ({
           id: p.id,
           username: p.username,
           fullName: p.fullName,
@@ -104,7 +101,6 @@ class UserStorage {
   
   async createUser(insertUser: InsertUser): Promise<User> {
     try {
-      console.log("Kreiranje korisnika:", {
         username: insertUser.username,
         fullName: insertUser.fullName,
         role: insertUser.role,
@@ -154,7 +150,6 @@ class UserStorage {
         verifiedBy: null
       };
       
-      console.log("Vrednosti za unos u bazu:", {
         username: userToInsert.username,
         role: userToInsert.role,
         email: userToInsert.email,
@@ -162,7 +157,6 @@ class UserStorage {
       });
 
       // Koristimo Drizzle ORM sa type-safe insert().returning() pattern
-      console.log("Izvršavanje Drizzle upita za kreiranje korisnika");
       
       const result = await db.insert(users).values({
         username: userToInsert.username,
@@ -209,7 +203,6 @@ class UserStorage {
         verifiedBy: userResult.verifiedBy
       };
       
-      console.log("Korisnik uspešno kreiran:", {
         id: user.id,
         username: user.username,
         fullName: user.fullName,
@@ -277,7 +270,6 @@ class UserStorage {
         .insert(userPermissions)
         .values(permission)
         .returning();
-      console.log(`🛡️ [PERMISSIONS] Dodeljene privilegije korisniku ${permission.userId}`);
       return userPermission;
     } catch (error) {
       console.error('Greška pri kreiranju user permissions:', error);
@@ -305,7 +297,6 @@ class UserStorage {
         .set(updates)
         .where(eq(userPermissions.userId, userId))
         .returning();
-      console.log(`🛡️ [PERMISSIONS] Ažurirane privilegije za korisnika ${userId}`);
       return updatedPermission;
     } catch (error) {
       console.error('Greška pri ažuriranju user permissions:', error);

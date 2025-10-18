@@ -24,8 +24,6 @@ export class ServiceStorage {
   
   async getAllServices(limit?: number): Promise<ServiceWithDetails[]> {
     try {
-      console.log('Dohvatanje svih servisa...');
-      
       let query = db.select({
         // ALL service fields
         id: services.id,
@@ -87,15 +85,6 @@ export class ServiceStorage {
       
       const result = await query;
       
-      if (result.length > 0) {
-        console.log("Ključevi prvog servisa:", Object.keys(result[0]));
-        if (result[0].createdAt) {
-          console.log("Prvi servis createdAt:", new Date(result[0].createdAt).toISOString().split('T')[0]);
-        }
-      }
-      
-      console.log(`Uspješno dohvaćeno ${result.length} servisa sa validnim referencama`);
-      
       const transformedResult = result.map(service => {
         const transformed = { ...service };
         
@@ -113,33 +102,16 @@ export class ServiceStorage {
       return transformedResult;
     } catch (error) {
       console.error("Greška pri dobijanju svih servisa sa validacijom veza:", error);
-      console.log("Korištenje fallback upita za dohvatanje servisa");
       return await db.select().from(services);
     }
   }
 
   async getService(id: number): Promise<Service | undefined> {
-    console.log(`[storage.getService] Pozvan za ID: ${id}, tip: ${typeof id}`);
-    
-    try {
-      const rawResult = await db.execute(sql`SELECT * FROM services WHERE id = ${id}`);
-      console.log(`[storage.getService] RAW SQL rezultat:`, rawResult.rows?.length || 0, 'redova');
-    } catch (e) {
-      console.error(`[storage.getService] RAW SQL greška:`, e);
-    }
-    
     const result = await db.select()
       .from(services)
       .where(eq(services.id, id));
     
-    console.log(`[storage.getService] Drizzle rezultat - pronađeno ${result.length} rezultata`);
-    if (result.length > 0) {
-      console.log(`[storage.getService] Prvi rezultat ID:`, result[0].id);
-    }
-    
-    const service = result[0];
-    console.log(`[storage.getService] Vraćam:`, service ? `Servis ID ${service.id}` : 'undefined');
-    return service;
+    return result[0];
   }
 
   async getServicesByClient(clientId: number): Promise<Service[]> {
@@ -157,7 +129,6 @@ export class ServiceStorage {
   }
 
   async getServicesByStatusDetailed(status: ServiceStatus): Promise<any[]> {
-    console.log(`getServicesByStatusDetailed called with status: ${status}`);
     return [];
   }
 
@@ -177,8 +148,6 @@ export class ServiceStorage {
 
   async getServicesByTechnician(technicianId: number, limit?: number): Promise<ServiceWithDetails[]> {
     try {
-      console.log(`Dohvatam servise za tehničara ${technicianId} sa JOIN podacima`);
-      
       let query = db.select({
         // ALL service fields
         id: services.id,
@@ -240,7 +209,6 @@ export class ServiceStorage {
       }
       
       const result = await query;
-      console.log(`Pronađeno ${result.length} servisa za tehničara ${technicianId} sa kompletnim podacima`);
       
       return result as Service[];
     } catch (error) {
@@ -251,8 +219,6 @@ export class ServiceStorage {
 
   async getServicesByTechnicianAndStatus(technicianId: number, status: ServiceStatus, limit?: number): Promise<ServiceWithDetails[]> {
     try {
-      console.log(`Dohvatam servise za tehničara ${technicianId} sa statusom '${status}'`);
-      
       let query = db
         .select()
         .from(services)
@@ -267,7 +233,6 @@ export class ServiceStorage {
       }
       
       const results = await query;
-      console.log(`Pronađeno ${results.length} servisa za tehničara ${technicianId} sa statusom '${status}'`);
       return results;
     } catch (error) {
       console.error(`Greška pri dohvatanju servisa za tehničara ${technicianId} sa statusom '${status}':`, error);
@@ -377,31 +342,7 @@ export class ServiceStorage {
   }
 
   async getServicesByPartner(partnerId: number): Promise<any[]> {
-    const startTime = Date.now();
-    
     try {
-      const poolResult = await pool.query(`
-        SELECT id, created_at, description 
-        FROM services 
-        WHERE business_partner_id = $1 
-        ORDER BY created_at DESC 
-        LIMIT 5
-      `, [partnerId]);
-      console.log(`[DEBUG] POOL - Top 5 servisa:`, poolResult.rows.map(r => `ID ${r.id} (${r.created_at})`).join(', '));
-      
-      const drizzleServices = await db
-        .select({
-          id: services.id,
-          createdAt: services.createdAt,
-          description: services.description
-        })
-        .from(services)
-        .where(eq(services.businessPartnerId, partnerId))
-        .orderBy(desc(services.createdAt))
-        .limit(5);
-      
-      console.log(`[DEBUG] DRIZZLE - Top 5 servisa:`, drizzleServices.map(r => `ID ${r.id} (${r.createdAt})`).join(', '));
-      
       const rawServices = await db
         .select({
           id: services.id,
@@ -484,13 +425,6 @@ export class ServiceStorage {
           specialization: row.technicianSpecialization
         } : null
       }));
-
-      const responseTime = Date.now() - startTime;
-      console.log(`[PERFORMANCE] getServicesByPartner(${partnerId}): ${responseTime}ms for ${servicesWithDetails.length} services`);
-      console.log(`[DEBUG] Raw services from DB: ${rawServices.length}, After transformation: ${servicesWithDetails.length}`);
-      if (rawServices.length > 0) {
-        console.log(`[DEBUG] First service ID: ${rawServices[0].id}, Last service ID: ${rawServices[rawServices.length-1].id}`);
-      }
 
       return servicesWithDetails;
     } catch (error) {
@@ -883,8 +817,6 @@ export class ServiceStorage {
 
   async deleteAdminService(id: number): Promise<boolean> {
     try {
-      console.log(`[DELETE SERVICE] Započinje brisanje servisa ID: ${id}`);
-      
       if (isNaN(id) || id <= 0) {
         console.error('Nevaljan ID servisa za brisanje:', id);
         return false;
@@ -896,29 +828,19 @@ export class ServiceStorage {
         .where(eq(services.id, id))
         .limit(1);
       
-      console.log(`[DELETE SERVICE] Servis sa ID ${id} postoji:`, existingService.length > 0);
-      
       if (existingService.length === 0) {
-        console.log(`[DELETE SERVICE] Servis sa ID ${id} ne postoji u bazi`);
         return false;
       }
 
-      console.log(`[DELETE SERVICE] Brišem povezane notifikacije za servis ${id}`);
-      const deletedNotifications = await db
+      await db
         .delete(notifications)
         .where(eq(notifications.relatedServiceId, id))
         .returning();
-      
-      console.log(`[DELETE SERVICE] Obrisano ${deletedNotifications.length} notifikacija`);
 
-      console.log(`[DELETE SERVICE] Brišem sam servis ${id}`);
       const result = await db
         .delete(services)
         .where(eq(services.id, id))
         .returning();
-
-      console.log(`[DELETE SERVICE] Rezultat brisanja servisa:`, result.length > 0 ? 'USPEŠNO' : 'NEUSPEŠNO');
-      console.log(`[DELETE SERVICE] Obrisani servis podaci:`, result.length > 0 ? result[0].id : 'nema podataka');
 
       return result.length > 0;
     } catch (error) {
