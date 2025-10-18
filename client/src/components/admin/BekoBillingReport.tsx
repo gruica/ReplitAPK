@@ -531,6 +531,18 @@ export default function BekoBillingReport() {
                 <Printer className="h-4 w-4 mr-2" />
                 Štampaj
               </Button>
+              <Button 
+                onClick={() => {
+                  const url = `/api/admin/billing/beko/enhanced/pdf/${selectedYear}/${selectedMonth}`;
+                  window.open(url, '_blank');
+                }}
+                disabled={!selectedMonth || !selectedYear}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                data-testid="button-download-pdf"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
             </div>
           </div>
         </CardContent>
