@@ -141,14 +141,14 @@ export function registerAuthRoutes(app: Express) {
       }
       if (!user) {
         logger.debug(`JWT Login: User not found`);
-        return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
+        return res.status(401).json({ error: "[USER_NOT_FOUND] Neispravno korisničko ime ili lozinka" });
       }
       
       // Check password
       const isPasswordValid = await comparePassword(password, user.password);
       if (!isPasswordValid) {
         logger.debug(`JWT Login: Invalid password`);
-        return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
+        return res.status(401).json({ error: "[PASSWORD_CHECK_FAILED] Neispravno korisničko ime ili lozinka" });
       }
       
       // Check if user is verified
