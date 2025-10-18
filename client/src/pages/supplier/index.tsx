@@ -34,18 +34,13 @@ interface SupplierTask {
 }
 
 export default function SupplierDashboard() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  // Logout handler
-  const handleLogout = () => {
-    localStorage.removeItem("auth_token");
-    toast({
-      title: "Odjavljeni ste",
-      description: "Uspješno ste se odjavili sa portala.",
-    });
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync();
     navigate("/");
   };
 
