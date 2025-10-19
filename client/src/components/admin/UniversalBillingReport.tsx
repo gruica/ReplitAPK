@@ -309,17 +309,18 @@ export default function UniversalBillingReport({
   const handleExportToCSV = () => {
     if (!billingData?.services.length) return;
 
-    const csvHeaders = 'Broj servisa,Klijent,Telefon,Adresa,Grad,Uređaj,Brend,Model,Serijski broj,Serviser,Datum završetka,Cena,Opis problema,Izvršeni rad,Utrošeni rezervni dijelovi\n';
+    const csvHeaders = 'Broj servisa;Klijent;Telefon;Adresa;Grad;Uređaj;Brend;Model;Serijski broj;Serviser;Datum završetka;Cena;Opis problema;Izvršeni rad;Utrošeni rezervni dijelovi\n';
     
     const csvData = billingData.services.map((service: BillingService) => {
       const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
-        ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} (${p.partNumber}) x${p.quantity}`).join('; ')
+        ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} (${p.partNumber}) x${p.quantity}`).join(', ')
         : (service.usedParts || 'Nema');
         
-      return `${service.serviceNumber},"${service.clientName}","${service.clientPhone}","${service.clientAddress}","${service.clientCity}","${service.applianceCategory}","${service.manufacturerName}","${service.applianceModel}","${service.serialNumber}","${service.technicianName}","${format(new Date(service.completedDate), 'dd.MM.yyyy')}","${(service.billingPrice || service.cost || 0).toFixed(2)}","${(service.description || '').replace(/"/g, '""')}","${(service.technicianNotes || '').replace(/"/g, '""')}","${partsText.replace(/"/g, '""')}"`;
+      return `${service.serviceNumber};"${service.clientName}";"${service.clientPhone}";"${service.clientAddress}";"${service.clientCity}";"${service.applianceCategory}";"${service.manufacturerName}";"${service.applianceModel}";"${service.serialNumber}";"${service.technicianName}";"${format(new Date(service.completedDate), 'dd.MM.yyyy')}";"${(service.billingPrice || service.cost || 0).toFixed(2)}";"${(service.description || '').replace(/"/g, '""')}";"${(service.technicianNotes || '').replace(/"/g, '""')}";"${partsText.replace(/"/g, '""')}"`;
     }).join('\n');
 
-    const blob = new Blob([csvHeaders + csvData], { type: 'text/csv;charset=utf-8;' });
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvHeaders + csvData], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
