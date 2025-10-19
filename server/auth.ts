@@ -45,8 +45,9 @@ export async function comparePassword(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Detect production environment (MUST MATCH db.ts logic!)
-  const isProduction = process.env.REPLIT_DEPLOYMENT === 'true' || 
+  // Detect production environment 
+  const isProduction = process.env.REPLIT_ENVIRONMENT === 'production' || 
+                       !!process.env.REPLIT_DEV_DOMAIN || 
                        process.env.NODE_ENV === 'production';
   
   // MANDATORY SESSION_SECRET validation - fail-fast for production security
