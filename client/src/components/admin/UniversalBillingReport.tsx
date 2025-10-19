@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequestWithAuth, queryClient } from '@/lib/queryClient';
 
 interface UsedPartDetail {
   partName: string;
@@ -220,7 +220,7 @@ export default function UniversalBillingReport({
       billingPrice: number; 
       billingPriceReason: string;
     }) => {
-      return apiRequest('PATCH', `/api/admin/services/${serviceId}/billing`, {
+      return apiRequestWithAuth('PATCH', `/api/admin/services/${serviceId}/billing`, {
         billingPrice,
         billingPriceReason
       });
@@ -245,7 +245,7 @@ export default function UniversalBillingReport({
 
   const excludeFromBillingMutation = useMutation({
     mutationFn: async ({ serviceId, exclude }: { serviceId: number; exclude: boolean }) => {
-      return apiRequest('PATCH', `/api/admin/services/${serviceId}/exclude`, { exclude });
+      return apiRequestWithAuth('PATCH', `/api/admin/services/${serviceId}/exclude`, { exclude });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint] });
