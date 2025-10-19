@@ -791,6 +791,8 @@ export default function UniversalBillingReport({
                     <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Klijent</th>
                     <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Uređaj</th>
                     <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Serviser</th>
+                    <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Izvršeni rad</th>
+                    <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Korišteni dijelovi</th>
                     <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Datum</th>
                     <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Cijena</th>
                     <th className={`text-left p-4 font-semibold text-slate-700 ${colors.light}`}>Status</th>
@@ -805,11 +807,6 @@ export default function UniversalBillingReport({
                           <p className={`font-bold ${colors.text}`}>#{service.serviceNumber}</p>
                           {service.description && (
                             <p className="text-sm text-slate-600 mt-1">{service.description.substring(0, 40)}...</p>
-                          )}
-                          {service.technicianNotes && (
-                            <p className={`text-xs ${colors.text} ${colors.light} px-2 py-1 rounded mt-2 inline-block`}>
-                              Rad: {service.technicianNotes.substring(0, 50)}...
-                            </p>
                           )}
                         </div>
                       </td>
@@ -839,6 +836,30 @@ export default function UniversalBillingReport({
                             <User className={`h-4 w-4 text-${theme}-600`} />
                           </div>
                           <span className="text-sm font-medium text-slate-700">{service.technicianName}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="max-w-xs">
+                          <p className="text-sm text-slate-700 leading-relaxed">
+                            {service.technicianNotes || '-'}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="max-w-xs">
+                          {service.usedPartsDetails && service.usedPartsDetails.length > 0 ? (
+                            <div className="space-y-1">
+                              {service.usedPartsDetails.map((part: UsedPartDetail, idx: number) => (
+                                <div key={idx} className={`text-xs ${colors.light} px-2 py-1 rounded`}>
+                                  <span className="font-semibold">{part.partName}</span>
+                                  {part.partNumber && <span className="text-slate-500 ml-1">({part.partNumber})</span>}
+                                  <span className={`ml-1 ${colors.text}`}>x{part.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-600">{service.usedParts || '-'}</p>
+                          )}
                         </div>
                       </td>
                       <td className="p-4">
