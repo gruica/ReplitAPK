@@ -220,7 +220,7 @@ export default function UniversalBillingReport({
       billingPrice: number; 
       billingPriceReason: string;
     }) => {
-      return apiRequest('PATCH', `/api/admin/billing/services/${serviceId}/price`, {
+      return apiRequest('PATCH', `/api/admin/services/${serviceId}/billing`, {
         billingPrice,
         billingPriceReason
       });
@@ -245,7 +245,7 @@ export default function UniversalBillingReport({
 
   const excludeFromBillingMutation = useMutation({
     mutationFn: async ({ serviceId, exclude }: { serviceId: number; exclude: boolean }) => {
-      return apiRequest('PATCH', `/api/admin/billing/services/${serviceId}/exclude`, { exclude });
+      return apiRequest('PATCH', `/api/admin/services/${serviceId}/exclude`, { exclude });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint] });
