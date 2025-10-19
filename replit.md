@@ -59,6 +59,12 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **Billing PDF Refactoring (October 2024)**: Eliminated code duplication in PDF generation endpoints through shared helper function pattern.
+  - **Code Reduction**: billing.routes.ts reduced from 2,253L to 1,958L (-295L, -13%)
+  - **Shared Helper Function**: Created `generateBillingPDF()` helper (360 lines) consolidating database queries, parts allocation logic, HTML generation, and Puppeteer PDF creation
+  - **Endpoint Refactoring**: Both Beko and ComPlus PDF endpoints refactored from ~370 lines to ~35 lines each using configuration-based approach
+  - **Maintainability**: Bug fixes and new partner additions now require changes in single location instead of multiple duplicate blocks
+  - **Functionality**: Zero breaking changes - PDF generation works identically to pre-refactoring implementation
 - **PDF Billing Reports (October 2024)**: Implemented comprehensive PDF generation for both Beko and ComPlus billing reports using Puppeteer with system Chromium. Features include:
   - **Beko PDF Endpoint**: `/api/admin/billing/beko/enhanced/pdf/:year/:month` generates professional landscape A4 PDFs with complete service details, technician work notes, and used spare parts from production database.
   - **ComPlus PDF Endpoint**: `/api/admin/billing/complus/enhanced/pdf/:year/:month` mirrors Beko functionality with ComPlus brand styling (blue theme).
