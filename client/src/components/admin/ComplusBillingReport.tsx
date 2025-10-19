@@ -6,9 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, FileText, Download, Euro, CheckCircle, User, Phone, MapPin, Wrench, Package, Clock, Printer, Zap, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { Calendar, FileText, Download, Euro, CheckCircle, User, Phone, MapPin, Package, Clock, Printer, Zap, AlertCircle, Edit, Trash2, TrendingUp, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -76,7 +76,6 @@ interface MonthlyReport {
 export default function ComplusBillingReport() {
   const currentDate = new Date();
   
-  // Lazy initialization - localStorage se poziva UNUTAR funkcije koja se izvršava samo jednom
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const savedMonth = localStorage.getItem('complus_billing_month');
     return savedMonth || String(currentDate.getMonth() + 1).padStart(2, '0');
@@ -92,19 +91,15 @@ export default function ComplusBillingReport() {
     return savedEnhanced ? savedEnhanced === 'true' : true;
   });
 
-  // Dialog state za uređivanje cijene
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<BillingService | null>(null);
   const [newPrice, setNewPrice] = useState<string>('');
   const [newReason, setNewReason] = useState<string>('');
   
-  // Dialog state za isključivanje servisa iz billinga
   const [excludeDialogOpen, setExcludeDialogOpen] = useState(false);
   const [excludingService, setExcludingService] = useState<BillingService | null>(null);
   
   const { toast } = useToast();
-
-  // Production-ready component - debug logs removed
 
   const complusBrands = ['Electrolux', 'Elica', 'Candy', 'Hoover', 'Turbo Air'];
   const months = [
@@ -122,141 +117,104 @@ export default function ComplusBillingReport() {
     { value: '12', label: 'Decembar' }
   ];
 
-  // Sačuvaj promjene u localStorage
   useEffect(() => {
     localStorage.setItem('complus_billing_month', selectedMonth);
-    localStorage.setItem('complus_billing_year', String(selectedYear));
-    localStorage.setItem('complus_billing_enhanced', String(enhancedMode));
-    // Saved to localStorage successfully
-  }, [selectedMonth, selectedYear, enhancedMode]);
-  
-  // Enhanced mode validation check
+  }, [selectedMonth]);
 
-  // Fetch warranty services for all Complus brands in selected period
-  const { data: billingData, isLoading, error, refetch: refetchBillingData } = useQuery({
-    queryKey: [
-      enhancedMode ? '/api/admin/billing/complus/enhanced' : '/api/admin/billing/complus',
-      { month: selectedMonth, year: selectedYear, enhancedMode }
-    ],
-    staleTime: 0, // Uvijek refetch fresh podatke
+  useEffect(() => {
+    localStorage.setItem('complus_billing_year', selectedYear.toString());
+  }, [selectedYear]);
+
+  useEffect(() => {
+    localStorage.setItem('complus_billing_enhanced', enhancedMode.toString());
+  }, [enhancedMode]);
+
+  const { data: billingData, isLoading, refetch: refetchBillingData } = useQuery({
+    queryKey: [enhancedMode ? '/api/admin/billing/complus/enhanced' : '/api/admin/billing/complus', selectedMonth, selectedYear, enhancedMode],
+    staleTime: 0,
     enabled: !!selectedMonth && !!selectedYear,
-    queryFn: async ({ queryKey }) => {
-      const [endpoint, params] = queryKey;
-      const urlParams = new URLSearchParams({
-        month: (params as any).month,
-        year: (params as any).year.toString()
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        month: selectedMonth,
+        year: selectedYear.toString()
       });
       
-      // Making API call to billing endpoint
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('Nema autentifikacije');
       
-      const response = await fetch(`${endpoint}?${urlParams}`, {
+      const endpoint = enhancedMode 
+        ? `/api/admin/billing/complus/enhanced?${params}`
+        : `/api/admin/billing/complus?${params}`;
+      
+      const response = await fetch(endpoint, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+          'Authorization': `Bearer ${token}`
         }
       });
       
-      // Response received successfully
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        // Backend error handled with user notification - sanitized for production
-        throw new Error('Greška pri dohvatanju podataka za fakturisanje. Molimo pokušajte ponovo.');
-      }
-      const result = await response.json() as MonthlyReport;
-      // Data retrieved successfully
-      return result;
+      if (!response.ok) throw new Error('Greška pri učitavanju podataka');
+      return response.json();
     }
   });
 
-  // Mutation za ažuriranje billing podataka
   const updateBillingMutation = useMutation({
     mutationFn: async ({ serviceId, billingPrice, billingPriceReason }: { 
       serviceId: number; 
       billingPrice: number; 
-      billingPriceReason: string 
+      billingPriceReason: string;
     }) => {
-      return await apiRequest(`/api/admin/services/${serviceId}/billing`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          billingPrice,
-          billingPriceReason
-        })
+      return apiRequest('PATCH', `/api/admin/billing/services/${serviceId}/price`, {
+        billingPrice,
+        billingPriceReason
       });
     },
-    onSuccess: async (data, variables) => {
-      console.log('✅ [BILLING UPDATE] Mutation success, backend response:', data);
-      console.log('✅ [BILLING UPDATE] Updated service ID:', variables.serviceId, 'New price:', variables.billingPrice);
-      
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [enhancedMode ? '/api/admin/billing/complus/enhanced' : '/api/admin/billing/complus'] });
       toast({
-        title: "Uspješno ažurirano",
-        description: "Billing cijena i dokumentacija su uspješno ažurirani.",
+        title: "Uspjeh",
+        description: "Cijena uspješno ažurirana",
       });
-      
-      // Invalidiraj keš i forsiraj immediate refetch
-      await queryClient.invalidateQueries({
-        queryKey: [
-          enhancedMode ? '/api/admin/billing/complus/enhanced' : '/api/admin/billing/complus'
-        ],
-        refetchType: 'active'
-      });
-      
-      console.log('✅ [BILLING UPDATE] Cache invalidated and refetched');
-      
       setEditDialogOpen(false);
-      setEditingService(null);
-      setNewPrice('');
-      setNewReason('');
+      refetchBillingData();
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Greška",
-        description: error.message || "Greška pri ažuriranju billing podataka",
+        description: "Greška pri ažuriranju cijene",
         variant: "destructive",
       });
     }
   });
 
-  // Mutation za isključivanje servisa iz billing izvještaja
   const excludeFromBillingMutation = useMutation({
-    mutationFn: async ({ serviceId, exclude }: { 
-      serviceId: number; 
-      exclude: boolean 
-    }) => {
-      return await apiRequest(`/api/admin/services/${serviceId}/exclude-from-billing`, {
-        method: 'PATCH',
-        body: JSON.stringify({ exclude })
-      });
+    mutationFn: async ({ serviceId, exclude }: { serviceId: number; exclude: boolean }) => {
+      return apiRequest('PATCH', `/api/admin/billing/services/${serviceId}/exclude`, { exclude });
     },
-    onSuccess: async (_, variables) => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [enhancedMode ? '/api/admin/billing/complus/enhanced' : '/api/admin/billing/complus'] });
       toast({
-        title: "Uspješno",
-        description: "Servis je uklonjen iz billing izvještaja.",
+        title: "Uspjeh",
+        description: "Servis isključen iz billinga",
       });
-      
-      // Direktno refetch podataka iz baze
-      await refetchBillingData();
-      
       setExcludeDialogOpen(false);
-      setExcludingService(null);
+      refetchBillingData();
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Greška",
-        description: error.message || "Greška pri isključivanju servisa",
+        description: "Greška pri isključivanju servisa",
         variant: "destructive",
       });
     }
   });
 
-  // Handler za otvaranje edit dialoga
   const handleEditPrice = (service: BillingService) => {
     setEditingService(service);
-    setNewPrice((service.billingPrice || service.cost || 0).toString());
+    setNewPrice(service.billingPrice?.toString() || service.cost?.toString() || '30.25');
     setNewReason(service.billingPriceReason || '');
     setEditDialogOpen(true);
   };
 
-  // Handler za čuvanje izmjena
   const handleSavePrice = () => {
     if (!editingService) return;
     
@@ -277,13 +235,11 @@ export default function ComplusBillingReport() {
     });
   };
 
-  // Handler za otvaranje exclude dialoga
   const handleExcludeFromBilling = (service: BillingService) => {
     setExcludingService(service);
     setExcludeDialogOpen(true);
   };
 
-  // Handler za potvrdu isključivanja servisa
   const handleConfirmExclude = () => {
     if (!excludingService) return;
     
@@ -293,16 +249,14 @@ export default function ComplusBillingReport() {
     });
   };
 
-  // Generate export data
   const handleExportToCSV = () => {
     if (!billingData?.services.length) return;
 
     const csvHeaders = 'Broj servisa,Klijent,Telefon,Adresa,Grad,Uređaj,Brend,Model,Serijski broj,Serviser,Datum završetka,Cena,Opis problema,Izvršeni rad,Utrošeni rezervni dijelovi\n';
     
-    const csvData = billingData.services.map(service => {
-      // Formatiraj utrošene rezervne dijelove
+    const csvData = billingData.services.map((service: BillingService) => {
       const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
-        ? service.usedPartsDetails.map(p => `${p.partName} (${p.partNumber}) x${p.quantity}`).join('; ')
+        ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} (${p.partNumber}) x${p.quantity}`).join('; ')
         : (service.usedParts || 'Nema');
         
       return `${service.serviceNumber},"${service.clientName}","${service.clientPhone}","${service.clientAddress}","${service.clientCity}","${service.applianceCategory}","${service.manufacturerName}","${service.applianceModel}","${service.serialNumber}","${service.technicianName}","${format(new Date(service.completedDate), 'dd.MM.yyyy')}","${(service.billingPrice || service.cost || 0).toFixed(2)}","${(service.description || '').replace(/"/g, '""')}","${(service.technicianNotes || '').replace(/"/g, '""')}","${partsText.replace(/"/g, '""')}"`;
@@ -368,7 +322,6 @@ export default function ComplusBillingReport() {
     }
   };
 
-  // Handle print functionality for horizontal table layout (20 services per page)
   const handlePrintReport = () => {
     if (!billingData?.services.length) return;
     
@@ -383,105 +336,91 @@ export default function ComplusBillingReport() {
             @page { size: A4 landscape; margin: 15mm; }
             body { 
               font-family: Arial, sans-serif; 
-              margin: 0; 
-              font-size: 9px; 
-              line-height: 1.2; 
+              font-size: 8px;
+              margin: 0;
+              padding: 20px;
             }
-            .header { 
-              text-align: center; 
-              margin-bottom: 15px; 
-              border-bottom: 2px solid #333; 
-              padding-bottom: 8px; 
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #2563eb;
+              padding-bottom: 10px;
             }
-            .header h1 { margin: 0; font-size: 16px; }
-            .header h2 { margin: 5px 0; font-size: 14px; }
-            .header p { margin: 0; font-size: 10px; }
-            .summary { 
-              background: #f5f5f5; 
-              padding: 8px; 
-              margin-bottom: 10px; 
-              font-size: 10px;
-              display: flex;
-              justify-content: space-between;
+            .header h1 {
+              margin: 0;
+              color: #2563eb;
+              font-size: 18px;
             }
-            .services-table { 
+            .header p {
+              margin: 5px 0;
+              color: #666;
+            }
+            table { 
               width: 100%; 
               border-collapse: collapse; 
-              font-size: 8px;
+              margin-top: 10px;
             }
-            .services-table th { 
-              background: #e3f2fd; 
-              border: 1px solid #ccc; 
-              padding: 4px 2px; 
-              text-align: left; 
+            th {
+              background-color: #2563eb;
+              color: white;
+              padding: 8px 4px;
+              text-align: left;
               font-weight: bold;
-              white-space: nowrap;
+              font-size: 8px;
+              border: 1px solid #1d4ed8;
             }
-            .services-table td { 
-              border: 1px solid #ccc; 
-              padding: 3px 2px; 
-              vertical-align: top;
-              max-width: 80px;
-              overflow: hidden;
-              text-overflow: ellipsis;
+            td {
+              padding: 6px 4px;
+              border: 1px solid #ddd;
+              font-size: 7px;
             }
-            .services-table tr:nth-child(even) { background: #f9f9f9; }
-            .services-table tr:hover { background: #f0f8ff; }
-            .service-number { font-weight: bold; color: #1976d2; }
-            .cost { font-weight: bold; color: #2e7d32; }
-            .brand { font-size: 7px; color: #666; }
+            tr:nth-child(even) {
+              background-color: #f9fafb;
+            }
+            .service-number { font-weight: bold; color: #2563eb; }
             .phone { font-size: 7px; }
-            .serial { font-size: 6px; font-family: monospace; }
-            .footer { 
-              margin-top: 10px; 
-              text-align: center; 
-              font-size: 8px; 
-              color: #666; 
-            }
-            @media print { 
-              body { margin: 0; } 
-              .no-print { display: none; }
-              .services-table { page-break-inside: auto; }
-              .services-table tr { page-break-inside: avoid; }
+            .brand { font-weight: bold; }
+            .serial { font-family: monospace; font-size: 6px; }
+            .cost { font-weight: bold; color: #059669; }
+            .footer {
+              margin-top: 20px;
+              text-align: center;
+              font-size: 7px;
+              color: #666;
+              border-top: 1px solid #ddd;
+              padding-top: 10px;
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>ComPlus Fakturisanje</h1>
-            <h2>${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</h2>
-            <p>Završeni garancijski servisi - Svi ComPlus brendovi</p>
+            <h1>ComPlus Fakturisanje - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</h1>
+            <p>Garantni servisi | Ukupno: ${billingData.totalServices} servisa | Vrijednost: ${(billingData.totalServices * 30.25).toFixed(2)}€</p>
           </div>
           
-          <div class="summary">
-            <div><strong>Ukupno servisa:</strong> ${billingData.totalServices}</div>
-            <div><strong>Ukupna vrednost:</strong> ${Number(billingData.totalBillingAmount || billingData.totalCost || 0).toFixed(2)} €</div>
-            <div><strong>Brendovi:</strong> ${billingData.brandBreakdown.map(b => `${b.brand} (${b.count})`).join(', ')}</div>
-          </div>
-          
-          <table class="services-table">
+          <table>
             <thead>
               <tr>
-                <th style="width: 4%;">Servis #</th>
-                <th style="width: 10%;">Klijent</th>
-                <th style="width: 7%;">Telefon</th>
-                <th style="width: 10%;">Adresa</th>
-                <th style="width: 6%;">Grad</th>
-                <th style="width: 8%;">Uređaj</th>
-                <th style="width: 6%;">Brend</th>
-                <th style="width: 8%;">Model</th>
-                <th style="width: 8%;">Serijski #</th>
-                <th style="width: 7%;">Serviser</th>
-                <th style="width: 5%;">Završeno</th>
-                <th style="width: 4%;">Cena</th>
-                <th style="width: 10%;">Izvršeni rad</th>
-                <th style="width: 10%;">Utrošeni dijelovi</th>
+                <th>Servis</th>
+                <th>Klijent</th>
+                <th>Telefon</th>
+                <th>Adresa</th>
+                <th>Grad</th>
+                <th>Kategorija</th>
+                <th>Brend</th>
+                <th>Model</th>
+                <th>S/N</th>
+                <th>Serviser</th>
+                <th>Datum</th>
+                <th>Cijena</th>
+                <th>Rad</th>
+                <th>Dijelovi</th>
               </tr>
             </thead>
             <tbody>
-              ${billingData.services.map(service => {
+              ${billingData.services.map((service: BillingService) => {
                 const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
-                  ? service.usedPartsDetails.map(p => `${p.partName} x${p.quantity}`).join(', ')
+                  ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} x${p.quantity}`).join(', ')
                   : (service.usedParts || '-');
                 return `
                 <tr>
@@ -518,59 +457,76 @@ export default function ComplusBillingReport() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Complus Fakturisanje - Svi Brendovi Zajedno
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            Mesečna evidencija završenih garancijskih servisa za sve Complus brendove (Electrolux, Elica, Candy, Hoover, Turbo Air)
-          </p>
-        </CardHeader>
-        <CardContent>
-          {/* Enhanced Mode Toggle */}
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-blue-600" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 p-6 space-y-6">
+      {/* Premium Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 p-8 shadow-2xl">
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]"></div>
+        <div className="relative z-10">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl">
+                  <Building2 className="h-8 w-8 text-white" />
+                </div>
                 <div>
-                  <h3 className="font-medium text-blue-900">Enhanced Mode - Automatsko hvatanje servisa</h3>
-                  <p className="text-sm text-blue-700">
-                    Hvata sve završene servise uključujući i one bez completedDate (kao Gruica Todosijević)
+                  <h1 className="text-4xl font-bold text-white tracking-tight">ComPlus Fakturisanje</h1>
+                  <p className="text-blue-100 text-lg mt-1">
+                    Garantni servisi · Electrolux, Elica, Candy & Hoover
                   </p>
                 </div>
               </div>
-              <Switch
-                checked={enhancedMode}
-                onCheckedChange={setEnhancedMode}
-                className="data-[state=checked]:bg-blue-600"
-              />
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20">
+              <div className="flex items-center gap-2 text-white">
+                <Calendar className="h-5 w-5" />
+                <span className="font-semibold text-lg">
+                  {billingData ? `${billingData.month} ${billingData.year}` : 'Izaberite period'}
+                </span>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Enhanced Mode Alert */}
-          {enhancedMode && billingData?.autoDetectedCount && billingData.autoDetectedCount > 0 && (
-            <Alert className="mb-4 border-orange-200 bg-orange-50">
-              <AlertCircle className="h-4 w-4 text-orange-600" />
-              <AlertDescription className="text-orange-800">
-                <strong>Auto-detektovano {billingData?.autoDetectedCount || 0} servisa</strong> koji nemaju completedDate 
-                (korišten createdAt kao fallback). Ovo rešava problem sa servisima od "Gruica Todosijević".
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Godina</label>
-              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                <SelectTrigger>
-                  <SelectValue />
+      {/* Filters - Premium Design */}
+      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-blue-50">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Zap className="h-5 w-5 text-blue-600" />
+            </div>
+            Postavke i filteri
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                Mesec
+              </label>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="h-11 border-2 hover:border-blue-300 transition-colors">
+                  <SelectValue placeholder="Izaberite mesec" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[2024, 2025, 2026].map(year => (
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Godina</label>
+              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                <SelectTrigger className="h-11 border-2 hover:border-blue-300 transition-colors">
+                  <SelectValue placeholder="Izaberite godinu" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i).map((year) => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
                     </SelectItem>
@@ -579,426 +535,372 @@ export default function ComplusBillingReport() {
               </Select>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Mesec</label>
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Izaberite mesec" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map(month => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col justify-end space-y-2">
+              <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-100">
+                <Switch
+                  id="enhanced-mode"
+                  checked={enhancedMode}
+                  onCheckedChange={setEnhancedMode}
+                  className="data-[state=checked]:bg-blue-600"
+                />
+                <label 
+                  htmlFor="enhanced-mode" 
+                  className="text-sm font-semibold cursor-pointer text-slate-700"
+                >
+                  Enhanced Mode
+                </label>
+              </div>
+              <p className="text-xs text-slate-500 pl-3">
+                Automatski hvata sve završene servise
+              </p>
             </div>
 
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-2">
               <Button 
-                onClick={handleExportToCSV}
+                onClick={handleExportToCSV} 
                 disabled={!billingData?.services.length}
-                className="flex-1"
                 variant="outline"
+                className="h-11 border-2 hover:border-emerald-400 hover:bg-emerald-50"
               >
                 <Download className="h-4 w-4 mr-2" />
-                CSV
+                CSV Export
               </Button>
-              <Button 
-                onClick={handlePrintReport}
-                disabled={!billingData?.services.length}
-                className="flex-1"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Štampaj
-              </Button>
-              <Button 
-                onClick={handleDownloadPDF}
-                disabled={!selectedMonth || !selectedYear}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                data-testid="button-download-pdf-complus"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  onClick={handlePrintReport} 
+                  disabled={!billingData?.services.length}
+                  variant="outline"
+                  className="h-11 border-2 hover:border-blue-400 hover:bg-blue-50"
+                >
+                  <Printer className="h-4 w-4" />
+                </Button>
+                <Button 
+                  onClick={handleDownloadPDF}
+                  disabled={!selectedMonth || !selectedYear}
+                  className="h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                  data-testid="button-download-pdf-complus"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
-
-          {isLoading && (
-            <div className="space-y-4">
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Učitavam ComPlus fakturisanje...</p>
-              </div>
-            </div>
-          )}
-
-          {billingData && (
-            <div className="space-y-4">
-              {/* Brand Breakdown Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                {(billingData.brandBreakdown || []).map(brand => (
-                  <Card key={brand.brand}>
-                    <CardContent className="pt-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-gray-600">{brand.brand}</p>
-                        <p className="text-xl font-bold">{brand.count}</p>
-                        <p className="text-xs text-gray-500">{Number(brand.billingAmount || brand.cost || 0).toFixed(2)} €</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Ukupno servisa</p>
-                        <p className="text-2xl font-bold">{billingData.totalServices}</p>
-                      </div>
-                      <CheckCircle className="h-8 w-8 text-green-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Ukupna vrednost</p>
-                        <p className="text-2xl font-bold">{Number(billingData.totalBillingAmount || billingData.totalCost || 0).toFixed(2)} €</p>
-                      </div>
-                      <Euro className="h-8 w-8 text-blue-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Period</p>
-                        <p className="text-2xl font-bold">
-                          {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
-                        </p>
-                      </div>
-                      <Calendar className="h-8 w-8 text-purple-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Detailed Services List */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Detaljni pregled servisa - {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
-                </h3>
-                
-                {(!billingData.services || billingData.services.length === 0) ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">Nema servisa</h3>
-                    <p className="text-gray-500">
-                      Nije pronađen nijedan ComPlus servis za {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
-                    </p>
-                  </div>
-                ) : (
-                  (billingData.services || []).map(service => (
-                  <Card key={service.id} className={`border-l-4 ${service.isAutoDetected ? 'border-l-orange-500 bg-orange-50' : 'border-l-blue-500'}`}>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        {/* Service Header */}
-                        <div className="lg:col-span-3 border-b pb-4 mb-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Badge variant="default" className="text-base px-3 py-1">
-                                Servis #{service.serviceNumber}
-                              </Badge>
-                              <Badge 
-                                variant={Number(service.billingPrice || service.cost || 0) > 0 ? "default" : "secondary"}
-                                className="text-base px-3 py-1"
-                              >
-                                {Number(service.billingPrice || service.cost || 0).toFixed(2)} €
-                              </Badge>
-                              {service.isAutoDetected && (
-                                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  Auto-detektovan
-                                </Badge>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditPrice(service)}
-                                className="ml-2"
-                                data-testid={`button-edit-price-${service.id}`}
-                              >
-                                <Edit className="h-3 w-3 mr-1" />
-                                Uredi cijenu
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="ml-2 text-red-600 hover:text-red-700 hover:border-red-600"
-                                onClick={() => handleExcludeFromBilling(service)}
-                                data-testid={`button-exclude-${service.id}`}
-                              >
-                                <Trash2 className="h-3 w-3 mr-1" />
-                                Obriši
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Clock className="h-4 w-4" />
-                              Završeno: {format(new Date(service.completedDate), 'dd.MM.yyyy')}
-                              {service.isAutoDetected && (
-                                <span className="text-xs text-orange-600">(datum kreiranja)</span>
-                              )}
-                            </div>
-                          </div>
-                          {service.billingPriceReason && (
-                            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
-                              <span className="font-semibold text-yellow-800">Dokumentacija: </span>
-                              <span className="text-yellow-700">{service.billingPriceReason}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Client Information */}
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                            <User className="h-4 w-4 text-blue-600" />
-                            Podaci o klijentu
-                          </h4>
-                          <div className="space-y-2 bg-blue-50 p-4 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-600" />
-                              <span className="font-medium">{service.clientName}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-gray-600" />
-                              <span>{service.clientPhone}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-gray-600" />
-                              <span>{service.clientAddress}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-gray-600" />
-                              <span className="font-medium">{service.clientCity}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Appliance Information */}
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                            <Package className="h-4 w-4 text-green-600" />
-                            Podaci o aparatu
-                          </h4>
-                          <div className="space-y-2 bg-green-50 p-4 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <Package className="h-4 w-4 text-gray-600" />
-                              <span className="font-medium">{service.applianceCategory}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {service.manufacturerName}
-                              </Badge>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="text-sm">
-                                <span className="text-gray-600">Model:</span>
-                                <span className="font-medium ml-1">{service.applianceModel}</span>
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-gray-600">Serijski broj:</span>
-                                <span className="font-mono text-xs ml-1">{service.serialNumber}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Service Information */}
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                            <Wrench className="h-4 w-4 text-orange-600" />
-                            Podaci o servisu
-                          </h4>
-                          <div className="space-y-2 bg-orange-50 p-4 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <Wrench className="h-4 w-4 text-gray-600" />
-                              <span className="font-medium">{service.technicianName}</span>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="text-sm">
-                                <span className="text-gray-600">Status:</span>
-                                <Badge variant="default" className="ml-1 text-xs">
-                                  {service.warrantyStatus}
-                                </Badge>
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-gray-600">Troškovi:</span>
-                                <span className="font-bold text-green-600 ml-1">
-                                  {Number(service.billingPrice || service.cost || 0).toFixed(2)} €
-                                </span>
-                              </div>
-                            </div>
-                            {service.description && (
-                              <div className="mt-3 p-3 bg-white rounded border-l-4 border-l-gray-300">
-                                <div className="text-xs text-gray-600 mb-1">Opis problema:</div>
-                                <div className="text-sm">{service.description}</div>
-                              </div>
-                            )}
-                            {service.technicianNotes && (
-                              <div className="mt-3 p-3 bg-white rounded border-l-4 border-l-blue-500">
-                                <div className="text-xs text-blue-600 font-medium mb-1">Izvršeni rad:</div>
-                                <div className="text-sm font-medium text-blue-900">{service.technicianNotes}</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {isLoading && (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-sm text-gray-500 mt-2">Učitavam podatke...</p>
-            </div>
-          )}
-
-          {!selectedMonth ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Izaberite mesec i godinu za pregled Complus fakturisanja</p>
-            </div>
-          ) : billingData && billingData.services.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nema završenih garancijskih servisa za izabrani period</p>
-            </div>
-          ) : null}
         </CardContent>
       </Card>
 
-      {/* Dialog za uređivanje cijene */}
+      {/* Summary Stats - Premium Cards */}
+      {billingData && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium mb-1">Ukupno servisa</p>
+                  <p className="text-4xl font-bold">{billingData.totalServices}</p>
+                </div>
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <Package className="h-10 w-10" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium mb-1">Ukupna vrijednost</p>
+                  <p className="text-4xl font-bold">{(billingData.totalServices * 30.25).toFixed(2)}€</p>
+                </div>
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <Euro className="h-10 w-10" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-cyan-600 text-white overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-cyan-100 text-sm font-medium mb-1">Brendovi</p>
+                  <p className="text-4xl font-bold">{billingData.brandBreakdown.length}</p>
+                </div>
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <CheckCircle className="h-10 w-10" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {billingData.autoDetectedCount !== undefined && (
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-amber-100 text-sm font-medium mb-1">Auto-detektovano</p>
+                    <p className="text-4xl font-bold">{billingData.autoDetectedCount}</p>
+                  </div>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                    <Zap className="h-10 w-10" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <Card className="border-0 shadow-xl">
+          <CardContent className="py-16">
+            <div className="flex flex-col items-center justify-center gap-4">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 absolute top-0 left-0"></div>
+              </div>
+              <p className="text-lg font-medium text-slate-600">Učitavam podatke...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Data */}
+      {!isLoading && billingData && billingData.totalServices === 0 && (
+        <Alert className="border-0 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg">
+          <AlertCircle className="h-5 w-5 text-amber-600" />
+          <AlertDescription className="text-slate-700 font-medium">
+            Nema garantnih servisa za ComPlus brendove u izabranom periodu ({billingData.month} {billingData.year}).
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Brand Breakdown - Premium Design */}
+      {billingData && billingData.brandBreakdown.length > 0 && (
+        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-blue-50">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              Raspored po brendovima
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {billingData.brandBreakdown.map((brand: BrandBreakdown, idx: number) => (
+                <div key={brand.brand} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-blue-50 p-6 border-2 border-blue-100 hover:border-blue-300 transition-all hover:shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${idx === 0 ? 'bg-blue-600' : idx === 1 ? 'bg-cyan-500' : idx === 2 ? 'bg-sky-500' : idx === 3 ? 'bg-indigo-500' : 'bg-violet-500'}`}></div>
+                      <p className="font-bold text-sm text-slate-800">{brand.brand}</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-700 border-0 mb-3">{brand.count} servisa</Badge>
+                  <div>
+                    <p className="text-2xl font-bold text-blue-600">{Number(brand.billingAmount || brand.cost || 0).toFixed(2)}€</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {brand.count > 0 ? (Number(brand.billingAmount || brand.cost || 0) / brand.count).toFixed(2) : '0.00'}€ po servisu
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Services Table - Premium Design */}
+      {billingData && billingData.services.length > 0 && (
+        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-blue-50">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              Detaljni pregled servisa
+              <Badge className="ml-auto bg-blue-600 text-white">{billingData.services.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-blue-100">
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Servis</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Klijent</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Uređaj</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Serviser</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Datum</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Cijena</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Status</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-blue-50">Akcije</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billingData.services.map((service: BillingService, idx: number) => (
+                    <tr key={service.id} className={`border-b hover:bg-blue-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+                      <td className="p-4">
+                        <div>
+                          <p className="font-bold text-blue-600">#{service.serviceNumber}</p>
+                          {service.description && (
+                            <p className="text-sm text-slate-600 mt-1">{service.description.substring(0, 40)}...</p>
+                          )}
+                          {service.technicianNotes && (
+                            <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-2 inline-block">
+                              Rad: {service.technicianNotes.substring(0, 50)}...
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-800">{service.clientName}</p>
+                          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                            <Phone className="h-3.5 w-3.5 text-blue-500" />
+                            {service.clientPhone}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                            <MapPin className="h-3.5 w-3.5 text-blue-500" />
+                            {service.clientCity}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-800">{service.manufacturerName}</p>
+                          <p className="text-sm text-slate-600">{service.applianceModel}</p>
+                          <p className="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded inline-block">{service.serialNumber}</p>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-blue-100 rounded-full">
+                            <User className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <span className="text-sm font-medium text-slate-700">{service.technicianName}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          <span className="text-sm font-medium text-slate-700">
+                            {format(new Date(service.completedDate), 'dd.MM.yyyy')}
+                          </span>
+                        </div>
+                        {service.isAutoDetected && (
+                          <Badge variant="secondary" className="text-xs mt-2 bg-amber-100 text-amber-700 border-0">
+                            Auto
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div>
+                          <p className="text-lg font-bold text-emerald-600">{Number(service.billingPrice || service.cost || 0).toFixed(2)}€</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {service.billingPriceReason || 'Standardna tarifa'}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 shadow-sm">
+                          Garantni
+                        </Badge>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditPrice(service)}
+                            className="hover:bg-blue-50 hover:border-blue-300"
+                            data-testid={`button-edit-price-${service.id}`}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
+                            onClick={() => handleExcludeFromBilling(service)}
+                            data-testid={`button-exclude-${service.id}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Price Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Uredi cijenu i dokumentaciju</DialogTitle>
+            <DialogTitle className="text-xl">Uredi billing cijenu</DialogTitle>
             <DialogDescription>
-              Servis #{editingService?.serviceNumber} - {editingService?.clientName}
+              {editingService && `Servis #${editingService.serviceNumber} - ${editingService.clientName}`}
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
               <Label htmlFor="price">Nova cijena (€)</Label>
               <Input
                 id="price"
                 type="number"
                 step="0.01"
-                min="0"
                 value={newPrice}
                 onChange={(e) => setNewPrice(e.target.value)}
-                placeholder="Unesite novu cijenu"
-                data-testid="input-billing-price"
+                placeholder="30.25"
               />
-              <p className="text-xs text-gray-500">
-                Trenutna cijena: {(editingService?.billingPrice || editingService?.cost || 0).toFixed(2)} €
-              </p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="reason">Dokumentacija / Razlog promjene</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="reason">Razlog izmjene</Label>
               <Textarea
                 id="reason"
                 value={newReason}
                 onChange={(e) => setNewReason(e.target.value)}
-                placeholder="Napomena o promjeni cijene (npr: 'Dodatan deo', 'Specijalan popust', itd.)"
-                rows={4}
-                data-testid="input-billing-reason"
+                placeholder="Opciono: objasnite razlog izmjene cijene"
+                rows={3}
               />
-              <p className="text-xs text-gray-500">
-                Ova dokumentacija će biti prikazana uz servis
-              </p>
             </div>
           </div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditDialogOpen(false)}
-              disabled={updateBillingMutation.isPending}
-              data-testid="button-cancel-edit"
-            >
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Otkaži
             </Button>
-            <Button
-              onClick={handleSavePrice}
-              disabled={updateBillingMutation.isPending}
-              data-testid="button-save-billing"
-            >
-              {updateBillingMutation.isPending ? 'Čuvanje...' : 'Sačuvaj'}
+            <Button onClick={handleSavePrice} disabled={updateBillingMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
+              {updateBillingMutation.isPending ? "Čuvanje..." : "Sačuvaj"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog za potvrdu brisanja iz billing izvještaja */}
+      {/* Exclude Dialog */}
       <Dialog open={excludeDialogOpen} onOpenChange={setExcludeDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <Trash2 className="h-5 w-5" />
-              Obriši servis iz billing izvještaja
-            </DialogTitle>
+            <DialogTitle>Isključi iz billinga?</DialogTitle>
             <DialogDescription>
-              Servis #{excludingService?.serviceNumber} - {excludingService?.clientName}
+              {excludingService && `Da li ste sigurni da želite isključiti servis #${excludingService.serviceNumber}?`}
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="py-4">
-            <Alert className="border-yellow-500 bg-yellow-50">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-900">
-                <p className="font-semibold mb-2">Da li ste sigurni da želite da uklonite ovaj servis iz billing izvještaja?</p>
-                <p className="text-sm">
-                  Servis će biti trajno isključen iz svih budućih izvještaja za ComPlus i Beko fakturisanje. 
-                  Ova akcija se preporučuje samo ako je servis greškom dodat u billing listu.
-                </p>
-              </AlertDescription>
-            </Alert>
-          </div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setExcludeDialogOpen(false)}
-              disabled={excludeFromBillingMutation.isPending}
-              data-testid="button-cancel-exclude"
-            >
+            <Button variant="outline" onClick={() => setExcludeDialogOpen(false)}>
               Otkaži
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmExclude}
+            <Button 
+              onClick={handleConfirmExclude} 
               disabled={excludeFromBillingMutation.isPending}
-              data-testid="button-confirm-exclude"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              {excludeFromBillingMutation.isPending ? 'Brisanje...' : 'Obriši iz izvještaja'}
+              {excludeFromBillingMutation.isPending ? "Isključivanje..." : "Isključi"}
             </Button>
           </DialogFooter>
         </DialogContent>
