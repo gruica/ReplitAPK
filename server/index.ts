@@ -297,7 +297,7 @@ app.use((req, res, next) => {
       for (const username of testUsernames) {
         const user = await storage.getUserByUsername(username);
         if (user && !user.isVerified) {
-          await storage.verifyUser(user.id);
+          await storage.verifyUser(user.id, 1); // Auto-verify with system admin ID
           console.log(`✅ [DEV ONLY] Auto-verified test user: ${username}`);
         }
         
