@@ -1433,6 +1433,378 @@ export function registerBillingRoutes(app: Express) {
   });
 
   // ============================================================================
+  // SHARED PDF GENERATION HELPER FUNCTION
+  // ============================================================================
+
+  /**
+   * Helper function for generating billing PDF reports
+   * Used by both Beko and ComPlus PDF endpoints to avoid code duplication
+   */
+  async function generateBillingPDF(config: {
+    year: number;
+    month: number;
+    brands: string[];
+    brandGroup: 'Beko' | 'ComPlus';
+    primaryColor: string;
+    darkColor: string;
+    defaultTariff?: number;
+    reportTitle: string;
+    reportSubtitle: string;
+  }): Promise<Buffer> {
+    const { year, month, brands, brandGroup, primaryColor, darkColor, defaultTariff, reportTitle, reportSubtitle } = config;
+
+    console.log(`📄 [PDF GENERATION] Generisanje ${brandGroup} billing PDF-a za ${month}/${year} iz PRODUKCIJSKE baze`);
+
+    // Kreiranje datumskih raspona
+    const startDate = new Date(year, month - 1, 1);
+    const nextMonthDate = new Date(year, month, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59);
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const nextMonthStr = nextMonthDate.toISOString().split('T')[0];
+    const endDateWithTimestamp = endDate.toISOString().replace('T', ' ').substring(0, 19);
+
+    // Kreiranje OR uslova za brendove
+    const brandConditions = brands.map(brand => eq(schema.manufacturers.name, brand));
+
+    // Izvlačenje servisa iz PRODUKCIJSKE baze
+    const services = await db
+      .select({
+        serviceId: schema.services.id,
+        clientId: schema.services.clientId,
+        applianceId: schema.services.applianceId,
+        technicianId: schema.services.technicianId,
+        description: schema.services.description,
+        technicianNotes: schema.services.technicianNotes,
+        usedParts: schema.services.usedParts,
+        status: schema.services.status,
+        warrantyStatus: schema.services.warrantyStatus,
+        completedDate: schema.services.completedDate,
+        createdAt: schema.services.createdAt,
+        cost: schema.services.cost,
+        billingPrice: schema.services.billingPrice,
+        billingPriceReason: schema.services.billingPriceReason,
+        excludeFromBilling: schema.services.excludeFromBilling,
+        clientName: schema.clients.fullName,
+        clientPhone: schema.clients.phone,
+        clientAddress: schema.clients.address,
+        clientCity: schema.clients.city,
+        applianceCategory: schema.applianceCategories.name,
+        manufacturerName: schema.manufacturers.name,
+        applianceModel: schema.appliances.model,
+        serialNumber: schema.appliances.serialNumber,
+        technicianName: schema.technicians.fullName
+      })
+      .from(schema.services)
+      .leftJoin(schema.clients, eq(schema.services.clientId, schema.clients.id))
+      .leftJoin(schema.appliances, eq(schema.services.applianceId, schema.appliances.id))
+      .leftJoin(schema.applianceCategories, eq(schema.appliances.categoryId, schema.applianceCategories.id))
+      .leftJoin(schema.manufacturers, eq(schema.appliances.manufacturerId, schema.manufacturers.id))
+      .leftJoin(schema.technicians, eq(schema.services.technicianId, schema.technicians.id))
+      .where(
+        and(
+          eq(schema.services.status, 'completed'),
+          eq(schema.services.warrantyStatus, 'u garanciji'),
+          ne(schema.services.excludeFromBilling, true),
+          or(...brandConditions),
+          or(
+            and(
+              isNotNull(schema.services.completedDate),
+              sql`LEFT(${schema.services.completedDate}, 10) >= ${startDateStr}`,
+              sql`LEFT(${schema.services.completedDate}, 10) < ${nextMonthStr}`
+            ),
+            and(
+              isNull(schema.services.completedDate),
+              gte(schema.services.createdAt, startDateStr),
+              or(
+                lt(schema.services.createdAt, nextMonthStr),
+                lte(schema.services.createdAt, endDateWithTimestamp)
+              )
+            )
+          )
+        )
+      )
+      .orderBy(
+        desc(schema.services.completedDate),
+        desc(schema.services.createdAt)
+      );
+
+    // Izvlačenje rezervnih dijelova
+    const serviceIds = services.map(s => s.serviceId);
+    const partsAllocations = serviceIds.length > 0 ? await db
+      .select({
+        serviceId: schema.partsAllocations.serviceId,
+        partName: schema.availableParts.partName,
+        partNumber: schema.availableParts.partNumber,
+        allocatedQuantity: schema.partsAllocations.allocatedQuantity,
+        unitCost: schema.availableParts.unitCost,
+      })
+      .from(schema.partsAllocations)
+      .leftJoin(schema.availableParts, eq(schema.partsAllocations.availablePartId, schema.availableParts.id))
+      .where(sql`${schema.partsAllocations.serviceId} IN (${sql.raw(serviceIds.join(','))})`)
+      : [];
+
+    // Grupisanje rezervnih dijelova po servisima
+    const partsByService = partsAllocations.reduce((acc, part) => {
+      if (!acc[part.serviceId]) {
+        acc[part.serviceId] = [];
+      }
+      acc[part.serviceId].push({
+        partName: part.partName || '',
+        partNumber: part.partNumber || '',
+        quantity: part.allocatedQuantity || 0,
+        unitCost: part.unitCost || ''
+      });
+      return acc;
+    }, {} as Record<number, Array<{partName: string, partNumber: string, quantity: number, unitCost: string}>>);
+
+    // Formatiranje servisa
+    const billingServices = services.map(service => {
+      const hasCompletedDate = service.completedDate && service.completedDate.trim() !== '';
+      const displayDate = hasCompletedDate ? service.completedDate : service.createdAt;
+      
+      const billingAmount = (service.billingPrice !== null && service.billingPrice !== undefined && service.billingPrice !== '') 
+        ? parseFloat(service.billingPrice) 
+        : (defaultTariff || (service.cost || 0));
+      
+      const usedPartsData = partsByService[service.serviceId] || [];
+      const usedPartsText = service.usedParts || '';
+      
+      return {
+        id: service.serviceId,
+        serviceNumber: service.serviceId.toString(),
+        clientName: service.clientName || 'Nepoznat klijent',
+        clientPhone: service.clientPhone || '',
+        clientAddress: service.clientAddress || '',
+        clientCity: service.clientCity || '',
+        applianceCategory: service.applianceCategory || '',
+        manufacturerName: service.manufacturerName || '',
+        applianceModel: service.applianceModel || '',
+        serialNumber: service.serialNumber || '',
+        technicianName: service.technicianName || 'Nepoznat serviser',
+        completedDate: displayDate,
+        cost: service.cost || 0,
+        billingPrice: billingAmount,
+        billingPriceReason: service.billingPriceReason || (defaultTariff ? `Standardna ${brandGroup} tarifa` : 'Standardna tarifa'),
+        description: service.description || '',
+        technicianNotes: service.technicianNotes || '',
+        usedParts: usedPartsText,
+        usedPartsDetails: usedPartsData
+      };
+    });
+
+    // Kalkulacija ukupnih vrednosti
+    const totalServices = billingServices.length;
+    const totalBillingAmount = billingServices.reduce((sum, s) => sum + parseFloat(String(s.billingPrice || 0)), 0);
+    
+    const brandBreakdown = billingServices.reduce((acc, service) => {
+      const brand = service.manufacturerName;
+      const existing = acc.find(b => b.brand === brand);
+      if (existing) {
+        existing.count++;
+        existing.totalAmount += parseFloat(String(service.billingPrice || 0));
+      } else {
+        acc.push({
+          brand,
+          count: 1,
+          totalAmount: parseFloat(String(service.billingPrice || 0))
+        });
+      }
+      return acc;
+    }, [] as Array<{brand: string, count: number, totalAmount: number}>);
+
+    const monthNames = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
+    const monthName = monthNames[month - 1];
+
+    console.log(`📊 [PDF GENERATION] Pronađeno ${totalServices} servisa, ukupna vrednost: ${totalBillingAmount.toFixed(2)}€`);
+
+    // Kreiranje HTML sadržaja za PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>${brandGroup} Fakturisanje - ${monthName} ${year}</title>
+          <style>
+            @page { size: A4 landscape; margin: 15mm; }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              font-size: 8px; 
+              line-height: 1.2; 
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 15px; 
+              border-bottom: 2px solid #333; 
+              padding-bottom: 8px; 
+            }
+            .header h1 { margin: 0; font-size: 18px; color: ${primaryColor}; }
+            .header h2 { margin: 5px 0; font-size: 14px; color: #666; }
+            .header p { margin: 3px 0; font-size: 10px; color: #666; }
+            .summary { 
+              display: flex; 
+              justify-content: space-around; 
+              margin-bottom: 12px; 
+              padding: 8px; 
+              background: #f5f5f5; 
+              border-radius: 5px; 
+              font-size: 9px;
+            }
+            .summary div { text-align: center; }
+            .summary strong { color: ${primaryColor}; }
+            .services-table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-top: 10px; 
+              font-size: 7px;
+            }
+            .services-table th { 
+              background: ${primaryColor}; 
+              color: white; 
+              padding: 4px 2px; 
+              text-align: left; 
+              font-weight: bold; 
+              border: 1px solid ${darkColor};
+              font-size: 7px;
+            }
+            .services-table td { 
+              border: 1px solid #ccc; 
+              padding: 3px 2px; 
+              vertical-align: top;
+              max-width: 80px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              font-size: 7px;
+            }
+            .services-table tr:nth-child(even) { background: #f9f9f9; }
+            .service-number { font-weight: bold; color: ${primaryColor}; }
+            .cost { font-weight: bold; color: #2e7d32; }
+            .brand { font-size: 6px; color: #666; }
+            .phone { font-size: 6px; }
+            .serial { font-size: 6px; font-family: monospace; }
+            .notes { font-size: 6px; max-height: 30px; overflow: hidden; }
+            .footer { 
+              margin-top: 10px; 
+              text-align: center; 
+              font-size: 7px; 
+              color: #666; 
+              border-top: 1px solid #ccc;
+              padding-top: 5px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${reportTitle}</h1>
+            <h2>${monthName} ${year}</h2>
+            <p>${reportSubtitle}</p>
+          </div>
+          
+          <div class="summary">
+            <div><strong>Ukupno servisa:</strong><br>${totalServices}</div>
+            <div><strong>Ukupna vrednost:</strong><br>${totalBillingAmount.toFixed(2)} €</div>
+            <div><strong>Brendovi:</strong><br>${brandBreakdown.map(b => `${b.brand}: ${b.count} (${b.totalAmount.toFixed(2)}€)`).join(' | ')}</div>
+          </div>
+          
+          <table class="services-table">
+            <thead>
+              <tr>
+                <th style="width: 3%;">#</th>
+                <th style="width: 9%;">Klijent</th>
+                <th style="width: 6%;">Telefon</th>
+                <th style="width: 10%;">Adresa</th>
+                <th style="width: 6%;">Grad</th>
+                <th style="width: 7%;">Uređaj</th>
+                <th style="width: 5%;">Brend</th>
+                <th style="width: 8%;">Model</th>
+                <th style="width: 7%;">Serijski #</th>
+                <th style="width: 7%;">Serviser</th>
+                <th style="width: 5%;">Datum</th>
+                <th style="width: 4%;">Cena</th>
+                <th style="width: 11%;">Izvršeni rad</th>
+                <th style="width: 12%;">Utrošeni dijelovi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${billingServices.map(service => {
+                const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
+                  ? service.usedPartsDetails.map(p => `${p.partName} x${p.quantity}`).join(', ')
+                  : (service.usedParts || '-');
+                
+                const displayDate = service.completedDate ? service.completedDate.substring(0, 10).split('-').reverse().join('.') : '-';
+                
+                return `
+                <tr>
+                  <td class="service-number">#${service.serviceNumber}</td>
+                  <td>${service.clientName}</td>
+                  <td class="phone">${service.clientPhone}</td>
+                  <td>${service.clientAddress}</td>
+                  <td>${service.clientCity}</td>
+                  <td>${service.applianceCategory}</td>
+                  <td class="brand">${service.manufacturerName}</td>
+                  <td>${service.applianceModel}</td>
+                  <td class="serial">${service.serialNumber}</td>
+                  <td>${service.technicianName}</td>
+                  <td>${displayDate}</td>
+                  <td class="cost">${parseFloat(String(service.billingPrice || 0)).toFixed(2)}€</td>
+                  <td class="notes">${service.technicianNotes || '-'}</td>
+                  <td class="notes">${partsText}</td>
+                </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            Izveštaj generisan: ${new Date().toLocaleString('sr-RS', { dateStyle: 'short', timeStyle: 'short' })} | 
+            Frigo Sistem Todosijević | 
+            Ukupno servisa: ${totalServices} | 
+            Ukupna vrednost: ${totalBillingAmount.toFixed(2)} €
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Pokretanje Puppeteer-a i generisanje PDF-a
+    console.log(`🚀 [PDF GENERATION] Pokretanje Puppeteer-a...`);
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process']
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      landscape: true,
+      margin: {
+        top: '10mm',
+        right: '10mm',
+        bottom: '10mm',
+        left: '10mm'
+      },
+      printBackground: true
+    });
+
+    await browser.close();
+
+    // Čuvanje PDF-a u attached_assets folder
+    const monthNames2 = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
+    const fileName = `${brandGroup}_Billing_${monthNames2[month - 1]}_${year}_${Date.now()}.pdf`;
+    const filePath = path.join(process.cwd(), 'attached_assets', fileName);
+    
+    await writeFile(filePath, pdfBuffer);
+
+    console.log(`✅ [PDF GENERATION] PDF uspešno generisan: ${fileName}`);
+    console.log(`📁 [PDF GENERATION] Putanja: ${filePath}`);
+
+    return pdfBuffer;
+  }
+
+  // ============================================================================
   // PDF GENERATION ENDPOINT - BEKO BILLING (PRODUCTION DATA)
   // ============================================================================
 
@@ -1471,7 +1843,7 @@ export function registerBillingRoutes(app: Express) {
    */
 
   app.get('/api/admin/billing/beko/enhanced/pdf/:year/:month', jwtAuth, requireRole(['admin']), async (req: Request, res: Response) => {
-    console.log(`📄 [PDF GENERATION] PDF zahtjev za ${req.params.year}/${req.params.month}`);
+    console.log(`📄 [PDF GENERATION] Beko PDF zahtjev za ${req.params.year}/${req.params.month}`);
     try {
       const year = parseInt(req.params.year);
       const month = parseInt(req.params.month);
@@ -1480,361 +1852,29 @@ export function registerBillingRoutes(app: Express) {
         return res.status(400).json({ error: "Neispravni parametri godine ili meseca" });
       }
 
-      console.log(`📄 [PDF GENERATION] Generisanje Beko billing PDF-a za ${month}/${year} iz PRODUKCIJSKE baze`);
-
-      // Kreiranje datumskih raspona
-      const startDate = new Date(year, month - 1, 1);
-      const nextMonthDate = new Date(year, month, 1);
-      const endDate = new Date(year, month, 0, 23, 59, 59);
-      
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const nextMonthStr = nextMonthDate.toISOString().split('T')[0];
-      const endDateWithTimestamp = endDate.toISOString().replace('T', ' ').substring(0, 19);
-
-      // Izvlačenje servisa iz PRODUKCIJSKE baze
-      const services = await db
-        .select({
-          serviceId: schema.services.id,
-          clientId: schema.services.clientId,
-          applianceId: schema.services.applianceId,
-          technicianId: schema.services.technicianId,
-          description: schema.services.description,
-          technicianNotes: schema.services.technicianNotes,
-          usedParts: schema.services.usedParts,
-          status: schema.services.status,
-          warrantyStatus: schema.services.warrantyStatus,
-          completedDate: schema.services.completedDate,
-          createdAt: schema.services.createdAt,
-          cost: schema.services.cost,
-          billingPrice: schema.services.billingPrice,
-          billingPriceReason: schema.services.billingPriceReason,
-          excludeFromBilling: schema.services.excludeFromBilling,
-          clientName: schema.clients.fullName,
-          clientPhone: schema.clients.phone,
-          clientAddress: schema.clients.address,
-          clientCity: schema.clients.city,
-          applianceCategory: schema.applianceCategories.name,
-          manufacturerName: schema.manufacturers.name,
-          applianceModel: schema.appliances.model,
-          serialNumber: schema.appliances.serialNumber,
-          technicianName: schema.technicians.fullName
-        })
-        .from(schema.services)
-        .leftJoin(schema.clients, eq(schema.services.clientId, schema.clients.id))
-        .leftJoin(schema.appliances, eq(schema.services.applianceId, schema.appliances.id))
-        .leftJoin(schema.applianceCategories, eq(schema.appliances.categoryId, schema.applianceCategories.id))
-        .leftJoin(schema.manufacturers, eq(schema.appliances.manufacturerId, schema.manufacturers.id))
-        .leftJoin(schema.technicians, eq(schema.services.technicianId, schema.technicians.id))
-        .where(
-          and(
-            eq(schema.services.status, 'completed'),
-            eq(schema.services.warrantyStatus, 'u garanciji'),
-            ne(schema.services.excludeFromBilling, true),
-            or(
-              eq(schema.manufacturers.name, 'Beko'),
-              eq(schema.manufacturers.name, 'Grundig'),
-              eq(schema.manufacturers.name, 'Blomberg')
-            ),
-            or(
-              and(
-                isNotNull(schema.services.completedDate),
-                sql`LEFT(${schema.services.completedDate}, 10) >= ${startDateStr}`,
-                sql`LEFT(${schema.services.completedDate}, 10) < ${nextMonthStr}`
-              ),
-              and(
-                isNull(schema.services.completedDate),
-                gte(schema.services.createdAt, startDateStr),
-                or(
-                  lt(schema.services.createdAt, nextMonthStr),
-                  lte(schema.services.createdAt, endDateWithTimestamp)
-                )
-              )
-            )
-          )
-        )
-        .orderBy(
-          desc(schema.services.completedDate),
-          desc(schema.services.createdAt)
-        );
-
-      // Izvlačenje rezervnih dijelova
-      const serviceIds = services.map(s => s.serviceId);
-      const partsAllocations = serviceIds.length > 0 ? await db
-        .select({
-          serviceId: schema.partsAllocations.serviceId,
-          partName: schema.availableParts.partName,
-          partNumber: schema.availableParts.partNumber,
-          allocatedQuantity: schema.partsAllocations.allocatedQuantity,
-          unitCost: schema.availableParts.unitCost,
-        })
-        .from(schema.partsAllocations)
-        .leftJoin(schema.availableParts, eq(schema.partsAllocations.availablePartId, schema.availableParts.id))
-        .where(sql`${schema.partsAllocations.serviceId} IN (${sql.raw(serviceIds.join(','))})`)
-        : [];
-
-      // Grupisanje rezervnih dijelova po servisima
-      const partsByService = partsAllocations.reduce((acc, part) => {
-        if (!acc[part.serviceId]) {
-          acc[part.serviceId] = [];
-        }
-        acc[part.serviceId].push({
-          partName: part.partName || '',
-          partNumber: part.partNumber || '',
-          quantity: part.allocatedQuantity || 0,
-          unitCost: part.unitCost || ''
-        });
-        return acc;
-      }, {} as Record<number, Array<{partName: string, partNumber: string, quantity: number, unitCost: string}>>);
-
-      // Formatiranje servisa
-      const billingServices = services.map(service => {
-        const hasCompletedDate = service.completedDate && service.completedDate.trim() !== '';
-        const displayDate = hasCompletedDate ? service.completedDate : service.createdAt;
-        
-        const billingAmount = (service.billingPrice !== null && service.billingPrice !== undefined && service.billingPrice !== '') 
-          ? parseFloat(service.billingPrice) 
-          : BEKO_STANDARD_TARIFF;
-        
-        const usedPartsData = partsByService[service.serviceId] || [];
-        const usedPartsText = service.usedParts || '';
-        
-        return {
-          id: service.serviceId,
-          serviceNumber: service.serviceId.toString(),
-          clientName: service.clientName || 'Nepoznat klijent',
-          clientPhone: service.clientPhone || '',
-          clientAddress: service.clientAddress || '',
-          clientCity: service.clientCity || '',
-          applianceCategory: service.applianceCategory || '',
-          manufacturerName: service.manufacturerName || '',
-          applianceModel: service.applianceModel || '',
-          serialNumber: service.serialNumber || '',
-          technicianName: service.technicianName || 'Nepoznat serviser',
-          completedDate: displayDate,
-          cost: service.cost || 0,
-          billingPrice: billingAmount,
-          billingPriceReason: service.billingPriceReason || 'Standardna Beko tarifa',
-          description: service.description || '',
-          technicianNotes: service.technicianNotes || '',
-          usedParts: usedPartsText,
-          usedPartsDetails: usedPartsData
-        };
+      // Generisanje PDF-a koristeći zajedničku helper funkciju
+      const pdfBuffer = await generateBillingPDF({
+        year,
+        month,
+        brands: bekoBrands,
+        brandGroup: 'Beko',
+        primaryColor: '#d32f2f',
+        darkColor: '#b71c1c',
+        defaultTariff: BEKO_STANDARD_TARIFF,
+        reportTitle: 'BEKO FAKTURISANJE - GARANCIJSKI SERVISI',
+        reportSubtitle: 'Svi Beko brendovi (Beko, Grundig, Blomberg) | Frigo Sistem Todosijević'
       });
-
-      // Kalkulacija ukupnih vrednosti
-      const totalServices = billingServices.length;
-      const totalBillingAmount = billingServices.reduce((sum, s) => sum + parseFloat(String(s.billingPrice || 0)), 0);
-      
-      const brandBreakdown = billingServices.reduce((acc, service) => {
-        const brand = service.manufacturerName;
-        const existing = acc.find(b => b.brand === brand);
-        if (existing) {
-          existing.count++;
-          existing.totalAmount += parseFloat(String(service.billingPrice || 0));
-        } else {
-          acc.push({
-            brand,
-            count: 1,
-            totalAmount: parseFloat(String(service.billingPrice || 0))
-          });
-        }
-        return acc;
-      }, [] as Array<{brand: string, count: number, totalAmount: number}>);
-
-      const monthNames = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
-      const monthName = monthNames[month - 1];
-
-      console.log(`📊 [PDF GENERATION] Pronađeno ${totalServices} servisa, ukupna vrednost: ${totalBillingAmount.toFixed(2)}€`);
-
-      // Kreiranje HTML sadržaja za PDF
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Beko Fakturisanje - ${monthName} ${year}</title>
-            <style>
-              @page { size: A4 landscape; margin: 15mm; }
-              body { 
-                font-family: Arial, sans-serif; 
-                margin: 0; 
-                font-size: 8px; 
-                line-height: 1.2; 
-              }
-              .header { 
-                text-align: center; 
-                margin-bottom: 15px; 
-                border-bottom: 2px solid #333; 
-                padding-bottom: 8px; 
-              }
-              .header h1 { margin: 0; font-size: 18px; color: #d32f2f; }
-              .header h2 { margin: 5px 0; font-size: 14px; color: #666; }
-              .header p { margin: 3px 0; font-size: 10px; color: #666; }
-              .summary { 
-                display: flex; 
-                justify-content: space-around; 
-                margin-bottom: 12px; 
-                padding: 8px; 
-                background: #f5f5f5; 
-                border-radius: 5px; 
-                font-size: 9px;
-              }
-              .summary div { text-align: center; }
-              .summary strong { color: #d32f2f; }
-              .services-table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                margin-top: 10px; 
-                font-size: 7px;
-              }
-              .services-table th { 
-                background: #d32f2f; 
-                color: white; 
-                padding: 4px 2px; 
-                text-align: left; 
-                font-weight: bold; 
-                border: 1px solid #b71c1c;
-                font-size: 7px;
-              }
-              .services-table td { 
-                border: 1px solid #ccc; 
-                padding: 3px 2px; 
-                vertical-align: top;
-                max-width: 80px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                font-size: 7px;
-              }
-              .services-table tr:nth-child(even) { background: #f9f9f9; }
-              .service-number { font-weight: bold; color: #d32f2f; }
-              .cost { font-weight: bold; color: #2e7d32; }
-              .brand { font-size: 6px; color: #666; }
-              .phone { font-size: 6px; }
-              .serial { font-size: 6px; font-family: monospace; }
-              .notes { font-size: 6px; max-height: 30px; overflow: hidden; }
-              .footer { 
-                margin-top: 10px; 
-                text-align: center; 
-                font-size: 7px; 
-                color: #666; 
-                border-top: 1px solid #ccc;
-                padding-top: 5px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>BEKO FAKTURISANJE - GARANCIJSKI SERVISI</h1>
-              <h2>${monthName} ${year}</h2>
-              <p>Svi Beko brendovi (Beko, Grundig, Blomberg) | Frigo Sistem Todosijević</p>
-            </div>
-            
-            <div class="summary">
-              <div><strong>Ukupno servisa:</strong><br>${totalServices}</div>
-              <div><strong>Ukupna vrednost:</strong><br>${totalBillingAmount.toFixed(2)} €</div>
-              <div><strong>Brendovi:</strong><br>${brandBreakdown.map(b => `${b.brand}: ${b.count} (${b.totalAmount.toFixed(2)}€)`).join(' | ')}</div>
-            </div>
-            
-            <table class="services-table">
-              <thead>
-                <tr>
-                  <th style="width: 3%;">#</th>
-                  <th style="width: 9%;">Klijent</th>
-                  <th style="width: 6%;">Telefon</th>
-                  <th style="width: 10%;">Adresa</th>
-                  <th style="width: 6%;">Grad</th>
-                  <th style="width: 7%;">Uređaj</th>
-                  <th style="width: 5%;">Brend</th>
-                  <th style="width: 8%;">Model</th>
-                  <th style="width: 7%;">Serijski #</th>
-                  <th style="width: 7%;">Serviser</th>
-                  <th style="width: 5%;">Datum</th>
-                  <th style="width: 4%;">Cena</th>
-                  <th style="width: 11%;">Izvršeni rad</th>
-                  <th style="width: 12%;">Utrošeni dijelovi</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${billingServices.map(service => {
-                  const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
-                    ? service.usedPartsDetails.map(p => `${p.partName} x${p.quantity}`).join(', ')
-                    : (service.usedParts || '-');
-                  
-                  const displayDate = service.completedDate ? service.completedDate.substring(0, 10).split('-').reverse().join('.') : '-';
-                  
-                  return `
-                  <tr>
-                    <td class="service-number">#${service.serviceNumber}</td>
-                    <td>${service.clientName}</td>
-                    <td class="phone">${service.clientPhone}</td>
-                    <td>${service.clientAddress}</td>
-                    <td>${service.clientCity}</td>
-                    <td>${service.applianceCategory}</td>
-                    <td class="brand">${service.manufacturerName}</td>
-                    <td>${service.applianceModel}</td>
-                    <td class="serial">${service.serialNumber}</td>
-                    <td>${service.technicianName}</td>
-                    <td>${displayDate}</td>
-                    <td class="cost">${parseFloat(String(service.billingPrice || 0)).toFixed(2)}€</td>
-                    <td class="notes">${service.technicianNotes || '-'}</td>
-                    <td class="notes">${partsText}</td>
-                  </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-            
-            <div class="footer">
-              Izveštaj generisan: ${new Date().toLocaleString('sr-RS', { dateStyle: 'short', timeStyle: 'short' })} | 
-              Frigo Sistem Todosijević | 
-              Ukupno servisa: ${totalServices} | 
-              Ukupna vrednost: ${totalBillingAmount.toFixed(2)} €
-            </div>
-          </body>
-        </html>
-      `;
-
-      // Pokretanje Puppeteer-a i generisanje PDF-a
-      console.log(`🚀 [PDF GENERATION] Pokretanje Puppeteer-a...`);
-      const browser = await puppeteer.launch({
-        headless: true,
-        executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process']
-      });
-
-      const page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        landscape: true,
-        margin: {
-          top: '10mm',
-          right: '10mm',
-          bottom: '10mm',
-          left: '10mm'
-        },
-        printBackground: true
-      });
-
-      await browser.close();
-
-      // Čuvanje PDF-a u attached_assets folder
-      const fileName = `Beko_Billing_${monthName}_${year}_${Date.now()}.pdf`;
-      const filePath = path.join(process.cwd(), 'attached_assets', fileName);
-      
-      await writeFile(filePath, pdfBuffer);
-
-      console.log(`✅ [PDF GENERATION] PDF uspešno generisan: ${fileName}`);
-      console.log(`📁 [PDF GENERATION] Putanja: ${filePath}`);
 
       // Slanje PDF-a korisniku
+      const monthNames = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'];
+      const fileName = `Beko_Billing_${monthNames[month - 1]}_${year}_${Date.now()}.pdf`;
+      
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.send(pdfBuffer);
 
     } catch (error: any) {
-      console.error("❌ [PDF GENERATION] Greška pri generisanju PDF-a:", error);
+      console.error("❌ [PDF GENERATION] Greška pri generisanju Beko PDF-a:", error);
       res.status(500).json({ 
         error: "Greška pri generisanju PDF izvještaja",
         details: error.message 
