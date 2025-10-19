@@ -59,6 +59,11 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **Billing Table Enhancement - Dedicated Work & Parts Columns (October 2024)**: Added two new dedicated columns to billing reports for improved data visibility.
+  - **New Columns**: Added "Izvršeni rad" (Work Performed) and "Korišteni dijelovi" (Used Parts) as separate table columns in UniversalBillingReport.tsx
+  - **Data Display**: "Izvršeni rad" column shows full technicianNotes text; "Korišteni dijelovi" column displays detailed parts information (name, part number, quantity) or usedParts text
+  - **UI Improvement**: Removed inline preview badges from service column for cleaner presentation
+  - **Partner Independence**: Both Beko and ComPlus billing reports benefit from enhanced visibility while maintaining complete visual and data independence
 - **Billing UI Component Refactoring (October 2024)**: Eliminated massive code duplication in billing report UI components through shared component pattern.
   - **Code Reduction**: Total frontend code reduced from 1,776L to 1,001L (-775L, -43.6%)
   - **Shared Component**: Created `UniversalBillingReport.tsx` (969 lines) consolidating all common UI logic, data fetching, filtering, CSV/PDF export, price editing, and service exclusion
