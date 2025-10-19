@@ -318,6 +318,56 @@ export default function ComplusBillingReport() {
     document.body.removeChild(link);
   };
 
+  const handleDownloadPDF = async () => {
+    if (!selectedMonth || !selectedYear) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        toast({
+          title: "Greška",
+          description: "Nema autentifikacije",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const url = `/api/admin/billing/complus/enhanced/pdf/${selectedYear}/${selectedMonth}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Greška pri preuzimanju PDF-a');
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `ComPlus_Izvjestaj_${selectedYear}_${selectedMonth}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toast({
+        title: "Uspjeh",
+        description: "PDF uspješno preuzet",
+      });
+    } catch (error) {
+      console.error('PDF download error:', error);
+      toast({
+        title: "Greška",
+        description: "Greška pri preuzimanju PDF-a",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Handle print functionality for horizontal table layout (20 services per page)
   const handlePrintReport = () => {
     if (!billingData?.services.length) return;
@@ -564,10 +614,7 @@ export default function ComplusBillingReport() {
                 Štampaj
               </Button>
               <Button 
-                onClick={() => {
-                  const url = `/api/admin/billing/complus/enhanced/pdf/${selectedYear}/${selectedMonth}`;
-                  window.open(url, '_blank');
-                }}
+                onClick={handleDownloadPDF}
                 disabled={!selectedMonth || !selectedYear}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 data-testid="button-download-pdf-complus"
