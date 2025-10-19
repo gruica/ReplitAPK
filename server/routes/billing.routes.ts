@@ -1098,7 +1098,7 @@ export function registerBillingRoutes(app: Express) {
           }
           else if (originalWarrantyStatus === 'nepoznato') {
             try {
-              const serviceDate = new Date(displayDate);
+              const serviceDate = new Date(displayDate || '');
               const now = new Date();
               const daysDiff = (now.getTime() - serviceDate.getTime()) / (1000 * 60 * 60 * 24);
               
@@ -1157,7 +1157,7 @@ export function registerBillingRoutes(app: Express) {
       const brandBreakdown = Object.entries(servicesByBrand).map(([brand, services]) => ({
         brand,
         count: services.length,
-        cost: services.reduce((sum, s) => sum + (s.cost || 0), 0)
+        cost: services.reduce((sum, s) => sum + parseFloat(String(s.cost || 0)), 0)
       }));
 
       const months = [
@@ -1175,7 +1175,7 @@ export function registerBillingRoutes(app: Express) {
         services: billingServices,
         servicesByBrand,
         totalServices: billingServices.length,
-        totalCost: billingServices.reduce((sum, s) => sum + (s.cost || 0), 0),
+        totalCost: billingServices.reduce((sum, s) => sum + parseFloat(String(s.cost || 0)), 0),
         autoDetectedCount: autoDetectedWarrantyCount,
         overriddenCount: overriddenCount,
         detectionSummary: {
@@ -1623,19 +1623,19 @@ export function registerBillingRoutes(app: Express) {
 
       // Kalkulacija ukupnih vrednosti
       const totalServices = billingServices.length;
-      const totalBillingAmount = billingServices.reduce((sum, s) => sum + (s.billingPrice || 0), 0);
+      const totalBillingAmount = billingServices.reduce((sum, s) => sum + parseFloat(String(s.billingPrice || 0)), 0);
       
       const brandBreakdown = billingServices.reduce((acc, service) => {
         const brand = service.manufacturerName;
         const existing = acc.find(b => b.brand === brand);
         if (existing) {
           existing.count++;
-          existing.totalAmount += service.billingPrice || 0;
+          existing.totalAmount += parseFloat(String(service.billingPrice || 0));
         } else {
           acc.push({
             brand,
             count: 1,
-            totalAmount: service.billingPrice || 0
+            totalAmount: parseFloat(String(service.billingPrice || 0))
           });
         }
         return acc;
@@ -1775,7 +1775,7 @@ export function registerBillingRoutes(app: Express) {
                     <td class="serial">${service.serialNumber}</td>
                     <td>${service.technicianName}</td>
                     <td>${displayDate}</td>
-                    <td class="cost">${service.billingPrice.toFixed(2)}€</td>
+                    <td class="cost">${parseFloat(String(service.billingPrice || 0)).toFixed(2)}€</td>
                     <td class="notes">${service.technicianNotes || '-'}</td>
                     <td class="notes">${partsText}</td>
                   </tr>
@@ -2030,19 +2030,19 @@ export function registerBillingRoutes(app: Express) {
 
       // Kalkulacija ukupnih vrednosti
       const totalServices = billingServices.length;
-      const totalBillingAmount = billingServices.reduce((sum, s) => sum + (s.billingPrice || 0), 0);
+      const totalBillingAmount = billingServices.reduce((sum, s) => sum + parseFloat(String(s.billingPrice || 0)), 0);
       
       const brandBreakdown = billingServices.reduce((acc, service) => {
         const brand = service.manufacturerName;
         const existing = acc.find(b => b.brand === brand);
         if (existing) {
           existing.count++;
-          existing.totalAmount += service.billingPrice || 0;
+          existing.totalAmount += parseFloat(String(service.billingPrice || 0));
         } else {
           acc.push({
             brand,
             count: 1,
-            totalAmount: service.billingPrice || 0
+            totalAmount: parseFloat(String(service.billingPrice || 0))
           });
         }
         return acc;
@@ -2182,7 +2182,7 @@ export function registerBillingRoutes(app: Express) {
                     <td class="serial">${service.serialNumber}</td>
                     <td>${service.technicianName}</td>
                     <td>${displayDate}</td>
-                    <td class="cost">${service.billingPrice.toFixed(2)}€</td>
+                    <td class="cost">${parseFloat(String(service.billingPrice || 0)).toFixed(2)}€</td>
                     <td class="notes">${service.technicianNotes || '-'}</td>
                     <td class="notes">${partsText}</td>
                   </tr>
