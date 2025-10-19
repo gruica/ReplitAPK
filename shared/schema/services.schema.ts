@@ -106,7 +106,10 @@ export type ServiceWithDetails = Service & {
 // Schema za dopunjavanje Generali servisa
 export const supplementGeneraliServiceSchema = z.object({
   serviceId: z.number().int().positive("ID servisa mora biti pozitivan broj"),
-  clientEmail: z.string().email("Unesite validnu email adresu").or(z.literal("")).optional(),
+  clientEmail: z.union([
+    z.string().email("Unesite validnu email adresu"),
+    z.literal("")
+  ]).optional(),
   clientAddress: z.string().min(5, "Adresa mora imati najmanje 5 karaktera").max(200, "Adresa je predugačka").optional(),
   clientCity: z.string().min(2, "Grad mora imati najmanje 2 karaktera").max(50, "Grad je predugačak").optional(),
   serialNumber: z.string().min(3, "Serijski broj mora imati najmanje 3 karaktera").max(50, "Serijski broj je predugačak").optional(),
