@@ -59,6 +59,14 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **Billing UI Component Refactoring (October 2024)**: Eliminated massive code duplication in billing report UI components through shared component pattern.
+  - **Code Reduction**: Total frontend code reduced from 1,776L to 1,001L (-775L, -43.6%)
+  - **Shared Component**: Created `UniversalBillingReport.tsx` (969 lines) consolidating all common UI logic, data fetching, filtering, CSV/PDF export, price editing, and service exclusion
+  - **Wrapper Components**: BekoBillingReport.tsx and ComplusBillingReport.tsx reduced from 888L each to 16L each - now simple configuration wrappers
+  - **Theme System**: Parameterized color themes (red for Beko, blue for ComPlus) with complete visual independence
+  - **Partner Independence**: 100% guaranteed - each partner maintains separate routes, API endpoints, localStorage keys, and PDF/CSV filenames with zero shared state
+  - **Maintainability**: Bug fixes, new features, and UI improvements now require changes in single location instead of duplicate blocks
+  - **Functionality**: Zero breaking changes - all billing features work identically to pre-refactoring implementation (enhanced mode, PDF download, CSV export, price editing, service exclusion)
 - **Billing PDF Refactoring (October 2024)**: Eliminated code duplication in PDF generation endpoints through shared helper function pattern.
   - **Code Reduction**: billing.routes.ts reduced from 2,253L to 1,958L (-295L, -13%)
   - **Shared Helper Function**: Created `generateBillingPDF()` helper (360 lines) consolidating database queries, parts allocation logic, HTML generation, and Puppeteer PDF creation
