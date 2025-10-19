@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, FileText, Download, Euro, CheckCircle, User, Phone, MapPin, Wrench, Package, Clock, Printer, Zap, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { Calendar, FileText, Download, Euro, CheckCircle, User, Phone, MapPin, Wrench, Package, Clock, Printer, Zap, AlertCircle, Edit, Trash2, TrendingUp, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -78,15 +78,13 @@ export default function BekoBillingReport() {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1).padStart(2, '0'));
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
-  const [enhancedMode, setEnhancedMode] = useState<boolean>(true); // Defaultno koristi enhanced mode
+  const [enhancedMode, setEnhancedMode] = useState<boolean>(true);
 
-  // Dialog state za uređivanje cijene
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<BekoBillingService | null>(null);
   const [newPrice, setNewPrice] = useState<string>('');
   const [newReason, setNewReason] = useState<string>('');
   
-  // Dialog state za isključivanje servisa iz billinga
   const [excludeDialogOpen, setExcludeDialogOpen] = useState(false);
   const [excludingService, setExcludingService] = useState<BekoBillingService | null>(null);
   
@@ -108,10 +106,9 @@ export default function BekoBillingReport() {
     { value: '12', label: 'Decembar' }
   ];
 
-  // Fetch warranty services for all Beko brands in selected period
   const { data: billingData, isLoading, refetch: refetchBillingData } = useQuery({
     queryKey: [enhancedMode ? '/api/admin/billing/beko/enhanced' : '/api/admin/billing/beko', selectedMonth, selectedYear, enhancedMode],
-    staleTime: 0, // Uvijek refetch fresh podatke
+    staleTime: 0,
     enabled: !!selectedMonth && !!selectedYear,
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -119,111 +116,82 @@ export default function BekoBillingReport() {
         year: selectedYear.toString()
       });
       
-      // Get JWT token from localStorage
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('Nema autentifikacije');
       
-      const endpoint = enhancedMode ? '/api/admin/billing/beko/enhanced' : '/api/admin/billing/beko';
-      const response = await fetch(`${endpoint}?${params}`, {
+      const endpoint = enhancedMode 
+        ? `/api/admin/billing/beko/enhanced?${params}`
+        : `/api/admin/billing/beko?${params}`;
+      
+      const response = await fetch(endpoint, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${token}`
         }
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        // Backend error handled with user notification - sanitized for production
-        throw new Error('Greška pri dohvatanju podataka za Beko fakturisanje. Molimo pokušajte ponovo.');
-      }
-      return await response.json() as BekoMonthlyReport;
+      if (!response.ok) throw new Error('Greška pri učitavanju podataka');
+      return response.json();
     }
   });
 
-  // Mutation za ažuriranje billing podataka
   const updateBillingMutation = useMutation({
     mutationFn: async ({ serviceId, billingPrice, billingPriceReason }: { 
       serviceId: number; 
       billingPrice: number; 
-      billingPriceReason: string 
+      billingPriceReason: string;
     }) => {
-      return await apiRequest(`/api/admin/services/${serviceId}/billing`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          billingPrice,
-          billingPriceReason
-        })
+      return apiRequest('PATCH', `/api/admin/billing/services/${serviceId}/price`, {
+        billingPrice,
+        billingPriceReason
       });
     },
-    onSuccess: async (data, variables) => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [enhancedMode ? '/api/admin/billing/beko/enhanced' : '/api/admin/billing/beko'] });
       toast({
-        title: "Uspješno ažurirano",
-        description: "Billing cijena i dokumentacija su uspješno ažurirani.",
+        title: "Uspjeh",
+        description: "Cijena uspješno ažurirana",
       });
-      
-      // Invalidiraj keš i forsiraj immediate refetch
-      await queryClient.invalidateQueries({
-        queryKey: [
-          enhancedMode ? '/api/admin/billing/beko/enhanced' : '/api/admin/billing/beko'
-        ],
-        refetchType: 'active'
-      });
-      
       setEditDialogOpen(false);
-      setEditingService(null);
-      setNewPrice('');
-      setNewReason('');
+      refetchBillingData();
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Greška",
-        description: error.message || "Greška pri ažuriranju billing podataka",
+        description: "Greška pri ažuriranju cijene",
         variant: "destructive",
       });
     }
   });
 
-  // Mutation za isključivanje servisa iz billing izvještaja
   const excludeFromBillingMutation = useMutation({
-    mutationFn: async ({ serviceId, exclude }: { 
-      serviceId: number; 
-      exclude: boolean 
-    }) => {
-      return await apiRequest(`/api/admin/services/${serviceId}/exclude-from-billing`, {
-        method: 'PATCH',
-        body: JSON.stringify({ exclude })
-      });
+    mutationFn: async ({ serviceId, exclude }: { serviceId: number; exclude: boolean }) => {
+      return apiRequest('PATCH', `/api/admin/billing/services/${serviceId}/exclude`, { exclude });
     },
-    onSuccess: async (_, variables) => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [enhancedMode ? '/api/admin/billing/beko/enhanced' : '/api/admin/billing/beko'] });
       toast({
-        title: "Uspješno",
-        description: "Servis je uklonjen iz billing izvještaja.",
+        title: "Uspjeh",
+        description: "Servis isključen iz billinga",
       });
-      
-      // Direktno refetch podataka iz baze
-      await refetchBillingData();
-      
       setExcludeDialogOpen(false);
-      setExcludingService(null);
+      refetchBillingData();
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Greška",
-        description: error.message || "Greška pri isključivanju servisa",
+        description: "Greška pri isključivanju servisa",
         variant: "destructive",
       });
     }
   });
 
-  // Handler za otvaranje edit dialoga
   const handleEditPrice = (service: BekoBillingService) => {
     setEditingService(service);
-    setNewPrice((service.billingPrice || service.cost || 0).toString());
+    setNewPrice(service.billingPrice?.toString() || service.cost?.toString() || '30.25');
     setNewReason(service.billingPriceReason || '');
     setEditDialogOpen(true);
   };
 
-  // Handler za čuvanje izmjena
   const handleSavePrice = () => {
     if (!editingService) return;
     
@@ -244,13 +212,11 @@ export default function BekoBillingReport() {
     });
   };
 
-  // Handler za otvaranje exclude dialoga
   const handleExcludeFromBilling = (service: BekoBillingService) => {
     setExcludingService(service);
     setExcludeDialogOpen(true);
   };
 
-  // Handler za potvrdu isključivanja servisa
   const handleConfirmExclude = () => {
     if (!excludingService) return;
     
@@ -260,14 +226,12 @@ export default function BekoBillingReport() {
     });
   };
 
-  // Generate export data
   const handleExportToCSV = () => {
     if (!billingData?.services.length) return;
 
     const csvHeaders = 'Broj servisa,Klijent,Telefon,Adresa,Grad,Uređaj,Brend,Model,Serijski broj,Serviser,Datum završetka,Cena,Opis problema,Izvršeni rad,Utrošeni rezervni dijelovi\n';
     
     const csvData = billingData.services.map(service => {
-      // Formatiraj utrošene rezervne dijelove
       const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
         ? service.usedPartsDetails.map(p => `${p.partName} (${p.partNumber}) x${p.quantity}`).join('; ')
         : (service.usedParts || 'Nema');
@@ -285,7 +249,6 @@ export default function BekoBillingReport() {
     document.body.removeChild(link);
   };
 
-  // Handle print functionality for horizontal table layout (20 services per page)
   const handleDownloadPDF = async () => {
     if (!selectedMonth || !selectedYear) return;
     
@@ -350,99 +313,85 @@ export default function BekoBillingReport() {
             @page { size: A4 landscape; margin: 15mm; }
             body { 
               font-family: Arial, sans-serif; 
-              margin: 0; 
-              font-size: 9px; 
-              line-height: 1.2; 
+              font-size: 8px;
+              margin: 0;
+              padding: 20px;
             }
-            .header { 
-              text-align: center; 
-              margin-bottom: 15px; 
-              border-bottom: 2px solid #333; 
-              padding-bottom: 8px; 
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #dc2626;
+              padding-bottom: 10px;
             }
-            .header h1 { margin: 0; font-size: 16px; color: #d32f2f; }
-            .header h2 { margin: 5px 0; font-size: 14px; }
-            .header p { margin: 0; font-size: 10px; }
-            .summary { 
-              background: #f5f5f5; 
-              padding: 8px; 
-              margin-bottom: 10px; 
-              font-size: 10px;
-              display: flex;
-              justify-content: space-between;
+            .header h1 {
+              margin: 0;
+              color: #dc2626;
+              font-size: 18px;
             }
-            .services-table { 
+            .header p {
+              margin: 5px 0;
+              color: #666;
+            }
+            table { 
               width: 100%; 
               border-collapse: collapse; 
-              font-size: 8px;
+              margin-top: 10px;
             }
-            .services-table th { 
-              background: #ffebee; 
-              border: 1px solid #ccc; 
-              padding: 4px 2px; 
-              text-align: left; 
+            th {
+              background-color: #dc2626;
+              color: white;
+              padding: 8px 4px;
+              text-align: left;
               font-weight: bold;
-              white-space: nowrap;
+              font-size: 8px;
+              border: 1px solid #b91c1c;
             }
-            .services-table td { 
-              border: 1px solid #ccc; 
-              padding: 3px 2px; 
-              vertical-align: top;
-              max-width: 80px;
-              overflow: hidden;
-              text-overflow: ellipsis;
+            td {
+              padding: 6px 4px;
+              border: 1px solid #ddd;
+              font-size: 7px;
             }
-            .services-table tr:nth-child(even) { background: #f9f9f9; }
-            .services-table tr:hover { background: #fff3e0; }
-            .service-number { font-weight: bold; color: #d32f2f; }
-            .cost { font-weight: bold; color: #2e7d32; }
-            .brand { font-size: 7px; color: #666; }
+            tr:nth-child(even) {
+              background-color: #f9fafb;
+            }
+            .service-number { font-weight: bold; color: #dc2626; }
             .phone { font-size: 7px; }
-            .serial { font-size: 6px; font-family: monospace; }
-            .footer { 
-              margin-top: 10px; 
-              text-align: center; 
-              font-size: 8px; 
-              color: #666; 
-            }
-            @media print { 
-              body { margin: 0; } 
-              .no-print { display: none; }
-              .services-table { page-break-inside: auto; }
-              .services-table tr { page-break-inside: avoid; }
+            .brand { font-weight: bold; }
+            .serial { font-family: monospace; font-size: 6px; }
+            .cost { font-weight: bold; color: #059669; }
+            .footer {
+              margin-top: 20px;
+              text-align: center;
+              font-size: 7px;
+              color: #666;
+              border-top: 1px solid #ddd;
+              padding-top: 10px;
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>Beko Fakturisanje</h1>
-            <h2>${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</h2>
-            <p>Završeni garancijski servisi - Svi Beko brendovi (Beko, Grundig, Blomberg)</p>
+            <h1>Beko Fakturisanje - ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}</h1>
+            <p>Garantni servisi | Ukupno: ${billingData.totalServices} servisa | Vrijednost: ${(billingData.totalServices * 30.25).toFixed(2)}€</p>
           </div>
           
-          <div class="summary">
-            <div><strong>Ukupno servisa:</strong> ${billingData.totalServices}</div>
-            <div><strong>Ukupna vrednost:</strong> ${Number(billingData.totalBillingAmount || billingData.totalCost || 0).toFixed(2)} €</div>
-            <div><strong>Brendovi:</strong> ${billingData.brandBreakdown.map(b => `${b.brand} (${b.count})`).join(', ')}</div>
-          </div>
-          
-          <table class="services-table">
+          <table>
             <thead>
               <tr>
-                <th style="width: 4%;">Servis #</th>
-                <th style="width: 10%;">Klijent</th>
-                <th style="width: 7%;">Telefon</th>
-                <th style="width: 10%;">Adresa</th>
-                <th style="width: 6%;">Grad</th>
-                <th style="width: 8%;">Uređaj</th>
-                <th style="width: 6%;">Brend</th>
-                <th style="width: 8%;">Model</th>
-                <th style="width: 8%;">Serijski #</th>
-                <th style="width: 7%;">Serviser</th>
-                <th style="width: 5%;">Završeno</th>
-                <th style="width: 4%;">Cena</th>
-                <th style="width: 10%;">Izvršeni rad</th>
-                <th style="width: 10%;">Utrošeni dijelovi</th>
+                <th>Servis</th>
+                <th>Klijent</th>
+                <th>Telefon</th>
+                <th>Adresa</th>
+                <th>Grad</th>
+                <th>Kategorija</th>
+                <th>Brend</th>
+                <th>Model</th>
+                <th>S/N</th>
+                <th>Serviser</th>
+                <th>Datum</th>
+                <th>Cijena</th>
+                <th>Rad</th>
+                <th>Dijelovi</th>
               </tr>
             </thead>
             <tbody>
@@ -485,37 +434,56 @@ export default function BekoBillingReport() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Beko Fakturisanje</h1>
-          <p className="text-muted-foreground">
-            Pregled garantnih servisa za Beko brandove za fakturisanje
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Calendar className="h-4 w-4" />
-          <span className="text-sm text-muted-foreground">
-            {billingData ? `${billingData.month} ${billingData.year}` : 'Izaberite period'}
-          </span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-slate-50 p-6 space-y-6">
+      {/* Premium Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-600 via-red-700 to-red-800 p-8 shadow-2xl">
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]"></div>
+        <div className="relative z-10">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl">
+                  <Building2 className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white tracking-tight">Beko Fakturisanje</h1>
+                  <p className="text-red-100 text-lg mt-1">
+                    Garantni servisi · Beko, Grundig & Blomberg
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20">
+              <div className="flex items-center gap-2 text-white">
+                <Calendar className="h-5 w-5" />
+                <span className="font-semibold text-lg">
+                  {billingData ? `${billingData.month} ${billingData.year}` : 'Izaberite period'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Filteri i postavke
+      {/* Filters - Premium Design */}
+      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-red-50">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <Zap className="h-5 w-5 text-red-600" />
+            </div>
+            Postavke i filteri
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Mesec</label>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-red-600" />
+                Mesec
+              </label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 border-2 hover:border-red-300 transition-colors">
                   <SelectValue placeholder="Izaberite mesec" />
                 </SelectTrigger>
                 <SelectContent>
@@ -528,10 +496,10 @@ export default function BekoBillingReport() {
               </Select>
             </div>
             
-            <div>
-              <label className="text-sm font-medium mb-2 block">Godina</label>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Godina</label>
               <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 border-2 hover:border-red-300 transition-colors">
                   <SelectValue placeholder="Izaberite godinu" />
                 </SelectTrigger>
                 <SelectContent>
@@ -544,105 +512,115 @@ export default function BekoBillingReport() {
               </Select>
             </div>
 
-            <div className="flex flex-col justify-end">
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-col justify-end space-y-2">
+              <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border-2 border-red-100">
                 <Switch
                   id="enhanced-mode"
                   checked={enhancedMode}
                   onCheckedChange={setEnhancedMode}
+                  className="data-[state=checked]:bg-red-600"
                 />
                 <label 
                   htmlFor="enhanced-mode" 
-                  className="text-sm font-medium cursor-pointer"
+                  className="text-sm font-semibold cursor-pointer text-slate-700"
                 >
                   Enhanced Mode
                 </label>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-slate-500 pl-3">
                 Automatski hvata sve završene servise
               </p>
             </div>
 
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-2">
               <Button 
                 onClick={handleExportToCSV} 
                 disabled={!billingData?.services.length}
-                className="flex-1"
                 variant="outline"
+                className="h-11 border-2 hover:border-emerald-400 hover:bg-emerald-50"
               >
                 <Download className="h-4 w-4 mr-2" />
-                CSV
+                CSV Export
               </Button>
-              <Button 
-                onClick={handlePrintReport} 
-                disabled={!billingData?.services.length}
-                className="flex-1"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Štampaj
-              </Button>
-              <Button 
-                onClick={handleDownloadPDF}
-                disabled={!selectedMonth || !selectedYear}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                data-testid="button-download-pdf"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  onClick={handlePrintReport} 
+                  disabled={!billingData?.services.length}
+                  variant="outline"
+                  className="h-11 border-2 hover:border-blue-400 hover:bg-blue-50"
+                >
+                  <Printer className="h-4 w-4" />
+                </Button>
+                <Button 
+                  onClick={handleDownloadPDF}
+                  disabled={!selectedMonth || !selectedYear}
+                  className="h-11 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg"
+                  data-testid="button-download-pdf"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Summary Stats */}
+      {/* Summary Stats - Premium Cards */}
       {billingData && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ukupno servisa</p>
-                  <p className="text-2xl font-bold">{billingData.totalServices}</p>
+                  <p className="text-blue-100 text-sm font-medium mb-1">Ukupno servisa</p>
+                  <p className="text-4xl font-bold">{billingData.totalServices}</p>
                 </div>
-                <Package className="h-8 w-8 text-blue-500" />
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <Package className="h-10 w-10" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 text-white overflow-hidden">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Ukupna vrednost za naplatu</p>
-                  <p className="text-2xl font-bold">{(billingData.totalServices * 30.25).toFixed(2)}€</p>
+                  <p className="text-emerald-100 text-sm font-medium mb-1">Ukupna vrijednost</p>
+                  <p className="text-4xl font-bold">{(billingData.totalServices * 30.25).toFixed(2)}€</p>
                 </div>
-                <Euro className="h-8 w-8 text-green-500" />
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <Euro className="h-10 w-10" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white overflow-hidden">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Brendovi</p>
-                  <p className="text-2xl font-bold">{billingData.brandBreakdown.length}</p>
+                  <p className="text-orange-100 text-sm font-medium mb-1">Brendovi</p>
+                  <p className="text-4xl font-bold">{billingData.brandBreakdown.length}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-orange-500" />
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <CheckCircle className="h-10 w-10" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {billingData.autoDetectedCount !== undefined && (
-            <Card>
-              <CardContent className="pt-6">
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white overflow-hidden">
+              <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Auto-detektovano</p>
-                    <p className="text-2xl font-bold">{billingData.autoDetectedCount}</p>
+                    <p className="text-amber-100 text-sm font-medium mb-1">Auto-detektovano</p>
+                    <p className="text-4xl font-bold">{billingData.autoDetectedCount}</p>
                   </div>
-                  <AlertCircle className="h-8 w-8 text-yellow-500" />
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                    <Zap className="h-10 w-10" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -652,11 +630,14 @@ export default function BekoBillingReport() {
 
       {/* Loading State */}
       {isLoading && (
-        <Card>
-          <CardContent className="py-12">
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              <span className="ml-2">Učitavam podatke...</span>
+        <Card className="border-0 shadow-xl">
+          <CardContent className="py-16">
+            <div className="flex flex-col items-center justify-center gap-4">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-red-200"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-red-600 absolute top-0 left-0"></div>
+              </div>
+              <p className="text-lg font-medium text-slate-600">Učitavam podatke...</p>
             </div>
           </CardContent>
         </Card>
@@ -664,37 +645,39 @@ export default function BekoBillingReport() {
 
       {/* No Data */}
       {!isLoading && billingData && billingData.totalServices === 0 && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
+        <Alert className="border-0 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg">
+          <AlertCircle className="h-5 w-5 text-amber-600" />
+          <AlertDescription className="text-slate-700 font-medium">
             Nema garantnih servisa za Beko brendove u izabranom periodu ({billingData.month} {billingData.year}).
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Brand Breakdown */}
+      {/* Brand Breakdown - Premium Design */}
       {billingData && billingData.brandBreakdown.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Printer className="h-5 w-5" />
+        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-red-50">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-red-600" />
+              </div>
               Raspored po brendovima
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {billingData.brandBreakdown.map((brand) => (
-                <div key={brand.brand} className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-red-600 rounded-full"></div>
-                    <div>
-                      <p className="font-medium">{brand.brand}</p>
-                      <p className="text-sm text-muted-foreground">{brand.count} servisa</p>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {billingData.brandBreakdown.map((brand, idx) => (
+                <div key={brand.brand} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-red-50 p-6 border-2 border-red-100 hover:border-red-300 transition-all hover:shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${idx === 0 ? 'bg-red-600' : idx === 1 ? 'bg-orange-500' : 'bg-amber-500'}`}></div>
+                      <p className="font-bold text-lg text-slate-800">{brand.brand}</p>
                     </div>
+                    <Badge className="bg-red-100 text-red-700 border-0">{brand.count} servisa</Badge>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold">{Number(brand.billingAmount || brand.cost || 0).toFixed(2)}€</p>
-                    <p className="text-sm text-muted-foreground">
+                  <div>
+                    <p className="text-3xl font-bold text-red-600">{Number(brand.billingAmount || brand.cost || 0).toFixed(2)}€</p>
+                    <p className="text-sm text-slate-500 mt-1">
                       {brand.count > 0 ? (Number(brand.billingAmount || brand.cost || 0) / brand.count).toFixed(2) : '0.00'}€ po servisu
                     </p>
                   </div>
@@ -705,116 +688,122 @@ export default function BekoBillingReport() {
         </Card>
       )}
 
-      {/* Services Table */}
+      {/* Services Table - Premium Design */}
       {billingData && billingData.services.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Detaljni pregled servisa ({billingData.services.length})
+        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+          <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-red-50">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <FileText className="h-5 w-5 text-red-600" />
+              </div>
+              Detaljni pregled servisa
+              <Badge className="ml-auto bg-red-600 text-white">{billingData.services.length}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Servis</th>
-                    <th className="text-left p-2">Klijent</th>
-                    <th className="text-left p-2">Uređaj</th>
-                    <th className="text-left p-2">Serviser</th>
-                    <th className="text-left p-2">Datum</th>
-                    <th className="text-left p-2">Cena</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Akcije</th>
+                  <tr className="border-b-2 border-red-100">
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Servis</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Klijent</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Uređaj</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Serviser</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Datum</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Cijena</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Status</th>
+                    <th className="text-left p-4 font-semibold text-slate-700 bg-red-50">Akcije</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {billingData.services.map((service) => (
-                    <tr key={service.id} className="border-b hover:bg-muted/50">
-                      <td className="p-2">
+                  {billingData.services.map((service, idx) => (
+                    <tr key={service.id} className={`border-b hover:bg-red-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+                      <td className="p-4">
                         <div>
-                          <p className="font-medium">#{service.serviceNumber}</p>
+                          <p className="font-bold text-red-600">#{service.serviceNumber}</p>
                           {service.description && (
-                            <p className="text-sm text-muted-foreground">{service.description.substring(0, 40)}...</p>
+                            <p className="text-sm text-slate-600 mt-1">{service.description.substring(0, 40)}...</p>
                           )}
                           {service.technicianNotes && (
-                            <p className="text-sm text-blue-600 font-medium mt-1">
-                              <span className="text-xs text-blue-500">Rad:</span> {service.technicianNotes.substring(0, 60)}...
+                            <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-2 inline-block">
+                              Rad: {service.technicianNotes.substring(0, 50)}...
                             </p>
                           )}
                         </div>
                       </td>
-                      <td className="p-2">
-                        <div>
-                          <p className="font-medium">{service.clientName}</p>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3" />
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-800">{service.clientName}</p>
+                          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                            <Phone className="h-3.5 w-3.5 text-red-500" />
                             {service.clientPhone}
                           </div>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
+                          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                            <MapPin className="h-3.5 w-3.5 text-red-500" />
                             {service.clientCity}
                           </div>
                         </div>
                       </td>
-                      <td className="p-2">
-                        <div>
-                          <p className="font-medium">{service.manufacturerName}</p>
-                          <p className="text-sm text-muted-foreground">{service.applianceModel}</p>
-                          <p className="text-xs text-muted-foreground">{service.serialNumber}</p>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-800">{service.manufacturerName}</p>
+                          <p className="text-sm text-slate-600">{service.applianceModel}</p>
+                          <p className="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded inline-block">{service.serialNumber}</p>
                         </div>
                       </td>
-                      <td className="p-2">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span className="text-sm">{service.technicianName}</span>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-red-100 rounded-full">
+                            <User className="h-4 w-4 text-red-600" />
+                          </div>
+                          <span className="text-sm font-medium text-slate-700">{service.technicianName}</span>
                         </div>
                       </td>
-                      <td className="p-2">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span className="text-sm">
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          <span className="text-sm font-medium text-slate-700">
                             {format(new Date(service.completedDate), 'dd.MM.yyyy')}
                           </span>
                         </div>
                         {service.isAutoDetected && (
-                          <Badge variant="secondary" className="text-xs mt-1">
-                            Auto-detektovano
+                          <Badge variant="secondary" className="text-xs mt-2 bg-amber-100 text-amber-700 border-0">
+                            Auto
                           </Badge>
                         )}
                       </td>
-                      <td className="p-2">
-                        <p className="font-bold">{Number(service.billingPrice || service.cost || 0).toFixed(2)}€</p>
-                        <p className="text-xs text-muted-foreground">
-                          {service.billingPriceReason || 'Standardna tarifa'}
-                        </p>
+                      <td className="p-4">
+                        <div>
+                          <p className="text-lg font-bold text-emerald-600">{Number(service.billingPrice || service.cost || 0).toFixed(2)}€</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {service.billingPriceReason || 'Standardna tarifa'}
+                          </p>
+                        </div>
                       </td>
-                      <td className="p-2">
-                        <Badge variant="default" className="bg-green-500">
+                      <td className="p-4">
+                        <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 shadow-sm">
                           Garantni
                         </Badge>
                       </td>
-                      <td className="p-2">
+                      <td className="p-4">
                         <div className="flex gap-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleEditPrice(service)}
+                            className="hover:bg-blue-50 hover:border-blue-300"
                             data-testid={`button-edit-price-${service.id}`}
                           >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Uredi
+                            <Edit className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-red-600 hover:text-red-700 hover:border-red-600"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
                             onClick={() => handleExcludeFromBilling(service)}
                             data-testid={`button-exclude-${service.id}`}
                           >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Obriši
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </td>
@@ -827,122 +816,68 @@ export default function BekoBillingReport() {
         </Card>
       )}
 
-      {/* Enhanced Mode Info */}
-      {billingData && enhancedMode && billingData.detectionSummary && (
-        <Alert>
-          <Zap className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Enhanced Mode aktiviran:</strong> Automatski detektovano {billingData.detectionSummary.withCompletedDate} servisa sa datumom završetka i {billingData.detectionSummary.withUpdatedDateFallback} servisa sa backup datumom kreiranja.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Dialog za uređivanje cijene */}
+      {/* Edit Price Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Uredi cijenu i dokumentaciju</DialogTitle>
+            <DialogTitle className="text-xl">Uredi billing cijenu</DialogTitle>
             <DialogDescription>
-              Servis #{editingService?.serviceNumber} - {editingService?.clientName}
+              {editingService && `Servis #${editingService.serviceNumber} - ${editingService.clientName}`}
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
               <Label htmlFor="price">Nova cijena (€)</Label>
               <Input
                 id="price"
                 type="number"
                 step="0.01"
-                min="0"
                 value={newPrice}
                 onChange={(e) => setNewPrice(e.target.value)}
-                placeholder="Unesite novu cijenu"
-                data-testid="input-billing-price"
+                placeholder="30.25"
               />
-              <p className="text-xs text-gray-500">
-                Trenutna cijena: {(editingService?.billingPrice || editingService?.cost || 0).toFixed(2)} €
-              </p>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="reason">Dokumentacija / Razlog promjene</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="reason">Razlog izmjene</Label>
               <Textarea
                 id="reason"
                 value={newReason}
                 onChange={(e) => setNewReason(e.target.value)}
-                placeholder="Napomena o promjeni cijene (npr: 'Dodatan deo', 'Specijalan popust', itd.)"
-                rows={4}
-                data-testid="input-billing-reason"
+                placeholder="Opciono: objasnite razlog izmjene cijene"
+                rows={3}
               />
-              <p className="text-xs text-gray-500">
-                Ova dokumentacija će biti prikazana uz servis
-              </p>
             </div>
           </div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditDialogOpen(false)}
-              disabled={updateBillingMutation.isPending}
-              data-testid="button-cancel-edit"
-            >
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Otkaži
             </Button>
-            <Button
-              onClick={handleSavePrice}
-              disabled={updateBillingMutation.isPending}
-              data-testid="button-save-billing"
-            >
-              {updateBillingMutation.isPending ? 'Čuvanje...' : 'Sačuvaj'}
+            <Button onClick={handleSavePrice} disabled={updateBillingMutation.isPending} className="bg-red-600 hover:bg-red-700">
+              {updateBillingMutation.isPending ? "Čuvanje..." : "Sačuvaj"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog za potvrdu brisanja iz billing izvještaja */}
+      {/* Exclude Dialog */}
       <Dialog open={excludeDialogOpen} onOpenChange={setExcludeDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <Trash2 className="h-5 w-5" />
-              Obriši servis iz billing izvještaja
-            </DialogTitle>
+            <DialogTitle>Isključi iz billinga?</DialogTitle>
             <DialogDescription>
-              Servis #{excludingService?.serviceNumber} - {excludingService?.clientName}
+              {excludingService && `Da li ste sigurni da želite isključiti servis #${excludingService.serviceNumber}?`}
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="py-4">
-            <Alert className="border-yellow-500 bg-yellow-50">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-900">
-                <p className="font-semibold mb-2">Da li ste sigurni da želite da uklonite ovaj servis iz billing izvještaja?</p>
-                <p className="text-sm">
-                  Servis će biti trajno isključen iz svih budućih izvještaja za ComPlus i Beko fakturisanje. 
-                  Ova akcija se preporučuje samo ako je servis greškom dodat u billing listu.
-                </p>
-              </AlertDescription>
-            </Alert>
-          </div>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setExcludeDialogOpen(false)}
-              disabled={excludeFromBillingMutation.isPending}
-              data-testid="button-cancel-exclude"
-            >
+            <Button variant="outline" onClick={() => setExcludeDialogOpen(false)}>
               Otkaži
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmExclude}
+            <Button 
+              onClick={handleConfirmExclude} 
               disabled={excludeFromBillingMutation.isPending}
-              data-testid="button-confirm-exclude"
+              className="bg-red-600 hover:bg-red-700"
             >
-              {excludeFromBillingMutation.isPending ? 'Brisanje...' : 'Obriši iz izvještaja'}
+              {excludeFromBillingMutation.isPending ? "Isključivanje..." : "Isključi"}
             </Button>
           </DialogFooter>
         </DialogContent>
