@@ -59,6 +59,12 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **PDF Billing Reports (October 2024)**: Implemented comprehensive PDF generation for both Beko and ComPlus billing reports using Puppeteer with system Chromium. Features include:
+  - **Beko PDF Endpoint**: `/api/admin/billing/beko/enhanced/pdf/:year/:month` generates professional landscape A4 PDFs with complete service details, technician work notes, and used spare parts from production database.
+  - **ComPlus PDF Endpoint**: `/api/admin/billing/complus/enhanced/pdf/:year/:month` mirrors Beko functionality with ComPlus brand styling (blue theme).
+  - **UI Integration**: Added "Preuzmi PDF" (Download PDF) buttons in both BekoBillingReport.tsx and ComplusBillingReport.tsx components for one-click PDF download.
+  - **Production Data**: PDF generation accesses production database with read-only queries, automatically saves PDFs to `attached_assets` folder, and streams to user's browser for download.
+  - **Technical Stack**: Puppeteer configured with system Chromium (`/nix/store/.../chromium`), TypeScript type safety with parseFloat conversions for billing calculations.
 - **Phase 5 Complete (User & Authentication Module)**: Delegated 15 user and authentication methods to `server/storage/user.storage.ts` (333 lines). Added 4 new GET user endpoints with JWT auth (`/api/users/:id`, `/api/users/role/:role`, `/api/users/unverified`, `/api/users/:id/permissions`). Resolved duplicate endpoint conflict in `auth.ts`. storage.ts reduced from 4,018L to 3,669L (-349L, -8.7%). All endpoints tested and functional.
 - **Import Pattern Standardization**: All storage modules use `@shared/schema` imports for consistency and compilation safety.
 - **MemStorage Cleanup**: Removed 130L of unused MemStorage user methods (DatabaseStorage is active instance).
@@ -74,4 +80,5 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Authentication**: Passport.js, scrypt
 - **File Uploads**: Multer
 - **Image Processing**: Sharp
+- **PDF Generation**: Puppeteer (system Chromium)
 - **API Documentation**: Swagger UI Express, Swagger JSDoc
