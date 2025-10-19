@@ -547,14 +547,6 @@ export default function ComplusBillingReport() {
 
             <div className="flex items-end gap-2">
               <Button 
-                onClick={handlePrintReport}
-                disabled={!billingData?.services.length}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Štampaj izveštaj
-              </Button>
-              <Button 
                 onClick={handleExportToCSV}
                 disabled={!billingData?.services.length}
                 className="flex-1"
@@ -562,6 +554,26 @@ export default function ComplusBillingReport() {
               >
                 <Download className="h-4 w-4 mr-2" />
                 CSV
+              </Button>
+              <Button 
+                onClick={handlePrintReport}
+                disabled={!billingData?.services.length}
+                className="flex-1"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Štampaj
+              </Button>
+              <Button 
+                onClick={() => {
+                  const url = `/api/admin/billing/complus/enhanced/pdf/${selectedYear}/${selectedMonth}`;
+                  window.open(url, '_blank');
+                }}
+                disabled={!selectedMonth || !selectedYear}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-download-pdf-complus"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                PDF
               </Button>
             </div>
           </div>
