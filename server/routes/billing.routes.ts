@@ -1432,6 +1432,67 @@ export function registerBillingRoutes(app: Express) {
     }
   });
 
+  // PATCH /api/admin/services/:id/exclude - Isključuje servis iz billing izvještaja
+  app.patch("/api/admin/services/:id/exclude", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Nedostaje autorizacioni token" });
+      }
+
+      const token = authHeader.substring(7);
+      const decoded = verifyToken(token);
+      
+      if (!decoded || !decoded.userId) {
+        return res.status(401).json({ error: "Nevažeći token" });
+      }
+
+      if (decoded.role !== 'admin') {
+        return res.status(403).json({ error: "Nemate dozvolu za ovu akciju" });
+      }
+
+      const serviceId = parseInt(req.params.id);
+      if (isNaN(serviceId)) {
+        return res.status(400).json({ error: "Nevažeći ID servisa" });
+      }
+
+      const { exclude } = req.body;
+      
+      if (typeof exclude !== 'boolean') {
+        return res.status(400).json({ error: "Nevažeći 'exclude' parametar - mora biti boolean" });
+      }
+
+      console.log(`🚫 [BILLING EXCLUDE] Isključivanje servisa #${serviceId} iz billinga: ${exclude}`);
+
+      const existingService = await db.query.services.findFirst({
+        where: eq(schema.services.id, serviceId)
+      });
+
+      if (!existingService) {
+        return res.status(404).json({ error: "Servis nije pronađen" });
+      }
+
+      const updatedService = await db
+        .update(schema.services)
+        .set({
+          excludeFromBilling: exclude
+        })
+        .where(eq(schema.services.id, serviceId))
+        .returning();
+
+      console.log(`✅ [BILLING EXCLUDE] Servis #${serviceId} ${exclude ? 'isključen iz' : 'uključen u'} billing`);
+      
+      res.status(200).json({
+        success: true,
+        service: updatedService[0],
+        message: exclude ? "Servis isključen iz billing izvještaja" : "Servis uključen u billing izvještaje"
+      });
+    } catch (error: any) {
+      console.error("❌ [BILLING EXCLUDE] Greška:", error);
+      res.status(500).json({ error: "Greška pri ažuriranju exclude statusa" });
+    }
+  });
+
   // ============================================================================
   // SHARED PDF GENERATION HELPER FUNCTION
   // ============================================================================
