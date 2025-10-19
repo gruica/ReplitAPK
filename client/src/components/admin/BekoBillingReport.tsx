@@ -231,9 +231,9 @@ export default function BekoBillingReport() {
 
     const csvHeaders = 'Broj servisa,Klijent,Telefon,Adresa,Grad,Uređaj,Brend,Model,Serijski broj,Serviser,Datum završetka,Cena,Opis problema,Izvršeni rad,Utrošeni rezervni dijelovi\n';
     
-    const csvData = billingData.services.map(service => {
+    const csvData = billingData.services.map((service: BekoBillingService) => {
       const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
-        ? service.usedPartsDetails.map(p => `${p.partName} (${p.partNumber}) x${p.quantity}`).join('; ')
+        ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} (${p.partNumber}) x${p.quantity}`).join('; ')
         : (service.usedParts || 'Nema');
         
       return `${service.serviceNumber},"${service.clientName}","${service.clientPhone}","${service.clientAddress}","${service.clientCity}","${service.applianceCategory}","${service.manufacturerName}","${service.applianceModel}","${service.serialNumber}","${service.technicianName}","${format(new Date(service.completedDate), 'dd.MM.yyyy')}","${(service.billingPrice || service.cost || 0).toFixed(2)}","${(service.description || '').replace(/"/g, '""')}","${(service.technicianNotes || '').replace(/"/g, '""')}","${partsText.replace(/"/g, '""')}"`;
@@ -395,9 +395,9 @@ export default function BekoBillingReport() {
               </tr>
             </thead>
             <tbody>
-              ${billingData.services.map(service => {
+              ${billingData.services.map((service: BekoBillingService) => {
                 const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
-                  ? service.usedPartsDetails.map(p => `${p.partName} x${p.quantity}`).join(', ')
+                  ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} x${p.quantity}`).join(', ')
                   : (service.usedParts || '-');
                 return `
                 <tr>
@@ -666,7 +666,7 @@ export default function BekoBillingReport() {
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {billingData.brandBreakdown.map((brand, idx) => (
+              {billingData.brandBreakdown.map((brand: BekoBrandBreakdown, idx: number) => (
                 <div key={brand.brand} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-red-50 p-6 border-2 border-red-100 hover:border-red-300 transition-all hover:shadow-lg">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -716,7 +716,7 @@ export default function BekoBillingReport() {
                   </tr>
                 </thead>
                 <tbody>
-                  {billingData.services.map((service, idx) => (
+                  {billingData.services.map((service: BekoBillingService, idx: number) => (
                     <tr key={service.id} className={`border-b hover:bg-red-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
                       <td className="p-4">
                         <div>
