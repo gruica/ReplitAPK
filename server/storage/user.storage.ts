@@ -8,8 +8,7 @@ import {
   userPermissions,
   type User, 
   type InsertUser,
-  type UserPermission,
-  type InsertUserPermission
+  type UserPermission
 } from "@shared/schema";
 
 const scryptAsyncPromisified = promisify(scryptAsync);
@@ -235,7 +234,7 @@ class UserStorage {
   // USER PERMISSIONS
   // ============================================
   
-  async createUserPermission(permission: InsertUserPermission): Promise<UserPermission | undefined> {
+  async createUserPermission(permission: Omit<UserPermission, 'id'>): Promise<UserPermission | undefined> {
     try {
       const [userPermission] = await db
         .insert(userPermissions)
@@ -261,7 +260,7 @@ class UserStorage {
     }
   }
 
-  async updateUserPermissions(userId: number, updates: Partial<InsertUserPermission>): Promise<UserPermission | undefined> {
+  async updateUserPermissions(userId: number, updates: Partial<Omit<UserPermission, 'id'>>): Promise<UserPermission | undefined> {
     try {
       const [updatedPermission] = await db
         .update(userPermissions)
