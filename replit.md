@@ -59,6 +59,12 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **Service Worker Cache Fix (October 20, 2025)**: Fixed CSS/JS loading issue in production caused by Service Worker caching strategy.
+  - **Bug Fix**: Service Worker was using Cache First strategy for CSS/JS files, causing stale cached files to be served after new builds
+  - **Solution**: Changed to Network First strategy for static assets - always fetches latest CSS/JS from server, falls back to cache only if network fails
+  - **Version Bump**: Service Worker version updated from v2025.1.0 to v2025.1.1 to force cache refresh
+  - **Impact**: Resolves "Refused to apply style" MIME type errors when accessing routes like /create-service after deployment
+  - **Files Modified**: `client/public/sw.js` (handleStaticAsset function, cache version constants)
 - **CSV/PDF Export Bug Fix - Price Parsing (October 20, 2024)**: Fixed critical TypeError in billing CSV export and improved PDF price calculations.
   - **Bug Fix**: Resolved `TypeError: .toFixed is not a function` caused by database fields (billingPrice, cost) being TEXT type instead of numeric
   - **CSV Export**: Added `parseFloat()` conversion with `isNaN()` validation to handle string-to-number conversion safely; prevents skipping legitimate 0€ prices

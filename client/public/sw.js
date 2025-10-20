@@ -1,8 +1,8 @@
 // Service Worker za Frigo Sistem Todosijević - 2025 Performance Optimized
-const CACHE_NAME = 'frigo-sistem-v2025.1.0';
-const STATIC_CACHE = 'frigo-static-v2025.1.0';
-const DYNAMIC_CACHE = 'frigo-dynamic-v2025.1.0';
-const IMAGE_CACHE = 'frigo-images-v2025.1.0';
+const CACHE_NAME = 'frigo-sistem-v2025.1.1';
+const STATIC_CACHE = 'frigo-static-v2025.1.1';
+const DYNAMIC_CACHE = 'frigo-dynamic-v2025.1.1';
+const IMAGE_CACHE = 'frigo-images-v2025.1.1';
 
 // URLs koje treba cache-ovati odmah
 const STATIC_ASSETS = [
@@ -26,7 +26,7 @@ const API_PATTERNS = [
 
 // Install event - cache kritičnih resursa
 self.addEventListener('install', event => {
-  console.log('🚀 Service Worker: Installing v2025.1.0');
+  console.log('🚀 Service Worker: Installing v2025.1.1 - Network First Strategy');
   
   event.waitUntil(
     Promise.all([
@@ -58,7 +58,7 @@ self.addEventListener('install', event => {
 
 // Activate event - obriši stare cache-ove
 self.addEventListener('activate', event => {
-  console.log('✅ Service Worker: Activating v2025.1.0');
+  console.log('✅ Service Worker: Activating v2025.1.1 - CSS/JS Cache Fix');
   
   event.waitUntil(
     Promise.all([
@@ -165,25 +165,28 @@ async function handleImageRequest(request) {
   }
 }
 
-// Strategija za statičke resurse - Cache First
+// Strategija za statičke resurse - Network First (fix za Vite hash fajlove)
 async function handleStaticAsset(request) {
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    return cachedResponse;
-  }
-  
   try {
+    // PRVO pokušaj network zahtev (fix za Vite build hash fajlove)
     const networkResponse = await fetch(request);
     
-    if (networkResponse.ok) {
+    if (networkResponse.ok && networkResponse.status === 200) {
+      // Cache-uj SAMO uspešne odgovore
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
     }
     
     return networkResponse;
   } catch (error) {
-    console.log('📄 Service Worker: Static asset failed:', request.url);
+    console.log('📄 Service Worker: Network failed for static asset, trying cache:', request.url);
+    
+    // Ako network ne radi, pokušaj cache kao fallback
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
     throw error;
   }
 }
@@ -309,4 +312,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('🎯 Service Worker: Frigo Sistem v2025.1.0 ready');
+console.log('🎯 Service Worker: Frigo Sistem v2025.1.1 ready - Network First for CSS/JS');
