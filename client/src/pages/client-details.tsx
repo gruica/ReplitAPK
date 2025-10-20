@@ -59,8 +59,8 @@ interface ExtendedService extends Service {
 
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { 
 import { logger } from '@/utils/logger';
+import { 
   ArrowLeft, 
   Phone, 
   Mail, 
