@@ -36,6 +36,7 @@ import {
   Plus
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { logger } from '@/utils/logger';
 
 // Service status configuration
 const statusConfig = {
@@ -92,7 +93,7 @@ export default function TechnicianServices() {
   // PDF Report funkcija
   const handlePdfReport = async (service: Service) => {
     try {
-      console.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
+      logger.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
       
       const response = await fetch(`/api/technician/service-report-pdf/${service.id}`, {
         method: 'GET',
@@ -107,7 +108,7 @@ export default function TechnicianServices() {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      console.log(`📄 PDF uspešno dobijen od servera`);
+      logger.log(`📄 PDF uspešno dobijen od servera`);
 
       const pdfBlob = await response.blob();
       const url = window.URL.createObjectURL(pdfBlob);
@@ -121,7 +122,7 @@ export default function TechnicianServices() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log(`📄 PDF izvještaj uspešno preuzet`);
+      logger.log(`📄 PDF izvještaj uspešno preuzet`);
 
       toast({
         title: "PDF izvještaj",
@@ -129,7 +130,7 @@ export default function TechnicianServices() {
       });
 
     } catch (error) {
-      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      logger.error('📄 Greška pri generisanju PDF izvještaja:', error);
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",
@@ -139,16 +140,16 @@ export default function TechnicianServices() {
   };
 
   // Debug user objekat
-  console.log('[TEHNIČKI SERVISI] Current user:', user);
-  console.log('[TEHNIČKI SERVISI] User technicianId:', user?.technicianId);
-  console.log('[TEHNIČKI SERVISI] User role:', user?.role);
+  logger.log('[TEHNIČKI SERVISI] Current user:', user);
+  logger.log('[TEHNIČKI SERVISI] User technicianId:', user?.technicianId);
+  logger.log('[TEHNIČKI SERVISI] User role:', user?.role);
 
   // ENTERPRISE OPTIMIZED: Fetch technician services with performance monitoring
   const { data: services, isLoading, refetch } = useQuery<Service[]>({
     queryKey: ["/api/services/technician", user?.technicianId],
     queryFn: async () => {
-      console.log('[TEHNIČKI SERVISI] Pozivam API za servisera:', user?.technicianId);
-      console.log('[TEHNIČKI SERVISI] User objekat:', user);
+      logger.log('[TEHNIČKI SERVISI] Pozivam API za servisera:', user?.technicianId);
+      logger.log('[TEHNIČKI SERVISI] User objekat:', user);
       
       const startTime = Date.now();
       const response = await fetch(`/api/services/technician/${user?.technicianId}`, {
@@ -157,13 +158,13 @@ export default function TechnicianServices() {
         }
       });
       if (!response.ok) {
-        console.error('[TEHNIČKI SERVISI] API greška:', response.status, response.statusText);
+        logger.error('[TEHNIČKI SERVISI] API greška:', response.status, response.statusText);
         throw new Error("Failed to fetch services");
       }
       const data = await response.json();
       const responseTime = Date.now() - startTime;
       
-      console.log('[TEHNIČKI SERVISI] Dobijeno servisa:', data.length);
+      logger.log('[TEHNIČKI SERVISI] Dobijeno servisa:', data.length);
       
       return data;
     },
@@ -201,7 +202,7 @@ export default function TechnicianServices() {
             });
 
             if (response.ok) {
-              console.log('📱 [WHATSAPP AUTO] Obaveštenja poslata za servis:', variables.serviceId);
+              logger.log('📱 [WHATSAPP AUTO] Obaveštenja poslata za servis:', variables.serviceId);
               toast({
                 title: "📱 WhatsApp obaveštenja poslata",
                 description: "Svi učesnici su obavešteni o završetku servisa"
@@ -209,7 +210,7 @@ export default function TechnicianServices() {
             }
           }
         } catch (error) {
-          console.warn('⚠️ [WHATSAPP AUTO] Greška pri obaveštenjima:', error);
+          logger.warn('⚠️ [WHATSAPP AUTO] Greška pri obaveštenjima:', error);
         }
       }
       

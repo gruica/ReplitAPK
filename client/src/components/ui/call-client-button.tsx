@@ -3,6 +3,7 @@ import { callPhoneNumber } from "@/lib/mobile-utils";
 import { PhoneCall } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
+import { logger } from '@/utils/logger';
 
 interface CallClientButtonProps {
   phoneNumber: string;
@@ -61,7 +62,7 @@ export function CallClientButton({
         });
       }
     } catch (error) {
-      console.error("Greška pri pozivu:", error);
+      logger.error("Greška pri pozivu:", error);
       toast({
         title: "Greška pri pozivu",
         description: "Došlo je do neočekivane greške pri pozivu.",

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { AppIcons, getApplianceIcon, getBrandIcon } from "@/lib/app-icons";
+import { logger } from '@/utils/logger';
 
 // Com Plus brendovi
 const COM_PLUS_BRANDS = ["Electrolux", "Elica", "Candy", "Hoover", "Turbo Air"];
@@ -252,7 +253,7 @@ export default function ComplusDashboard() {
             });
 
             if (response.ok) {
-              console.log('📱 [WHATSAPP AUTO] Obaveštenja poslata za ComPlus servis:', variables.serviceId);
+              logger.log('📱 [WHATSAPP AUTO] Obaveštenja poslata za ComPlus servis:', variables.serviceId);
               toast({
                 title: "📱 WhatsApp obaveštenja poslata",
                 description: "Com Plus servis - svi učesnici su obavešteni"
@@ -260,7 +261,7 @@ export default function ComplusDashboard() {
             }
           }
         } catch (error) {
-          console.warn('⚠️ [WHATSAPP AUTO] Greška pri ComPlus obaveštenjima:', error);
+          logger.warn('⚠️ [WHATSAPP AUTO] Greška pri ComPlus obaveštenjima:', error);
         }
       }
       

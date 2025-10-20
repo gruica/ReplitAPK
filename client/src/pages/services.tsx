@@ -29,6 +29,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil, Plus, Search, Eye, Filter } from "lucide-react";
 import { AppIcons, getApplianceIcon, getBrandIcon, getStatusIcon } from "@/lib/app-icons";
+import { logger } from '@/utils/logger';
 
 // PAŽNJA: Stranica je privremeno pojednostavljena zbog problema sa belim ekranom
 
@@ -100,7 +101,7 @@ function getAvatarColor(name: string) {
     const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
   } catch (error) {
-    console.error("Greška pri generisanju boje avatara:", error);
+    logger.error("Greška pri generisanju boje avatara:", error);
     return "bg-gray-500";
   }
 }
@@ -144,7 +145,7 @@ export default function Services() {
     try {
       // Proveravamo da li su clientId i applianceId validni
       if (!service.clientId || !service.applianceId) {
-        console.warn(`Servis #${service.id} ima nevažeći clientId:${service.clientId} ili applianceId:${service.applianceId}`);
+        logger.warn(`Servis #${service.id} ima nevažeći clientId:${service.clientId} ili applianceId:${service.applianceId}`);
       }
       
       const client = clients?.find(c => c.id === service.clientId);
@@ -153,11 +154,11 @@ export default function Services() {
       
       // Dodajemo dodatne debug informacije
       if (!client) {
-        console.warn(`Nije pronađen klijent za servis #${service.id}, clientId:${service.clientId}`);
+        logger.warn(`Nije pronađen klijent za servis #${service.id}, clientId:${service.clientId}`);
       }
       
       if (!appliance) {
-        console.warn(`Nije pronađen uređaj za servis #${service.id}, applianceId:${service.applianceId}`);
+        logger.warn(`Nije pronađen uređaj za servis #${service.id}, applianceId:${service.applianceId}`);
       }
       
       return {
@@ -167,7 +168,7 @@ export default function Services() {
         icon: category?.icon || "devices",
       };
     } catch (error) {
-      console.error(`Greška pri obogaćivanju servisa #${service.id}:`, error);
+      logger.error(`Greška pri obogaćivanju servisa #${service.id}:`, error);
       // Vraćamo osnovni servis bez dodatnih podataka ako dođe do greške
       return {
         ...service,
@@ -226,7 +227,7 @@ export default function Services() {
   // Create/Update service mutation
   const serviceMutation = useMutation({
     mutationFn: async (data: ServiceFormValues) => {
-      console.log("Podaci za slanje:", data);
+      logger.log("Podaci za slanje:", data);
       if (selectedService) {
         // Update service
         const res = await apiRequest(`/api/services/${selectedService.id}`, { method: "PUT", body: JSON.stringify(data) });
@@ -238,7 +239,7 @@ export default function Services() {
       }
     },
     onSuccess: (data) => {
-      console.log("Uspešno sačuvan servis:", data);
+      logger.log("Uspešno sačuvan servis:", data);
       
       // Invalidiraj upite za servise i statistiku
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
@@ -277,7 +278,7 @@ export default function Services() {
       setSelectedClient(null);
     },
     onError: (error) => {
-      console.error("Greška pri čuvanju servisa:", error);
+      logger.error("Greška pri čuvanju servisa:", error);
       toast({
         title: "Greška",
         description: error.message || "Došlo je do greške pri čuvanju podataka",
@@ -288,7 +289,7 @@ export default function Services() {
   
   // Open dialog for adding new service
   const handleAddService = () => {
-    console.log("Otvaranje dijaloga za dodavanje servisa");
+    logger.log("Otvaranje dijaloga za dodavanje servisa");
     setSelectedService(null);
     setSelectedClient(null);
     
@@ -310,15 +311,15 @@ export default function Services() {
     };
     
     form.reset(defaultValues);
-    console.log("Forma resetovana sa:", defaultValues);
+    logger.log("Forma resetovana sa:", defaultValues);
     
     setIsDialogOpen(true);
-    console.log("Dialog otvoren:", isDialogOpen);
+    logger.log("Dialog otvoren:", isDialogOpen);
   };
   
   // Open dialog for editing service
   const handleEditService = (service: Service) => {
-    console.log("Uređivanje servisa:", service);
+    logger.log("Uređivanje servisa:", service);
     setSelectedService(service);
     setSelectedClient(service.clientId);
     
@@ -340,14 +341,14 @@ export default function Services() {
     };
     
     form.reset(editValues);
-    console.log("Forma postavljena za uređivanje:", editValues);
+    logger.log("Forma postavljena za uređivanje:", editValues);
     
     setIsDialogOpen(true);
   };
   
   // Handle client change in form
   const handleClientChange = (clientId: string) => {
-    console.log("Klijent promijenjen u:", clientId);
+    logger.log("Klijent promijenjen u:", clientId);
     const clientIdNum = parseInt(clientId);
     setSelectedClient(clientIdNum);
     
@@ -357,8 +358,8 @@ export default function Services() {
     // Postavimo klijenta u formu
     form.setValue("clientId", clientIdNum, { shouldValidate: true });
     
-    console.log("Novi odabrani klijent:", clientIdNum);
-    console.log("Forma nakon promjene klijenta:", form.getValues());
+    logger.log("Novi odabrani klijent:", clientIdNum);
+    logger.log("Forma nakon promjene klijenta:", form.getValues());
   };
   
   // Submit service form

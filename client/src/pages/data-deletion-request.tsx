@@ -18,6 +18,7 @@ import {
 import { Loader2, ShieldCheck, Trash2, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'wouter';
+import { logger } from '@/utils/logger';
 
 const dataDeletionRequestSchema = z.object({
   email: z.string().email("Unesite validnu email adresu").min(1, "Email adresa je obavezna"),
@@ -68,7 +69,7 @@ export default function DataDeletionRequestPage() {
         throw new Error(errorData.error || 'Greška pri slanju zahteva');
       }
     } catch (error) {
-      console.error('Greška pri slanju zahteva:', error);
+      logger.error('Greška pri slanju zahteva:', error);
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Došlo je do greške pri slanju zahteva. Molimo pokušajte ponovo.",

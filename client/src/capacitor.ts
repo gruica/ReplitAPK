@@ -5,6 +5,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { Device } from '@capacitor/device';
 import { Preferences } from '@capacitor/preferences';
 import { Network, ConnectionStatus } from '@capacitor/network';
+import { logger } from '@/utils/logger';
 
 // Oznaka da li aplikacija radi na mobilnom uređaju
 export const isNativeMobile = Capacitor.isNativePlatform();
@@ -21,9 +22,9 @@ export async function initializeCapacitor() {
       // Postavljanje status bara
       await StatusBar.setBackgroundColor({ color: '#1E293B' });
       
-      console.log('✅ [Capacitor] Mobile plugins initialized');
+      logger.log('✅ [Capacitor] Mobile plugins initialized');
     } catch (error) {
-      console.error('❌ [Capacitor] Failed to initialize mobile plugins:', error);
+      logger.error('❌ [Capacitor] Failed to initialize mobile plugins:', error);
     }
   }
   
@@ -37,7 +38,7 @@ export async function getDeviceInfo() {
   try {
     return await Device.getInfo();
   } catch (error) {
-    console.error('Greška pri dohvatanju informacija o uređaju:', error);
+    logger.error('Greška pri dohvatanju informacija o uređaju:', error);
     return null;
   }
 }
@@ -118,7 +119,7 @@ export async function getNetworkStatus(): Promise<ConnectionStatus> {
   try {
     if (isNativeMobile) {
       const status = await Network.getStatus();
-      console.log('📶 [Network] Current status:', status);
+      logger.log('📶 [Network] Current status:', status);
       return status;
     } else {
       // Web fallback
@@ -127,11 +128,11 @@ export async function getNetworkStatus(): Promise<ConnectionStatus> {
         connected: isOnline,
         connectionType: isOnline ? 'wifi' : 'none',
       };
-      console.log('🌐 [Network] Web status:', webStatus);
+      logger.log('🌐 [Network] Web status:', webStatus);
       return webStatus;
     }
   } catch (error) {
-    console.error('❌ [Network] Failed to get network status:', error);
+    logger.error('❌ [Network] Failed to get network status:', error);
     // Fallback - pretpostavi da je online
     return {
       connected: true,
@@ -147,12 +148,12 @@ export async function initializeNetworkMonitoring(): Promise<void> {
   try {
     // Dobij početni status
     currentNetworkStatus = await getNetworkStatus();
-    console.log('🚀 [Network] Initial status:', currentNetworkStatus);
+    logger.log('🚀 [Network] Initial status:', currentNetworkStatus);
     
     if (isNativeMobile) {
       // Native network monitoring
       Network.addListener('networkStatusChange', (status: ConnectionStatus) => {
-        console.log('📶 [Network] Status changed:', status);
+        logger.log('📶 [Network] Status changed:', status);
         currentNetworkStatus = status;
         
         // Pozovi sve listenere
@@ -160,12 +161,12 @@ export async function initializeNetworkMonitoring(): Promise<void> {
           try {
             listener(status);
           } catch (error) {
-            console.error('❌ [Network] Listener error:', error);
+            logger.error('❌ [Network] Listener error:', error);
           }
         });
       });
       
-      console.log('✅ [Network] Native monitoring initialized');
+      logger.log('✅ [Network] Native monitoring initialized');
     } else {
       // Web network monitoring
       const handleOnline = () => {
@@ -173,7 +174,7 @@ export async function initializeNetworkMonitoring(): Promise<void> {
           connected: true,
           connectionType: 'wifi', // Assumption za web
         };
-        console.log('🌐 [Network] Web online:', status);
+        logger.log('🌐 [Network] Web online:', status);
         currentNetworkStatus = status;
         networkListeners.forEach(listener => listener(status));
       };
@@ -183,7 +184,7 @@ export async function initializeNetworkMonitoring(): Promise<void> {
           connected: false,
           connectionType: 'none',
         };
-        console.log('🌐 [Network] Web offline:', status);
+        logger.log('🌐 [Network] Web offline:', status);
         currentNetworkStatus = status;
         networkListeners.forEach(listener => listener(status));
       };
@@ -191,10 +192,10 @@ export async function initializeNetworkMonitoring(): Promise<void> {
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
       
-      console.log('✅ [Network] Web monitoring initialized');
+      logger.log('✅ [Network] Web monitoring initialized');
     }
   } catch (error) {
-    console.error('❌ [Network] Failed to initialize monitoring:', error);
+    logger.error('❌ [Network] Failed to initialize monitoring:', error);
   }
 }
 
@@ -209,7 +210,7 @@ export function addNetworkListener(listener: (status: ConnectionStatus) => void)
     try {
       listener(currentNetworkStatus);
     } catch (error) {
-      console.error('❌ [Network] Initial listener call failed:', error);
+      logger.error('❌ [Network] Initial listener call failed:', error);
     }
   }
   

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, Eye, Trash2, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { logger } from '@/utils/logger';
 
 interface ServicePhoto {
   id: number;
@@ -52,7 +53,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   // Upload photos
   const uploadPhotosMutation = useMutation({
     mutationFn: async (photoUrls: string[]) => {
-      console.log('📸 Uploading photos for serviceId:', serviceId, 'URLs:', photoUrls);
+      logger.log('📸 Uploading photos for serviceId:', serviceId, 'URLs:', photoUrls);
       
       for (const photoUrl of photoUrls) {
         await apiRequest('/api/service-photos', {
@@ -79,7 +80,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
       queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
     },
     onError: (error) => {
-      console.error('📸 Upload error:', error);
+      logger.error('📸 Upload error:', error);
       toast({
         title: "Greška pri otpremanju",
         description: "Došlo je do greške prilikom čuvanja slika.",
@@ -104,7 +105,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
       queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
     },
     onError: (error) => {
-      console.error('📸 Delete error:', error);
+      logger.error('📸 Delete error:', error);
       toast({
         title: "Greška pri brisanju",
         description: "Došlo je do greške prilikom brisanja slike.",
@@ -115,11 +116,11 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
 
   // Handle upload
   const handleGetUploadParameters = async () => {
-    console.log('📸 Getting upload parameters...');
+    logger.log('📸 Getting upload parameters...');
     const response = await apiRequest('/api/objects/upload', {
       method: 'POST'
     });
-    console.log('📸 Upload parameters:', response);
+    logger.log('📸 Upload parameters:', response);
     return {
       method: 'PUT' as const,
       url: (response as any).uploadURL,
@@ -127,7 +128,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   };
 
   const handleUploadComplete = (result: any) => {
-    console.log('📸 Upload completed:', result);
+    logger.log('📸 Upload completed:', result);
     const uploadedUrls = result.successful.map((file: any) => file.uploadURL);
     uploadPhotosMutation.mutate(uploadedUrls);
   };
@@ -136,7 +137,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
     return PHOTO_CATEGORIES.find(cat => cat.value === category) || PHOTO_CATEGORIES[5];
   };
 
-  console.log('📸 Rendering with photos:', photos.length, 'isLoading:', isLoading, 'error:', error);
+  logger.log('📸 Rendering with photos:', photos.length, 'isLoading:', isLoading, 'error:', error);
 
   if (isLoading) {
     return (
@@ -152,7 +153,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   }
 
   if (error) {
-    console.error('📸 Error loading photos:', error);
+    logger.error('📸 Error loading photos:', error);
     return (
       <Card>
         <CardContent className="p-6">
@@ -229,7 +230,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
                         className="w-full h-full object-cover cursor-pointer transition-all group-hover:scale-105"
                         onClick={() => setSelectedPhoto(photo)}
                         onError={(e) => {
-                          console.error('📸 Image load error for photo ID:', photo.id);
+                          logger.error('📸 Image load error for photo ID:', photo.id);
                           const target = e.target as HTMLImageElement;
                           target.src = '/api/placeholder/300x200?text=Slika+nedostaje';
                         }}

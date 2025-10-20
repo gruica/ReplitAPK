@@ -1,4 +1,5 @@
 import { createWorker } from 'tesseract.js';
+import { logger } from '@/utils/logger';
 
 export interface ScannedData {
   model?: string;
@@ -236,7 +237,7 @@ export class EnhancedOCRService {
         });
 
         const { data: { text, confidence } } = await this.worker.recognize(processedImage);
-        console.log(`OCR pokušaj ${attempts.indexOf(attempt) + 1}:`, { text, confidence });
+        logger.log(`OCR pokušaj ${attempts.indexOf(attempt) + 1}:`, { text, confidence });
         const parsed = this.parseText(text, confidence, config.manufacturerFocus);
         results.push(parsed);
       }
@@ -253,7 +254,7 @@ export class EnhancedOCRService {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const result: ScannedData = { confidence, extractedText: text };
 
-    console.log('🔍 OCR čitanje:', { text, lines, confidence });
+    logger.log('🔍 OCR čitanje:', { text, lines, confidence });
 
     // Detektuj proizvođača iz teksta
     const detectedManufacturer = this.detectManufacturer(text, manufacturerFocus);

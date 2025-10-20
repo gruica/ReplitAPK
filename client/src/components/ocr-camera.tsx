@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ocrService, ScannedData } from '@/services/ocr-service';
+import { logger } from '@/utils/logger';
 
 interface OCRCameraProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export function OCRCamera({ isOpen, onClose, onDataScanned }: OCRCameraProps) {
       setIsInitialized(true);
       setScanProgress(0);
     } catch (err) {
-      console.error('OCR initialization error:', err);
+      logger.error('OCR initialization error:', err);
       setError('Greška pri inicijalizaciji skenera');
       setScanProgress(0);
     }
@@ -82,7 +83,7 @@ export function OCRCamera({ isOpen, onClose, onDataScanned }: OCRCameraProps) {
       }
 
     } catch (err) {
-      console.error('Scanning error:', err);
+      logger.error('Scanning error:', err);
       setError('Greška pri skeniranju. Pokušajte ponovo.');
     } finally {
       setIsScanning(false);

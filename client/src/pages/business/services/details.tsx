@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import BusinessLayout from "@/components/layout/business-layout";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from '@/utils/logger';
 
 // Tip za Service Completion Report
 interface CompletionReport {
@@ -200,7 +201,7 @@ export default function ServiceDetails() {
   // PDF Report funkcija
   const handlePdfReport = async () => {
     try {
-      console.log(`📄 Generisanje PDF izvještaja za servis ${serviceId}`);
+      logger.log(`📄 Generisanje PDF izvještaja za servis ${serviceId}`);
       
       const response = await fetch(`/api/business/service-report-pdf/${serviceId}`, {
         method: 'GET',
@@ -215,7 +216,7 @@ export default function ServiceDetails() {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      console.log(`📄 PDF uspešno dobijen od servera`);
+      logger.log(`📄 PDF uspešno dobijen od servera`);
 
       const pdfBlob = await response.blob();
       const url = window.URL.createObjectURL(pdfBlob);
@@ -229,7 +230,7 @@ export default function ServiceDetails() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log(`📄 PDF izvještaj uspešno preuzet`);
+      logger.log(`📄 PDF izvještaj uspešno preuzet`);
 
       toast({
         title: "PDF izvještaj",
@@ -237,7 +238,7 @@ export default function ServiceDetails() {
       });
 
     } catch (error) {
-      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      logger.error('📄 Greška pri generisanju PDF izvještaja:', error);
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",
@@ -256,10 +257,10 @@ export default function ServiceDetails() {
           throw new Error('Greška pri dohvatanju detalja servisa');
         }
         const data = await response.json();
-        console.log("🔍 Business Partner Service Details Response:", data);
+        logger.log("🔍 Business Partner Service Details Response:", data);
         return data;
       } catch (error) {
-        console.error("Greška pri dohvatanju detalja servisa:", error);
+        logger.error("Greška pri dohvatanju detalja servisa:", error);
         throw error;
       }
     },

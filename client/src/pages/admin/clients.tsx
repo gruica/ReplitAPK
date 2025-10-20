@@ -49,6 +49,7 @@ import { z } from "zod";
 import type { Client } from "@shared/schema";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { logger } from '@/utils/logger';
 
 // Schema za editovanje klijenta
 const editClientSchema = z.object({
@@ -185,7 +186,7 @@ const AdminClientsPage = memo(function AdminClientsPage() {
   // Mutacija za kreiranje novog klijenta sa uređajem
   const addClientMutation = useMutation({
     mutationFn: async (data: NewClientFormValues) => {
-      console.log("🔧 Kreiranje klijenta sa podacima:", data);
+      logger.log("🔧 Kreiranje klijenta sa podacima:", data);
       const response = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

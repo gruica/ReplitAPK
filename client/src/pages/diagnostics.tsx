@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@/utils/logger';
 
 // Dijagnostička stranica koja pokazuje sve greške i status aplikacije
 const DiagnosticsPage = () => {
@@ -14,7 +15,7 @@ const DiagnosticsPage = () => {
   // Provjera API-ja za servise
   const checkServicesApi = async () => {
     try {
-      console.log('Započinjem provjeru API-ja za servise...');
+      logger.log('Započinjem provjeru API-ja za servise...');
       
       // Šaljemo request za servise with JWT token
       const token = localStorage.getItem('auth_token');
@@ -35,10 +36,10 @@ const DiagnosticsPage = () => {
         setServicesData(data);
         
         if (Array.isArray(data)) {
-          console.log('API je vratio niz podataka, duljina:', data.length);
+          logger.log('API je vratio niz podataka, duljina:', data.length);
           if (data.length > 0) {
-            console.log('Prvi element:', data[0]);
-            console.log('Ključevi u prvom elementu:', Object.keys(data[0]));
+            logger.log('Prvi element:', data[0]);
+            logger.log('Ključevi u prvom elementu:', Object.keys(data[0]));
             
             // Provjera ključeva
             const keysToCheck = ['id', 'description', 'status', 'createdAt'];
@@ -51,22 +52,22 @@ const DiagnosticsPage = () => {
               setApiStatus('success');
             }
           } else {
-            console.log('API je vratio prazan niz');
+            logger.log('API je vratio prazan niz');
             setApiStatus('success'); // Tehnički API radi ispravno
             setErrorDetails('API vraća prazan niz podataka. Nema servisa za prikaz.');
           }
         } else {
-          console.log('API nije vratio niz:', data);
+          logger.log('API nije vratio niz:', data);
           setApiStatus('error');
           setErrorDetails('API nije vratio očekivani format podataka (niz).');
         }
       } catch (parseError) {
-        console.error('Greška pri parsiranju JSON-a:', parseError);
+        logger.error('Greška pri parsiranju JSON-a:', parseError);
         setApiStatus('error');
         setErrorDetails(`API nije vratio ispravan JSON. Greška: ${parseError.message}`);
       }
     } catch (error) {
-      console.error('Greška pri provjeri API-ja:', error);
+      logger.error('Greška pri provjeri API-ja:', error);
       setApiStatus('error');
       setErrorDetails(`Mrežna greška ili greška servera: ${error.message}`);
     }

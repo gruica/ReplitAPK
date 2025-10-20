@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { ArrowLeft, Package, Eye, Calendar, User, Phone, Settings, CheckCircle, Clock, AlertCircle, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from '@/utils/logger';
 
 // Interface za rezervne delove
 interface ApprovedSparePart {
@@ -53,7 +54,7 @@ export default function BusinessSpareParts() {
   // PDF Report funkcija - napravit ćemo poseban izvještaj sa svim djelovima
   const handlePdfReport = async () => {
     try {
-      console.log(`📄 Generisanje PDF izvještaja za rezervne dijelove`);
+      logger.log(`📄 Generisanje PDF izvještaja za rezervne dijelove`);
       
       const response = await fetch(`/api/business/spare-parts-pdf`, {
         method: 'GET',
@@ -68,7 +69,7 @@ export default function BusinessSpareParts() {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      console.log(`📄 PDF uspešno dobijen od servera`);
+      logger.log(`📄 PDF uspešno dobijen od servera`);
 
       const pdfBlob = await response.blob();
       const url = window.URL.createObjectURL(pdfBlob);
@@ -82,7 +83,7 @@ export default function BusinessSpareParts() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log(`📄 PDF izvještaj uspešno preuzet`);
+      logger.log(`📄 PDF izvještaj uspešno preuzet`);
 
       toast({
         title: "PDF izvještaj",
@@ -90,7 +91,7 @@ export default function BusinessSpareParts() {
       });
 
     } catch (error) {
-      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      logger.error('📄 Greška pri generisanju PDF izvještaja:', error);
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",

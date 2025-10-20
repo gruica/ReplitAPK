@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { CheckCircle, Clock, Wrench, FileText, Star, Plus, Minus, Package } from "lucide-react";
+import { logger } from '@/utils/logger';
 
 // Schema za service completion report
 const serviceCompletionSchema = z.object({
@@ -120,19 +121,19 @@ function ServiceCompletionForm({ service, isOpen, onClose }: ServiceCompletionFo
 
           if (response.ok) {
             const result = await response.json();
-            console.log('📱 [WHATSAPP AUTO] Obaveštenja poslata:', result);
+            logger.log('📱 [WHATSAPP AUTO] Obaveštenja poslata:', result);
             
             toast({
               title: "✅ WhatsApp obaveštenja poslata",
               description: "Klijent, admin i ostali su obavešteni o završetku servisa preko WhatsApp-a"
             });
           } else {
-            console.warn('⚠️ [WHATSAPP AUTO] WhatsApp obaveštenja nisu poslata');
+            logger.warn('⚠️ [WHATSAPP AUTO] WhatsApp obaveštenja nisu poslata');
             // Ne prikazuj grešku korisniku - nije kritično
           }
         }
       } catch (error) {
-        console.warn('⚠️ [WHATSAPP AUTO] Greška pri WhatsApp obaveštenjima:', error);
+        logger.warn('⚠️ [WHATSAPP AUTO] Greška pri WhatsApp obaveštenjima:', error);
         // Ne blokira postojeći workflow
       }
       

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, Mic, MapPin, Image, Check, X, Loader2 } from 'lucide-react';
 import { useNativeCamera } from '@/utils/nativeCameraUtils';
+import { logger } from '@/utils/logger';
 
 interface MobilePhotoUploaderProps {
   serviceId: number;
@@ -48,7 +49,7 @@ export function MobilePhotoUploader({ serviceId, onPhotoUploaded, onClose }: Mob
           });
         },
         (error) => {
-          console.error('Geolocation error:', error);
+          logger.error('Geolocation error:', error);
           toast({
             title: "Greška",
             description: "Ne mogu da dohvatim lokaciju",
@@ -73,7 +74,7 @@ export function MobilePhotoUploader({ serviceId, onPhotoUploaded, onClose }: Mob
         description: isNativeSupported ? "Koristite native kameru" : "Koristite web kameru",
       });
     } catch (error: any) {
-      console.error('Camera capture error:', error);
+      logger.error('Camera capture error:', error);
       // Fallback to web input if native fails
       if (cameraInputRef.current) {
         cameraInputRef.current.click();
@@ -107,7 +108,7 @@ export function MobilePhotoUploader({ serviceId, onPhotoUploaded, onClose }: Mob
         description: isNativeSupported ? "Koristi native galeriju" : "Koristi web galeriju",
       });
     } catch (error: any) {
-      console.error('Gallery selection error:', error);
+      logger.error('Gallery selection error:', error);
       // Fallback to web input if native fails
       if (fileInputRef.current) {
         fileInputRef.current.click();
@@ -210,7 +211,7 @@ export function MobilePhotoUploader({ serviceId, onPhotoUploaded, onClose }: Mob
       }
 
     } catch (error: any) {
-      console.error('Mobile upload error:', error);
+      logger.error('Mobile upload error:', error);
       toast({
         title: "Greška pri upload-u",
         description: error.message || "Neočekivana greška",

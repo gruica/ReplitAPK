@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -33,7 +34,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
     });
 
     // Log error za production monitoring
-    console.error(`🚨 [ERROR BOUNDARY] ${this.props.componentName || 'Admin Panel'}:`, {
+    logger.error(`🚨 [ERROR BOUNDARY] ${this.props.componentName || 'Admin Panel'}:`, {
       error: error.message,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
@@ -121,7 +122,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
 // Hook za standardized error handling
 export function useErrorHandler() {
   const handleError = (error: Error, context?: string) => {
-    console.error(`🚨 [ERROR] ${context || 'Admin Panel'}:`, {
+    logger.error(`🚨 [ERROR] ${context || 'Admin Panel'}:`, {
       message: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()
@@ -134,7 +135,7 @@ export function useErrorHandler() {
   const handleApiError = (error: any, endpoint: string) => {
     const errorMessage = error?.message || error?.response?.data?.message || 'Nepoznata greška';
     
-    console.error(`🚨 [API ERROR] ${endpoint}:`, {
+    logger.error(`🚨 [API ERROR] ${endpoint}:`, {
       message: errorMessage,
       status: error?.response?.status,
       endpoint,

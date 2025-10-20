@@ -1,6 +1,7 @@
 // 🔴 VISOK PRIORITET: State Management Optimizacija - useReducer za complex state
 
 import { useReducer, useCallback, useMemo } from 'react';
+import { logger } from '@/utils/logger';
 
 // Optimized filter state management
 export interface OptimizedFilterState {
@@ -209,7 +210,7 @@ export function useStatePerformanceMonitor(componentName: string) {
 
   const logStateUpdate = useCallback((stateName: string, newState: any) => {
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🔄 [${componentName}] State update: ${stateName}`, {
+      logger.log(`🔄 [${componentName}] State update: ${stateName}`, {
         renderCount: renderCount(),
         newState,
         timestamp: new Date().toISOString()

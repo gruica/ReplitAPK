@@ -6,6 +6,7 @@
 import { Camera, CameraResultType, CameraSource, ImageOptions } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/logger';
 
 export interface CameraPhoto {
   base64String?: string;
@@ -49,19 +50,19 @@ class NativeCameraService {
   public async requestPermissions(): Promise<{ camera: boolean; photos: boolean }> {
     try {
       if (!this.isNativeSupported()) {
-        console.log('📱 [Camera] Web platform - koriste se web API-ji');
+        logger.log('📱 [Camera] Web platform - koriste se web API-ji');
         return { camera: true, photos: true };
       }
 
       const permissions = await Camera.requestPermissions();
-      console.log('📱 [Camera] Permissions:', permissions);
+      logger.log('📱 [Camera] Permissions:', permissions);
       
       return {
         camera: permissions.camera === 'granted',
         photos: permissions.photos === 'granted'
       };
     } catch (error) {
-      console.error('❌ [Camera] Permission error:', error);
+      logger.error('❌ [Camera] Permission error:', error);
       return { camera: false, photos: false };
     }
   }
@@ -76,14 +77,14 @@ class NativeCameraService {
       }
 
       const permissions = await Camera.checkPermissions();
-      console.log('📱 [Camera] Current permissions:', permissions);
+      logger.log('📱 [Camera] Current permissions:', permissions);
       
       return {
         camera: permissions.camera === 'granted',
         photos: permissions.photos === 'granted'
       };
     } catch (error) {
-      console.error('❌ [Camera] Check permissions error:', error);
+      logger.error('❌ [Camera] Check permissions error:', error);
       return { camera: false, photos: false };
     }
   }
@@ -92,7 +93,7 @@ class NativeCameraService {
    * Hvata fotografiju sa kamere (native ili web fallback)
    */
   public async takePhoto(options: PhotoCaptureOptions = {}): Promise<CameraPhoto> {
-    console.log('📸 [Camera] Taking photo with options:', options);
+    logger.log('📸 [Camera] Taking photo with options:', options);
 
     try {
       // Proverava dozvole prvo
@@ -133,7 +134,7 @@ class NativeCameraService {
       // Hvata fotografiju
       const photo = await Camera.getPhoto(imageOptions);
       
-      console.log('📸 [Camera] Photo captured successfully');
+      logger.log('📸 [Camera] Photo captured successfully');
       
       // Vraća standardizovani format
       return {
@@ -146,7 +147,7 @@ class NativeCameraService {
       };
 
     } catch (error: any) {
-      console.error('❌ [Camera] Photo capture failed:', error);
+      logger.error('❌ [Camera] Photo capture failed:', error);
       
       if (error.message?.includes('User cancelled')) {
         throw new Error('Snimanje fotografije je otkazano');

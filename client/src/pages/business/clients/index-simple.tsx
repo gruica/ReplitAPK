@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Search, Edit, Eye } from "lucide-react";
+import { logger } from '@/utils/logger';
 
 type Client = {
   id: number;
@@ -45,16 +46,16 @@ export default function BusinessClientsSimple() {
 
   const updateClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      console.log("🔥 STARTING UPDATE MUTATION");
-      console.log("🔥 Client ID:", id);
-      console.log("🔥 Update data:", data);
+      logger.log("🔥 STARTING UPDATE MUTATION");
+      logger.log("🔥 Client ID:", id);
+      logger.log("🔥 Update data:", data);
       
       const response = await apiRequest(`/api/business/clients/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
       });
       
-      console.log("🔥 API response:", response);
+      logger.log("🔥 API response:", response);
       return response;
     },
     onSuccess: () => {
@@ -67,7 +68,7 @@ export default function BusinessClientsSimple() {
       });
     },
     onError: (error: Error) => {
-      console.error("🔥 Mutation error:", error);
+      logger.error("🔥 Mutation error:", error);
       toast({
         title: "Greška",
         description: error.message,
@@ -85,7 +86,7 @@ export default function BusinessClientsSimple() {
   );
 
   const handleEdit = (client: Client) => {
-    console.log("🔧 Opening edit for:", client);
+    logger.log("🔧 Opening edit for:", client);
     setEditingClient(client);
     setFormData({
       fullName: client.fullName,
@@ -99,12 +100,12 @@ export default function BusinessClientsSimple() {
   };
 
   const handleSave = () => {
-    console.log("🔥 SAVE BUTTON CLICKED!");
-    console.log("🔥 Form data:", formData);
-    console.log("🔥 Editing client:", editingClient);
+    logger.log("🔥 SAVE BUTTON CLICKED!");
+    logger.log("🔥 Form data:", formData);
+    logger.log("🔥 Editing client:", editingClient);
     
     if (!editingClient) {
-      console.error("🔥 No editing client!");
+      logger.error("🔥 No editing client!");
       return;
     }
 

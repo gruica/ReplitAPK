@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PlusCircle, Wrench, Clock, CheckCircle, AlertCircle, Eye, Phone, Mail, Calendar, Package, Settings, MapPin, User, Receipt, Activity, Building2, TrendingUp, BarChart3, FileText, Users, Award } from "lucide-react";
 import { AppIcons, getApplianceIcon, getBrandIcon, getStatusIcon } from "@/lib/app-icons";
 import { useLocation } from "wouter";
+import { logger } from '@/utils/logger';
 
 // Enhanced service interface with detailed information
 interface ServiceItem {
@@ -111,7 +112,7 @@ export default function BusinessDashboard() {
       const responseTime = Date.now() - startTime;
       
       // Performance monitoring za enterprise sistem
-      console.log(`🚀 Business Partner API Response: ${responseTime}ms`);
+      logger.log(`🚀 Business Partner API Response: ${responseTime}ms`);
       
       return data;
     },

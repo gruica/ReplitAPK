@@ -36,6 +36,7 @@ import {
   Share2
 } from 'lucide-react';
 import { shareSparePartOrder } from '@/utils/shareUtils';
+import { logger } from '@/utils/logger';
 
 interface SparePartOrder {
   id: number;
@@ -411,9 +412,9 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
 
   // Handle delete order
   const handleDeleteOrder = (order: SparePartOrder) => {
-    console.log('Delete order clicked:', order.id, order.partName);
+    logger.log('Delete order clicked:', order.id, order.partName);
     if (window.confirm(`Da li ste sigurni da želite da obrišete porudžbinu #${order.id} - ${order.partName}?`)) {
-      console.log('Mutation started for order ID:', order.id);
+      logger.log('Mutation started for order ID:', order.id);
       deleteOrderMutation.mutate(order.id);
     }
   };
@@ -477,7 +478,7 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
         description: "Informacije o rezervnom delu su uspešno podeljene.",
       });
     } catch (error) {
-      console.error('Greška pri dijeljenju:', error);
+      logger.error('Greška pri dijeljenju:', error);
       toast({
         title: "Greška pri dijeljenju",
         description: "Došlo je do greške pri dijeljenju sadržaja.",

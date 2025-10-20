@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 /**
  * ADVANCED CAMERA FEATURES SERVICE
  * Napredne camera funkcionalnosti: Auto-focus, stabilizacija, napredna flash kontrola
@@ -291,7 +292,7 @@ class AdvancedCameraFeaturesService {
             bestFocusDistance = focusDistance;
           }
         } catch (focusErr) {
-          console.warn(`⚠️ Focus distance ${focusDistance} neuspešan:`, focusErr);
+          logger.warn(`⚠️ Focus distance ${focusDistance} neuspešan:`, focusErr);
         }
       }
 
@@ -312,7 +313,7 @@ class AdvancedCameraFeaturesService {
       };
 
     } catch (error) {
-      console.error('❌ AUTO FOCUS: Greška:', error);
+      logger.error('❌ AUTO FOCUS: Greška:', error);
       return {
         success: false,
         sharpnessScore: 0,
@@ -373,7 +374,7 @@ class AdvancedCameraFeaturesService {
       };
 
     } catch (error) {
-      console.error('❌ ADVANCED FLASH: Greška:', error);
+      logger.error('❌ ADVANCED FLASH: Greška:', error);
       return {
         success: false,
         flashEnabled: false,
@@ -439,7 +440,7 @@ class AdvancedCameraFeaturesService {
       };
 
     } catch (error) {
-      console.error('❌ CAMERA OPTIMIZATION: Greška:', error);
+      logger.error('❌ CAMERA OPTIMIZATION: Greška:', error);
       return {
         success: false,
         appliedOptimizations,

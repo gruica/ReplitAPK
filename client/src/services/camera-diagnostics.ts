@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 /**
  * CAMERA DIAGNOSTICS SERVICE
  * Detaljno testiranje i analiza camera capabilities na različitim uređajima
@@ -54,12 +55,12 @@ class CameraDiagnosticsService {
     const warnings: string[] = [];
     const errors: string[] = [];
 
-    console.log('🔍 CAMERA DIJAGNOSTIKA: Pokretanje sveobuhvatne analize...');
+    logger.log('🔍 CAMERA DIJAGNOSTIKA: Pokretanje sveobuhvatne analize...');
 
     try {
       // 1. Detektuj browser info
       const browserInfo = this.detectBrowserInfo();
-      console.log('📱 Browser info:', browserInfo);
+      logger.log('📱 Browser info:', browserInfo);
 
       // 2. Testiraj osnovni pristup kameri
       const basicAccess = await this.testBasicCameraAccess();
@@ -91,8 +92,8 @@ class CameraDiagnosticsService {
       };
 
       this.diagnosticsCache = result;
-      console.log('✅ CAMERA DIJAGNOSTIKA: Završena za', Date.now() - startTime, 'ms');
-      console.log('📊 Rezultat:', result);
+      logger.log('✅ CAMERA DIJAGNOSTIKA: Završena za', Date.now() - startTime, 'ms');
+      logger.log('📊 Rezultat:', result);
 
       return result;
 
@@ -110,7 +111,7 @@ class CameraDiagnosticsService {
         errors
       };
 
-      console.error('❌ CAMERA DIJAGNOSTIKA: Kritična greška', error);
+      logger.error('❌ CAMERA DIJAGNOSTIKA: Kritična greška', error);
       return failedResult;
     }
   }
@@ -147,7 +148,7 @@ class CameraDiagnosticsService {
    */
   private async testBasicCameraAccess(): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🎥 Testiranje osnovnog camera pristupa...');
+      logger.log('🎥 Testiranje osnovnog camera pristupa...');
       
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
@@ -156,11 +157,11 @@ class CameraDiagnosticsService {
       // Odmah zatvori stream
       stream.getTracks().forEach(track => track.stop());
       
-      console.log('✅ Osnovni camera pristup - uspešan');
+      logger.log('✅ Osnovni camera pristup - uspešan');
       return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Nepoznata camera greška';
-      console.error('❌ Osnovni camera pristup - neuspešan:', errorMessage);
+      logger.error('❌ Osnovni camera pristup - neuspešan:', errorMessage);
       return { success: false, error: errorMessage };
     }
   }
@@ -192,7 +193,7 @@ class CameraDiagnosticsService {
       const track = stream.getVideoTracks()[0];
       const capabilities = track.getCapabilities();
       
-      console.log('🔧 Camera capabilities:', capabilities);
+      logger.log('🔧 Camera capabilities:', capabilities);
 
       // Analiziraj torch support
       if (capabilities.torch) {
@@ -228,7 +229,7 @@ class CameraDiagnosticsService {
       stream.getTracks().forEach(track => track.stop());
 
     } catch (error) {
-      console.error('❌ Greška tokom capability analize:', error);
+      logger.error('❌ Greška tokom capability analize:', error);
     }
 
     const deviceType = this.detectDeviceType(browserInfo);
@@ -270,9 +271,9 @@ class CameraDiagnosticsService {
       });
       results.highResolution = true;
       stream.getTracks().forEach(track => track.stop());
-      console.log('✅ High resolution (1920x1080) - podržana');
+      logger.log('✅ High resolution (1920x1080) - podržana');
     } catch (error) {
-      console.log('⚠️ High resolution (1920x1080) - nije podržana');
+      logger.log('⚠️ High resolution (1920x1080) - nije podržana');
     }
 
     // Test medium resolution (1280x720)
@@ -282,9 +283,9 @@ class CameraDiagnosticsService {
       });
       results.mediumResolution = true;
       stream.getTracks().forEach(track => track.stop());
-      console.log('✅ Medium resolution (1280x720) - podržana');
+      logger.log('✅ Medium resolution (1280x720) - podržana');
     } catch (error) {
-      console.log('⚠️ Medium resolution (1280x720) - nije podržana');
+      logger.log('⚠️ Medium resolution (1280x720) - nije podržana');
     }
 
     // Test low resolution (640x480)
@@ -294,9 +295,9 @@ class CameraDiagnosticsService {
       });
       results.lowResolution = true;
       stream.getTracks().forEach(track => track.stop());
-      console.log('✅ Low resolution (640x480) - podržana');
+      logger.log('✅ Low resolution (640x480) - podržana');
     } catch (error) {
-      console.log('⚠️ Low resolution (640x480) - nije podržana');
+      logger.log('⚠️ Low resolution (640x480) - nije podržana');
     }
 
     // Test torch control
@@ -309,9 +310,9 @@ class CameraDiagnosticsService {
       });
       results.torchControl = true;
       stream.getTracks().forEach(track => track.stop());
-      console.log('✅ Torch control - podržan');
+      logger.log('✅ Torch control - podržan');
     } catch (error) {
-      console.log('⚠️ Torch control - nije podržan');
+      logger.log('⚠️ Torch control - nije podržan');
     }
 
     return results;

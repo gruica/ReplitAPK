@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EnhancedDashboard } from '@/components/admin/enhanced-dashboard';
+import { logger } from '@/utils/logger';
 
 interface UseDashboardOverlayProps {
   stats: any;
@@ -74,7 +75,7 @@ export function useDashboardOverlay({
     );
 
     setIsOverlayActive(true);
-    console.log('🎨 Enhanced Dashboard aktiviran sa Lucide ikonama');
+    logger.log('🎨 Enhanced Dashboard aktiviran sa Lucide ikonama');
   };
 
   const deactivateEnhancedDashboard = () => {
@@ -82,7 +83,7 @@ export function useDashboardOverlay({
     if (overlay) {
       overlay.remove();
       setIsOverlayActive(false);
-      console.log('🎨 Enhanced Dashboard deaktiviran');
+      logger.log('🎨 Enhanced Dashboard deaktiviran');
     }
   };
 

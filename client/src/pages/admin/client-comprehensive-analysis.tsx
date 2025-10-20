@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import { logger } from '@/utils/logger';
 
 // Tipovi za kompletnu analizu klijenta
 interface ClientAnalysis {
@@ -157,8 +158,8 @@ const AdminClientComprehensiveAnalysis = memo(function AdminClientComprehensiveA
     queryKey: [`/api/admin/clients/${clientId}/comprehensive-analysis-enhanced`],
     queryFn: async () => {
       const token = localStorage.getItem('auth_token');
-      console.log('🔑 Token exists:', !!token);
-      console.log('🔑 Token length:', token?.length || 0);
+      logger.log('🔑 Token exists:', !!token);
+      logger.log('🔑 Token length:', token?.length || 0);
       
       const response = await fetch(`/api/admin/clients/${clientId}/comprehensive-analysis-enhanced`, {
         headers: {
@@ -168,16 +169,16 @@ const AdminClientComprehensiveAnalysis = memo(function AdminClientComprehensiveA
         credentials: 'include'
       });
       
-      console.log('📡 API Response status:', response.status);
+      logger.log('📡 API Response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API Error:', errorText);
+        logger.error('❌ API Error:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('✅ API Success, data received');
+      logger.log('✅ API Success, data received');
       return data;
     },
     enabled: !!clientId,

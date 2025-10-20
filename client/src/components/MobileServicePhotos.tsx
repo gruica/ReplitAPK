@@ -10,6 +10,7 @@ import { Camera, Upload, Eye, Trash2, Calendar, Image, Plus, Loader2, Wifi, Wifi
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { logger } from '@/utils/logger';
 
 interface ServicePhoto {
   id: number;
@@ -95,7 +96,7 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
     mutationFn: async (data: { file: File; category: string }) => {
       setUploadProgress(10);
       
-      console.log('[BASE64 UPLOAD] Pokušavam upload fotografije...', {
+      logger.log('[BASE64 UPLOAD] Pokušavam upload fotografije...', {
         serviceId,
         category: data.category,
         fileSize: data.file.size
@@ -114,7 +115,7 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
       setUploadProgress(30);
 
       const base64Data = await convertToBase64(data.file);
-      console.log('[BASE64 UPLOAD] Fajl konvertovan u base64, veličina:', base64Data.length);
+      logger.log('[BASE64 UPLOAD] Fajl konvertovan u base64, veličina:', base64Data.length);
 
       setUploadProgress(50);
 
@@ -131,8 +132,8 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
 
       // Log auth token za debugging
       const token = localStorage.getItem('auth_token');
-      console.log('[BASE64 UPLOAD] Auth token exists:', !!token);
-      console.log('[BASE64 UPLOAD] Auth token length:', token?.length);
+      logger.log('[BASE64 UPLOAD] Auth token exists:', !!token);
+      logger.log('[BASE64 UPLOAD] Auth token length:', token?.length);
 
       const result = await apiRequest('/api/service-photos/upload-base64', {
         method: 'POST',
@@ -143,7 +144,7 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
       });
 
       setUploadProgress(100);
-      console.log('[BASE64 UPLOAD] Upload uspešan:', result);
+      logger.log('[BASE64 UPLOAD] Upload uspešan:', result);
       return result;
     },
     onSuccess: () => {
@@ -245,7 +246,7 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
       try {
         await uploadMutation.mutateAsync({ file, category: uploadCategory });
       } catch (error) {
-        console.error('Failed to upload offline photo:', error);
+        logger.error('Failed to upload offline photo:', error);
       }
     }
     

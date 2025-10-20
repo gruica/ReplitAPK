@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequestWithAuth, queryClient } from '@/lib/queryClient';
+import { logger } from '@/utils/logger';
 
 interface UsedPartDetail {
   partName: string;
@@ -313,9 +314,9 @@ export default function UniversalBillingReport({
   };
 
   const handleExportToCSV = () => {
-    console.log('CSV Export clicked!', billingData?.services.length);
+    logger.log('CSV Export clicked!', billingData?.services.length);
     if (!billingData?.services.length) {
-      console.log('No billing data, returning early');
+      logger.log('No billing data, returning early');
       return;
     }
 
@@ -335,28 +336,28 @@ export default function UniversalBillingReport({
 
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvHeaders + csvData], { type: 'text/csv;charset=utf-8;' });
-    console.log('CSV Blob created, size:', blob.size);
+    logger.log('CSV Blob created, size:', blob.size);
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', csvFilename);
-    console.log('CSV Download filename:', csvFilename);
+    logger.log('CSV Download filename:', csvFilename);
     document.body.appendChild(link);
     link.click();
-    console.log('CSV Link clicked!');
+    logger.log('CSV Link clicked!');
     document.body.removeChild(link);
   };
 
   const handleDownloadPDF = async () => {
-    console.log('PDF Download clicked!', selectedMonth, selectedYear);
+    logger.log('PDF Download clicked!', selectedMonth, selectedYear);
     if (!selectedMonth || !selectedYear) {
-      console.log('No month/year selected, returning early');
+      logger.log('No month/year selected, returning early');
       return;
     }
     
     try {
       const token = localStorage.getItem('auth_token');
-      console.log('Auth token exists:', !!token);
+      logger.log('Auth token exists:', !!token);
       if (!token) {
         toast({
           title: "Greška",
@@ -367,7 +368,7 @@ export default function UniversalBillingReport({
       }
 
       const url = `${apiEndpoint}/enhanced/pdf/${selectedYear}/${selectedMonth}`;
-      console.log('Fetching PDF from:', url);
+      logger.log('Fetching PDF from:', url);
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -380,15 +381,15 @@ export default function UniversalBillingReport({
       }
 
       const blob = await response.blob();
-      console.log('PDF Blob received, size:', blob.size);
+      logger.log('PDF Blob received, size:', blob.size);
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = pdfFilename;
-      console.log('PDF Download filename:', pdfFilename);
+      logger.log('PDF Download filename:', pdfFilename);
       document.body.appendChild(link);
       link.click();
-      console.log('PDF Link clicked!');
+      logger.log('PDF Link clicked!');
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
       
@@ -397,7 +398,7 @@ export default function UniversalBillingReport({
         description: "PDF uspješno preuzet",
       });
     } catch (error) {
-      console.error('PDF download error:', error);
+      logger.error('PDF download error:', error);
       toast({
         title: "Greška",
         description: "Greška pri preuzimanju PDF-a",

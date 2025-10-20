@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { 
+import { logger } from '@/utils/logger';
   MessageSquare, 
   Settings, 
   Send, 
@@ -103,7 +104,7 @@ export default function WhatsAppBusinessAPI() {
         }
       }
     } catch (error: any) {
-      console.error('Greška pri učitavanju konfiguracije:', error);
+      logger.error('Greška pri učitavanju konfiguracije:', error);
       toast({
         title: 'Greška',
         description: 'Nije moguće učitati konfiguraciju',
@@ -155,7 +156,7 @@ export default function WhatsAppBusinessAPI() {
         throw new Error(error.error || 'Greška pri čuvanju konfiguracije');
       }
     } catch (error: any) {
-      console.error('Greška pri čuvanju konfiguracije:', error);
+      logger.error('Greška pri čuvanju konfiguracije:', error);
       toast({
         title: 'Greška',
         description: error.message,
@@ -192,7 +193,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri testiranju konekcije:', error);
+      logger.error('Greška pri testiranju konekcije:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri testiranju konekcije',
@@ -245,7 +246,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri slanju poruke:', error);
+      logger.error('Greška pri slanju poruke:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri slanju poruke',
@@ -298,7 +299,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri slanju template poruke:', error);
+      logger.error('Greška pri slanju template poruke:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri slanju template poruke',
@@ -352,7 +353,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri slanju slike:', error);
+      logger.error('Greška pri slanju slike:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri slanju slike',
@@ -414,7 +415,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri bulk slanju:', error);
+      logger.error('Greška pri bulk slanju:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri bulk slanju poruka',
@@ -447,7 +448,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri učitavanju webhook konfiguracije:', error);
+      logger.error('Greška pri učitavanju webhook konfiguracije:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri učitavanju webhook konfiguracije',
@@ -484,7 +485,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri testiranju webhook konfiguracije:', error);
+      logger.error('Greška pri testiranju webhook konfiguracije:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri testiranju webhook konfiguracije',
@@ -509,10 +510,10 @@ export default function WhatsAppBusinessAPI() {
       if (response.ok) {
         const data = await response.json();
         setAvailableTemplates(data.templates || []);
-        console.log('✅ Template-i učitani:', data.templates);
+        logger.log('✅ Template-i učitani:', data.templates);
       } else {
         const errorData = await response.json();
-        console.error('❌ Greška pri učitavanju template-a:', errorData);
+        logger.error('❌ Greška pri učitavanju template-a:', errorData);
         toast({
           title: 'Greška',
           description: 'Greška pri učitavanju template-a',
@@ -520,7 +521,7 @@ export default function WhatsAppBusinessAPI() {
         });
       }
     } catch (error: any) {
-      console.error('Greška pri učitavanju template-a:', error);
+      logger.error('Greška pri učitavanju template-a:', error);
       toast({
         title: 'Greška',
         description: 'Greška pri učitavanju template-a',

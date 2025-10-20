@@ -1,6 +1,7 @@
 // 🔴 VISOK PRIORITET: React Query Optimizacije - Smaniti sa 31 na 15 invalidacija
 
 import { QueryClient } from '@tanstack/react-query';
+import { logger } from '@/utils/logger';
 
 // Centralizovane query key konstante za consistency
 export const QUERY_KEYS = {
@@ -20,7 +21,7 @@ export class QueryInvalidationManager {
 
   // Strategija 1: Batch povezanih invalidacija u jednu operaciju
   invalidateServiceRelated(reason?: string) {
-    console.log(`🔄 Batching service-related invalidations: ${reason || 'Service update'}`);
+    logger.log(`🔄 Batching service-related invalidations: ${reason || 'Service update'}`);
     
     // Umesto 3 odvojene invalidacije, jedna batch operacija
     this.queryClient.invalidateQueries({

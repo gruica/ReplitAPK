@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
+import { logger } from '@/utils/logger';
 
 interface ServiceItem {
   id: number;
@@ -207,7 +208,7 @@ export default function BusinessServices() {
   // PDF Report funkcija
   const handlePdfReport = async (service: ServiceItem) => {
     try {
-      console.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
+      logger.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
       
       const response = await fetch(`/api/business/service-report-pdf/${service.id}`, {
         method: 'GET',
@@ -222,7 +223,7 @@ export default function BusinessServices() {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      console.log(`📄 PDF uspešno dobijen od servera`);
+      logger.log(`📄 PDF uspešno dobijen od servera`);
 
       const pdfBlob = await response.blob();
       const url = window.URL.createObjectURL(pdfBlob);
@@ -236,10 +237,10 @@ export default function BusinessServices() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log(`📄 PDF izvještaj uspešno preuzet`);
+      logger.log(`📄 PDF izvještaj uspešno preuzet`);
 
     } catch (error) {
-      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      logger.error('📄 Greška pri generisanju PDF izvještaja:', error);
       alert(error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja");
     }
   };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@/utils/logger';
 
 // Interfejs za status sistema
 interface SystemStatus {
@@ -472,11 +473,11 @@ const SystemDiagnostics: React.FC = () => {
         lastChecked: new Date()
       };
       
-      console.log('Status kod kategorija:', categoriesResponse.status);
+      logger.log('Status kod kategorija:', categoriesResponse.status);
       
       if (categoriesResponse.ok) {
         const categoriesText = await categoriesResponse.text();
-        console.log('Kategorije response text:', categoriesText);
+        logger.log('Kategorije response text:', categoriesText);
         try {
           // Specijalni slučaj za API kategorija koji možda ne vraća format JSON-a
           if (categoriesText.trim() === '') {
@@ -501,7 +502,7 @@ const SystemDiagnostics: React.FC = () => {
             try {
               categories = JSON.parse(categoriesText);
             } catch (parseError) {
-              console.error('Greška parsiranja:', parseError);
+              logger.error('Greška parsiranja:', parseError);
               
               // Specijalni slučaj - možda kategorije nisu u JSON formatu, pokušamo ih prepoznati
               if (categoriesText.includes('kategorija') || categoriesText.includes('category')) {
@@ -570,7 +571,7 @@ const SystemDiagnostics: React.FC = () => {
             }
           }
         } catch (e) {
-          console.error('Kategorije JSON greška:', e);
+          logger.error('Kategorije JSON greška:', e);
           categoriesStatus = {
             name: 'API Kategorija',
             status: 'critical',
@@ -669,7 +670,7 @@ const SystemDiagnostics: React.FC = () => {
         return stats;
       });
     } catch (err) {
-      console.error('Greška prilikom provjere statusa sustava:', err);
+      logger.error('Greška prilikom provjere statusa sustava:', err);
       setError('Greška prilikom provjere statusa sustava. Molimo pokušajte ponovno kasnije.');
     } finally {
       setIsLoading(false);
