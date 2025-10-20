@@ -59,6 +59,13 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **CSV/PDF Export Bug Fix - Price Parsing (October 20, 2024)**: Fixed critical TypeError in billing CSV export and improved PDF price calculations.
+  - **Bug Fix**: Resolved `TypeError: .toFixed is not a function` caused by database fields (billingPrice, cost) being TEXT type instead of numeric
+  - **CSV Export**: Added `parseFloat()` conversion with `isNaN()` validation to handle string-to-number conversion safely; prevents skipping legitimate 0€ prices
+  - **PDF Backend**: Implemented nullish coalescing operator (`??`) and explicit `isNaN()` checks in total calculations for safer number handling
+  - **Excel Compatibility**: CSV separator changed from `,` to `;` for better Excel compatibility in European locales; added UTF-8 BOM marker (`\uFEFF`) for proper Cyrillic character display
+  - **Architect Review**: Code reviewed and approved with mandatory bug fixes implemented before production deployment
+  - **Files Modified**: `client/src/components/admin/UniversalBillingReport.tsx` (CSV export logic), `server/routes/billing.routes.ts` (PDF total calculations)
 - **Billing Table Enhancement - Dedicated Work & Parts Columns (October 2024)**: Added two new dedicated columns to billing reports for improved data visibility.
   - **New Columns**: Added "Izvršeni rad" (Work Performed) and "Korišteni dijelovi" (Used Parts) as separate table columns in UniversalBillingReport.tsx
   - **Data Display**: "Izvršeni rad" column shows full technicianNotes text; "Korišteni dijelovi" column displays detailed parts information (name, part number, quantity) or usedParts text
