@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { Send, MessageSquare, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface WhatsAppMessengerProps {
   serviceId: number;
@@ -97,7 +98,7 @@ export function WhatsAppMessenger({ serviceId, clientPhone, clientName, readOnly
         return await response.json();
       } catch (error: any) {
         // Robust error handling - never throw empty errors
-        console.error('WhatsApp send error:', error);
+        logger.error('WhatsApp send error:', error);
         
         let errorMessage = 'Greška pri slanju WhatsApp poruke';
         if (error && typeof error.message === 'string' && error.message.trim()) {
@@ -123,7 +124,7 @@ export function WhatsAppMessenger({ serviceId, clientPhone, clientName, readOnly
       queryClient.invalidateQueries({ 
         queryKey: [`/api/conversations/${serviceId}/history`] 
       }).catch(err => {
-        console.warn('Query invalidation failed:', err);
+        logger.warn('Query invalidation failed:', err);
       });
     },
     onError: (error: any) => {

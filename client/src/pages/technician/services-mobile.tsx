@@ -44,6 +44,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { SupplementGeneraliFormSimple } from "@/components/technician/supplement-generali-form-simple";
 import { MobileServicePhotos } from "@/components/MobileServicePhotos";
+import { logger } from '@/utils/logger';
 
 // Status ikone - NAPOMENA: Privremeno koriste placeholder vrednosti
 const serviceTodoIcon = "";
@@ -107,7 +108,7 @@ function ServiceCard({ service }: { service: Service }) {
   // PDF Report funkcija
   const handlePdfReport = async () => {
     try {
-      console.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
+      logger.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
       
       const response = await fetch(`/api/technician/service-report-pdf/${service.id}`, {
         method: 'GET',
@@ -122,7 +123,7 @@ function ServiceCard({ service }: { service: Service }) {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      console.log(`📄 PDF uspešno dobijen od servera`);
+      logger.log(`📄 PDF uspešno dobijen od servera`);
 
       const pdfBlob = await response.blob();
       const url = window.URL.createObjectURL(pdfBlob);
@@ -136,7 +137,7 @@ function ServiceCard({ service }: { service: Service }) {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log(`📄 PDF izvještaj uspešno preuzet`);
+      logger.log(`📄 PDF izvještaj uspešno preuzet`);
 
       toast({
         title: "PDF izvještaj",
@@ -144,7 +145,7 @@ function ServiceCard({ service }: { service: Service }) {
       });
 
     } catch (error) {
-      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      logger.error('📄 Greška pri generisanju PDF izvještaja:', error);
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",

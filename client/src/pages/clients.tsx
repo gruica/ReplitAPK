@@ -25,6 +25,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Pencil, Plus, Search, User, AlertCircle, ArrowRight, ExternalLink, Eye, Trash2 } from "lucide-react";
+import { logger } from '@/utils/logger';
 
 const clientFormSchema = insertClientSchema.extend({
   fullName: z.string().min(1, "Obavezno polje"),
@@ -88,7 +89,7 @@ export default function Clients() {
       
       return nameMatch || emailMatch || phoneMatch;
     } catch (error) {
-      console.error("Greška pri filtriranju klijenta:", error, client);
+      logger.error("Greška pri filtriranju klijenta:", error, client);
       return false; // U slučaju greške, klijent neće biti prikazan
     }
   });
@@ -227,7 +228,7 @@ export default function Clients() {
         .map(word => word?.[0]?.toUpperCase() || "")
         .join('') || "?";
     } catch (error) {
-      console.error(`Greška pri dobijanju inicijala za ime: ${name}`, error);
+      logger.error(`Greška pri dobijanju inicijala za ime: ${name}`, error);
       return "?";
     }
   }
@@ -248,7 +249,7 @@ export default function Clients() {
       const colorIndex = nameSum % colors.length;
       return colors[colorIndex];
     } catch (error) {
-      console.error(`Greška pri dobijanju boje za ime: ${name}`, error);
+      logger.error(`Greška pri dobijanju boje za ime: ${name}`, error);
       return "bg-gray-400"; // Sigurna boja u slučaju greške
     }
   }

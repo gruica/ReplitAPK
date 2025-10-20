@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
+import { logger } from '@/utils/logger';
 
 // Definicija jednostavnog tipa za service
 type SimpleService = {
@@ -38,7 +39,7 @@ export default function SimplifiedServices() {
         setServices(data || []);
         setError(null);
       } catch (err) {
-        console.error("Greška pri dohvatanju servisa:", err);
+        logger.error("Greška pri dohvatanju servisa:", err);
         setError(err instanceof Error ? err : new Error("Greška pri dohvatanju podataka"));
       } finally {
         setIsLoading(false);
@@ -104,10 +105,10 @@ export default function SimplifiedServices() {
       })
       .then(data => {
         setServices(data || []);
-        console.log("Podaci osveženi:", data);
+        logger.log("Podaci osveženi:", data);
       })
       .catch(err => {
-        console.error("Greška pri osvežavanju servisa:", err);
+        logger.error("Greška pri osvežavanju servisa:", err);
         setError(err instanceof Error ? err : new Error("Greška pri dohvatanju podataka"));
       })
       .finally(() => {

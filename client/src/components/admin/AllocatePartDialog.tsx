@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
+import { logger } from '@/utils/logger';
 
 interface AllocatePartDialogProps {
   open: boolean;
@@ -83,7 +84,7 @@ export default function AllocatePartDialog({ open, onOpenChange, part }: Allocat
         setTechnicians(techniciansData);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logger.error('Error fetching data:', error);
       toast({
         title: "Greška",
         description: "Greška pri učitavanju podataka",
@@ -138,7 +139,7 @@ export default function AllocatePartDialog({ open, onOpenChange, part }: Allocat
         onOpenChange(false);
       }
     } catch (error: any) {
-      console.error('Error allocating part:', error);
+      logger.error('Error allocating part:', error);
       toast({
         title: "Greška",
         description: error.message || "Greška pri dodeli dela serviseru",

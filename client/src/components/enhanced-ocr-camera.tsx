@@ -14,6 +14,7 @@ import { robustOCRService } from '@/services/robust-ocr-service';
 import { cameraDiagnosticsService } from '@/services/camera-diagnostics';
 import { advancedCameraService, CameraStreamAnalysis } from '@/services/advanced-camera-features';
 import { ocrPerformanceOptimizer, PreprocessingConfig } from '@/services/ocr-performance-optimizer';
+import { logger } from '@/utils/logger';
 
 interface EnhancedOCRCameraProps {
   isOpen: boolean;
@@ -112,14 +113,14 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
             advanced: [{ torch: !flashEnabled } as any]
           });
           setFlashEnabled(!flashEnabled);
-          console.log(`Flash ${!flashEnabled ? 'uključen' : 'isključen'}`);
+          logger.log(`Flash ${!flashEnabled ? 'uključen' : 'isključen'}`);
         } else {
-          console.log('Flash nije podržan na ovom uređaju');
+          logger.log('Flash nije podržan na ovom uređaju');
           setError('Flash nije podržan na ovom uređaju');
           setTimeout(() => setError(null), 3000);
         }
       } catch (error) {
-        console.error('Greška prilikom kontrole flash-a:', error);
+        logger.error('Greška prilikom kontrole flash-a:', error);
         setError('Greška prilikom kontrole flash-a');
         setTimeout(() => setError(null), 3000);
       }
@@ -130,18 +131,18 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
     if (isInitialized) return;
     
     try {
-      console.log('🚀 ENHANCED OCR: Pokretanje robust inicijalizacije...');
+      logger.log('🚀 ENHANCED OCR: Pokretanje robust inicijalizacije...');
       setScanProgress(5);
       
       // Prvo izvrši dijagnostiku kamere
       if (!diagnosticsComplete) {
-        console.log('🔍 Izvršavam camera dijagnostiku...');
+        logger.log('🔍 Izvršavam camera dijagnostiku...');
         const diagnosticsResult = await cameraDiagnosticsService.performFullDiagnostics();
         setCameraCapabilities(diagnosticsResult.capabilities);
         setDiagnosticsComplete(true);
         
         if (!diagnosticsResult.success) {
-          console.warn('⚠️ Camera dijagnostika: Problem detected', diagnosticsResult.errors);
+          logger.warn('⚠️ Camera dijagnostika: Problem detected', diagnosticsResult.errors);
           // Ali nastavi sa OCR inicijalizacijom
         }
       }
@@ -150,13 +151,13 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       
       // Inicijalizuj napredne servise
       if (advancedFeaturesEnabled) {
-        console.log('⚡ Inicijalizujem napredne camera funkcionalnosti...');
+        logger.log('⚡ Inicijalizujem napredne camera funkcionalnosti...');
         await advancedCameraService.initialize();
         setScanProgress(30);
       }
 
       if (performanceOptimization) {
-        console.log('🎯 Inicijalizujem OCR performance optimizer...');
+        logger.log('🎯 Inicijalizujem OCR performance optimizer...');
         await ocrPerformanceOptimizer.initialize();
         setScanProgress(40);
       }
@@ -165,7 +166,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       const ocrResult = await robustOCRService.initializeRobust(config);
       
       if (ocrResult.success) {
-        console.log('✅ Robust OCR inicijalizovan za', ocrResult.timeElapsed, 'ms');
+        logger.log('✅ Robust OCR inicijalizovan za', ocrResult.timeElapsed, 'ms');
         setIsInitialized(true);
         setScanProgress(0);
         
@@ -178,19 +179,19 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       }
       
     } catch (err) {
-      console.error('❌ Enhanced OCR initialization error:', err);
+      logger.error('❌ Enhanced OCR initialization error:', err);
       setError(`Greška pri inicijalizaciji: ${err instanceof Error ? err.message : 'Nepoznata greška'}`);
       setScanProgress(0);
       
       // Pokušaj fallback na stari servis
       try {
-        console.log('🔄 Pokušavam fallback na osnovni OCR...');
+        logger.log('🔄 Pokušavam fallback na osnovni OCR...');
         await enhancedOCRService.initialize(config);
         setIsInitialized(true);
         setError(null);
-        console.log('✅ Fallback OCR inicijalizovan');
+        logger.log('✅ Fallback OCR inicijalizovan');
       } catch (fallbackErr) {
-        console.error('❌ I fallback OCR failed:', fallbackErr);
+        logger.error('❌ I fallback OCR failed:', fallbackErr);
         setError('OCR servis trenutno nije dostupan. Pokušajte ponovo.');
       }
     }
@@ -203,7 +204,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
   }, [isOpen, initializeOCR, isInitialized]);
 
   const captureAndScan = useCallback(async () => {
-    console.log('🎯 CAPTURE AND SCAN: Pokretanje', { isScanning, webcamRef: !!webcamRef.current });
+    logger.log('🎯 CAPTURE AND SCAN: Pokretanje', { isScanning, webcamRef: !!webcamRef.current });
     if (!webcamRef.current || isScanning) return;
 
     try {
@@ -213,7 +214,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
 
       // Osiguraj da je OCR inicijalizovan
       if (!isInitialized) {
-        console.log('📋 OCR nije inicijalizovan, pokretam inicijalizaciju...');
+        logger.log('📋 OCR nije inicijalizovan, pokretam inicijalizaciju...');
         await initializeOCR();
       }
 
@@ -228,7 +229,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
         height: 1080
       };
 
-      console.log('📸 Uzimam screenshot sa opcijama:', screenshotOptions);
+      logger.log('📸 Uzimam screenshot sa opcijama:', screenshotOptions);
       const imageSrc = webcamRef.current.getScreenshot(screenshotOptions);
       
       if (!imageSrc) {
@@ -240,7 +241,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       // Optimizuj sliku pre OCR-a ako je performance optimization enabled
       let processedImageSrc = imageSrc;
       if (performanceOptimization) {
-        console.log('⚡ Optimizujem sliku za OCR...');
+        logger.log('⚡ Optimizujem sliku za OCR...');
         const optimizationResult = await ocrPerformanceOptimizer.optimizeImageForOCR(imageSrc, {
           enhanceContrast: true,
           sharpenImage: true,
@@ -251,7 +252,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
         });
         
         if (optimizationResult.success) {
-          console.log(`✅ Slika optimizovana za ${optimizationResult.processingTime}ms, score: ${optimizationResult.qualityScore}`);
+          logger.log(`✅ Slika optimizovana za ${optimizationResult.processingTime}ms, score: ${optimizationResult.qualityScore}`);
           // Note: U realnoj implementaciji bi processedImageSrc = optimizationResult.optimizedImage
         }
       }
@@ -259,16 +260,16 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       setScanProgress(60);
 
       // Koristi robust OCR scanning
-      console.log('🔍 Pokretam robust OCR skeniranje...');
+      logger.log('🔍 Pokretam robust OCR skeniranje...');
       let scannedData: any;
       
       if (robustOCRService.isWorkerReady()) {
         // Pokušaj sa robust servisom
         scannedData = await robustOCRService.scanImageRobust(processedImageSrc, config);
-        console.log('✅ Robust OCR završen:', scannedData);
+        logger.log('✅ Robust OCR završen:', scannedData);
       } else {
         // Fallback na osnovni servis
-        console.log('🔄 Fallback na osnovni OCR servis...');
+        logger.log('🔄 Fallback na osnovni OCR servis...');
         scannedData = await enhancedOCRService.scanImage(processedImageSrc, config);
       }
 
@@ -290,7 +291,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       }
 
     } catch (err) {
-      console.error('❌ Enhanced scanning error:', err);
+      logger.error('❌ Enhanced scanning error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Nepoznata greška';
       setError(`Greška pri skeniranju: ${errorMessage}. Pokušajte sa boljim osvetljenjem ili držite kameru stabilno.`);
     } finally {
@@ -364,7 +365,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       });
       
     } catch (err) {
-      console.error('Label detection error:', err);
+      logger.error('Label detection error:', err);
       return false;
     }
   }, [webcamRef, isScanning, isAutoScanning]);
@@ -396,7 +397,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
         setIsAutoScanning(false);
       }
     } catch (err) {
-      console.error('Auto scan error:', err);
+      logger.error('Auto scan error:', err);
       setIsAutoScanning(false);
     }
   }, [autoScanEnabled, isScanning, isAutoScanning, detectLabelInFrame, captureAndScan]);
@@ -478,11 +479,11 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
           }
         }
       } catch (error) {
-        console.warn('⚠️ Stream analysis greška:', error);
+        logger.warn('⚠️ Stream analysis greška:', error);
       }
     }, 2000); // Analiziraj svakih 2 sekunde
     
-    console.log('📊 Stream analysis pokrenuta');
+    logger.log('📊 Stream analysis pokrenuta');
   }, [advancedFeaturesEnabled, isInitialized]);
 
   const stopStreamAnalysis = useCallback(() => {
@@ -491,7 +492,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
       streamAnalysisIntervalRef.current = null;
     }
     setStreamAnalysis(null);
-    console.log('🛑 Stream analysis zaustavljena');
+    logger.log('🛑 Stream analysis zaustavljena');
   }, []);
 
   const handleClose = () => {
@@ -590,7 +591,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
                   videoConstraints={videoConstraints}
                   className="w-full h-full object-cover"
                   onUserMedia={(stream) => {
-                    console.log('Kamera inicijalizovana');
+                    logger.log('Kamera inicijalizovana');
                     setIsInitialized(true);
                     
                     // Pokreni stream analizu kada je kamera ready
@@ -599,7 +600,7 @@ export function EnhancedOCRCamera({ isOpen, onClose, onDataScanned, manufacturer
                     }
                   }}
                   onUserMediaError={(err) => {
-                    console.error('Greška prilikom pristupa kameri:', err);
+                    logger.error('Greška prilikom pristupa kameri:', err);
                     setError('Greška prilikom pristupa kameri. Molimo proverite dozvolje.');
                   }}
                 />

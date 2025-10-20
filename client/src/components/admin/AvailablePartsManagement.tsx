@@ -16,6 +16,7 @@ import { z } from "zod";
 import { Package, UserCheck, Trash2, Plus, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AllocatePartDialog from "./AllocatePartDialog";
+import { logger } from '@/utils/logger';
 
 const assignToTechnicianSchema = z.object({
   technicianId: z.string().min(1, "Molimo odaberite servisera"),
@@ -83,7 +84,7 @@ const AvailablePartsManagementComponent = () => {
   });
 
   // Debug informacije
-  console.log("🔍 Available Parts Debug:", {
+  logger.log("🔍 Available Parts Debug:", {
     availableParts,
     isLoading: partsLoading,
     error: partsError,
@@ -94,8 +95,8 @@ const AvailablePartsManagementComponent = () => {
 
   // Dodatni debug za pojedinačne delove
   if (availableParts && Array.isArray(availableParts) && availableParts.length > 0) {
-    console.log("🔍 First available part:", availableParts[0]);
-    console.log("🔍 All parts IDs:", availableParts.map(p => p.id));
+    logger.log("🔍 First available part:", availableParts[0]);
+    logger.log("🔍 All parts IDs:", availableParts.map(p => p.id));
   }
 
   // Dohvati servisere

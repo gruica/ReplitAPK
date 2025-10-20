@@ -6,6 +6,7 @@
 
 import { createWorker, Worker } from 'tesseract.js';
 import { ScannedData, OCRConfig } from './enhanced-ocr-service';
+import { logger } from '@/utils/logger';
 
 export interface OCRInitializationResult {
   success: boolean;
@@ -56,26 +57,26 @@ class RobustOCRService {
     const startTime = Date.now();
     this.initializationAttempts++;
 
-    console.log(`🚀 ROBUST OCR INIT: Pokušaj ${this.initializationAttempts}/${this.maxInitAttempts}`);
+    logger.log(`🚀 ROBUST OCR INIT: Pokušaj ${this.initializationAttempts}/${this.maxInitAttempts}`);
 
     try {
       // Kreiraj worker sa timeout-om
-      console.log('⏳ Kreiranje Tesseract worker-a...');
+      logger.log('⏳ Kreiranje Tesseract worker-a...');
       this.worker = await this.createWorkerWithTimeout();
       
-      console.log('✅ Worker kreiran, učitavanje jezika...');
+      logger.log('✅ Worker kreiran, učitavanje jezika...');
       await this.worker.loadLanguage('eng');
       
-      console.log('✅ Jezik učitan, inicijalizacija OCR engine-a...');
+      logger.log('✅ Jezik učitan, inicijalizacija OCR engine-a...');
       await this.worker.initialize('eng');
       
-      console.log('✅ OCR engine inicijalizovan, podešavanje parametara...');
+      logger.log('✅ OCR engine inicijalizovan, podešavanje parametara...');
       await this.setOptimalParameters();
       
       this.isInitialized = true;
       const timeElapsed = Date.now() - startTime;
       
-      console.log(`✅ ROBUST OCR INIT: Uspešno za ${timeElapsed}ms`);
+      logger.log(`✅ ROBUST OCR INIT: Uspešno za ${timeElapsed}ms`);
       
       return {
         success: true,
@@ -91,11 +92,11 @@ class RobustOCRService {
       const errorMessage = error instanceof Error ? error.message : 'Nepoznata OCR greška';
       const timeElapsed = Date.now() - startTime;
       
-      console.error(`❌ ROBUST OCR INIT: Greška nakon ${timeElapsed}ms:`, errorMessage);
+      logger.error(`❌ ROBUST OCR INIT: Greška nakon ${timeElapsed}ms:`, errorMessage);
       
       // Pokušaj fallback inicijalizaciju
       if (this.initializationAttempts < this.maxInitAttempts) {
-        console.log('🔄 Pokušavam fallback inicijalizaciju...');
+        logger.log('🔄 Pokušavam fallback inicijalizaciju...');
         await this.delay(1000); // Pauza pre ponovnog pokušaja
         return this.initializeRobust(config);
       }
@@ -161,13 +162,13 @@ class RobustOCRService {
     let attempts = 0;
     let lastError: Error | null = null;
 
-    console.log('🔍 ROBUST SCAN: Pokretanje skeniranja slike...');
+    logger.log('🔍 ROBUST SCAN: Pokretanje skeniranja slike...');
 
     // Strategy 1: Pokušaj sa initialized worker-om
     if (this.isInitialized && this.worker) {
       try {
         attempts++;
-        console.log('📸 STRATEGY 1: Primary OCR scan...');
+        logger.log('📸 STRATEGY 1: Primary OCR scan...');
         const result = await this.performPrimaryOCRScan(imageData, config);
         const processingTime = Date.now() - startTime;
         
@@ -185,14 +186,14 @@ class RobustOCRService {
         };
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Primary OCR scan neuspešan');
-        console.warn('⚠️ STRATEGY 1: Primary scan neuspešan:', lastError.message);
+        logger.warn('⚠️ STRATEGY 1: Primary scan neuspešan:', lastError.message);
       }
     }
 
     // Strategy 2: Pokušaj reinicijalizaciju i scan
     try {
       attempts++;
-      console.log('🔄 STRATEGY 2: Fallback sa reinicijalizacijom...');
+      logger.log('🔄 STRATEGY 2: Fallback sa reinicijalizacijom...');
       
       await this.terminateWorker(); // Očisti postojeći worker
       const initResult = await this.initializeRobust(config);
@@ -216,12 +217,12 @@ class RobustOCRService {
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Fallback scan neuspešan');
-      console.warn('⚠️ STRATEGY 2: Fallback scan neuspešan:', lastError.message);
+      logger.warn('⚠️ STRATEGY 2: Fallback scan neuspešan:', lastError.message);
     }
 
     // Strategy 3: Emergency regex-based fallback
     attempts++;
-    console.log('🚨 STRATEGY 3: Emergency regex fallback...');
+    logger.log('🚨 STRATEGY 3: Emergency regex fallback...');
     const emergencyResult = await this.performEmergencyFallback(imageData);
     const processingTime = Date.now() - startTime;
 
@@ -246,7 +247,7 @@ class RobustOCRService {
     if (!this.worker) throw new Error('OCR Worker nije dostupan');
 
     const { data: { text, confidence } } = await this.worker.recognize(imageData);
-    console.log('📝 OCR rezultat:', { text: text.substring(0, 100), confidence });
+    logger.log('📝 OCR rezultat:', { text: text.substring(0, 100), confidence });
 
     return this.parseTextAdvanced(text, confidence, config.manufacturerFocus);
   }
@@ -255,7 +256,7 @@ class RobustOCRService {
    * Emergency fallback koristeći regex pattern-e
    */
   private async performEmergencyFallback(imageData: string): Promise<ScannedData> {
-    console.log('🚨 Emergency fallback - pokušavam jednostavan OCR...');
+    logger.log('🚨 Emergency fallback - pokušavam jednostavan OCR...');
     
     // Pokušaj sa Web OCR API-jem ili jednostavnijim pristupom
     // Za sada vraćamo basic rezultat sa niskom pouzdanošću
@@ -276,7 +277,7 @@ class RobustOCRService {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const result: ScannedData = { confidence, extractedText: text };
 
-    console.log('🔍 Parsiranje teksta:', { lines: lines.length, manufacturerFocus });
+    logger.log('🔍 Parsiranje teksta:', { lines: lines.length, manufacturerFocus });
 
     // Detektuj proizvođača
     const detectedManufacturer = this.detectManufacturerFromText(text, manufacturerFocus);
@@ -483,9 +484,9 @@ class RobustOCRService {
     if (this.worker) {
       try {
         await this.worker.terminate();
-        console.log('✅ OCR Worker terminated');
+        logger.log('✅ OCR Worker terminated');
       } catch (error) {
-        console.warn('⚠️ Greška tokom worker termination:', error);
+        logger.warn('⚠️ Greška tokom worker termination:', error);
       }
       this.worker = null;
       this.isInitialized = false;

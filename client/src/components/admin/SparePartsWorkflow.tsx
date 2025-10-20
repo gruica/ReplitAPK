@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Package, Clock, CheckCircle, ArrowRight, Truck, ShoppingCart, Wrench, User, Phone, MapPin, Settings, Share2 } from 'lucide-react';
 import { shareSparePartOrder } from '@/utils/shareUtils';
+import { logger } from '@/utils/logger';
 
 interface SparePartOrder {
   id: number;
@@ -999,7 +1000,7 @@ export function SparePartsWorkflowEnhanced() {
         throw new Error(result.error || 'Nepoznata greška');
       }
     } catch (error) {
-      console.error('❌ Greška pri kopiranju:', error);
+      logger.error('❌ Greška pri kopiranju:', error);
       toast({
         title: "Greška pri kopiranju",
         description: "Nastala je greška tokom kopiranja sadržaja rezervnog dijela. Pokušajte ponovo.",

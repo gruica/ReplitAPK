@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, X, Eye, Download, Trash2, Plus, RotateCcw, Edit3 } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 // Types
 export interface ServicePhoto {
@@ -200,7 +201,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        console.log(`📸 [FRONTEND UPLOAD] Processing file ${i + 1}/${files.length}:`, file.name);
+        logger.log(`📸 [FRONTEND UPLOAD] Processing file ${i + 1}/${files.length}:`, file.name);
         
         // Validacija fajla
         if (!file.type.startsWith('image/')) {
@@ -217,7 +218,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
         formData.append('photoCategory', 'other');
         formData.append('description', `Admin upload: ${file.name}`);
 
-        console.log(`📸 [FRONTEND UPLOAD] Uploading ${file.name} with JWT token...`);
+        logger.log(`📸 [FRONTEND UPLOAD] Uploading ${file.name} with JWT token...`);
         
         const response = await fetch('/api/service-photos/upload', {
           method: 'POST',
@@ -227,7 +228,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
           body: formData,
         });
 
-        console.log(`📸 [FRONTEND UPLOAD] Response status:`, response.status);
+        logger.log(`📸 [FRONTEND UPLOAD] Response status:`, response.status);
         
         if (!response.ok) {
           const errorText = await response.text();
@@ -236,7 +237,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
         }
         
         const result = await response.json();
-        console.log(`📸 [FRONTEND UPLOAD] Success result:`, result);
+        logger.log(`📸 [FRONTEND UPLOAD] Success result:`, result);
         uploadedPhotos.push(result.photo);
       }
 
@@ -268,7 +269,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
     return acc;
   }, {});
 
-  console.log('🔍 FINAL RENDER CHECK:', {
+  logger.log('🔍 FINAL RENDER CHECK:', {
     isLoading,
     error: !!error,
     photosLength: photos.length,
@@ -276,7 +277,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
   });
 
   if (isLoading) {
-    console.log('🟡 RENDERUJEM: Loading state');
+    logger.log('🟡 RENDERUJEM: Loading state');
     return (
       <Card>
         <CardHeader>
@@ -298,7 +299,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
   }
 
   if (error) {
-    console.log('🔴 RENDERUJEM: Error state:', error.message);
+    logger.log('🔴 RENDERUJEM: Error state:', error.message);
     return (
       <Card>
         <CardHeader>
@@ -322,7 +323,7 @@ const ServicePhotosComponent = ({ serviceId, readOnly = false, showUpload = true
     );
   }
 
-  console.log('🟢 RENDERUJEM: Main component sa', photos.length, 'fotografija');
+  logger.log('🟢 RENDERUJEM: Main component sa', photos.length, 'fotografija');
   
   return (
     <Card>

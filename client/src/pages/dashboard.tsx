@@ -33,6 +33,7 @@ import {
   Home
 } from "lucide-react";
 import { AppIcons, getApplianceIcon, getBrandIcon, getStatusIcon } from "@/lib/app-icons";
+import { logger } from '@/utils/logger';
 
 // Get icon for service status
 function getStatusBadge(status: string) {
@@ -134,7 +135,7 @@ const Dashboard = memo(function Dashboard() {
       // Čistimo interval pri demontiranju
       return () => clearInterval(intervalId);
     } catch (err) {
-      console.error("Greška u useEffect:", err);
+      logger.error("Greška u useEffect:", err);
     }
   }, [refetchStats]);
   

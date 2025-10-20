@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ArrowLeft, CheckCircle2, ChevronUp, ChevronDown } from "lucide-react";
 import {
+import { logger } from '@/utils/logger';
   Select,
   SelectContent,
   SelectItem,
@@ -162,7 +163,7 @@ export default function NewBusinessServiceRequest() {
         
         if (!serviceResponse.ok) {
           const errorData = await serviceResponse.json().catch(() => null);
-          console.error("Greška response:", errorData);
+          logger.error("Greška response:", errorData);
           
           if (errorData && (errorData.message || errorData.error)) {
             throw new Error(errorData.message || errorData.error);
@@ -173,7 +174,7 @@ export default function NewBusinessServiceRequest() {
         
         return await serviceResponse.json();
       } catch (error) {
-        console.error("Greška pri kreiranju servisa:", error);
+        logger.error("Greška pri kreiranju servisa:", error);
         throw error;
       } finally {
         setIsSubmitting(false);

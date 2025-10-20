@@ -60,7 +60,7 @@ class AdminPanelPerformanceMonitor {
     
     // Warning za excessive invalidations
     if (invalidationCount > 10) {
-      console.warn(`⚠️ [PERFORMANCE] ${componentName} has ${invalidationCount} invalidations in the last minute`);
+      logger.warn(`⚠️ [PERFORMANCE] ${componentName} has ${invalidationCount} invalidations in the last minute`);
     }
   }
   
@@ -161,6 +161,7 @@ export const performanceMonitor = new AdminPanelPerformanceMonitor();
 
 // React hook for easy usage
 import { useEffect } from 'react';
+import { logger } from '@/utils/logger';
 
 export function usePerformanceMonitoring(componentName: string) {
   useEffect(() => {

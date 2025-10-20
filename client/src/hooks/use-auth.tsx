@@ -7,6 +7,7 @@ import {
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from '@/utils/logger';
 
 type AuthContextType = {
   user: SelectUser | null;
@@ -160,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         });
       } catch (error) {
-        console.error("Logout API call failed:", error);
+        logger.error("Logout API call failed:", error);
       }
       
       localStorage.removeItem('auth_token');

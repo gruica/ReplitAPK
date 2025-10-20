@@ -73,6 +73,7 @@ const BusinessSpareParts = lazy(() => import("@/pages/business/spare-parts"));
 // PERFORMANCE BOOST: Lazy load remaining pages
 import HomePage from "@/pages/home-page";
 import ComplusAuthPage from "@/pages/complus-auth";
+import { logger } from '@/utils/logger';
 const DiagnosticsPage = lazy(() => import("@/pages/diagnostics"));
 
 // Legal pages for Facebook App Review compliance - DODANO ZA LIVE MOD
@@ -272,7 +273,7 @@ function App() {
     // Inicijalizacija samo za nativne mobilne platforme
     if (isNativeMobile) {
       initializeCapacitor().catch(error => {
-        console.error("Greška pri inicijalizaciji mobilne aplikacije:", error);
+        logger.error("Greška pri inicijalizaciji mobilne aplikacije:", error);
       });
     }
   }, []);

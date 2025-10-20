@@ -8,6 +8,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { runtimeHelpers } from '@shared/runtime-config';
+import { logger } from '@/utils/logger';
 
 /**
  * Interface za share podatke
@@ -36,7 +37,7 @@ interface ShareResult {
  */
 export async function shareContent(data: ShareData): Promise<ShareResult> {
   try {
-    console.log('📤 [Share] Starting share:', data);
+    logger.log('📤 [Share] Starting share:', data);
     
     // Native sharing za mobilne aplikacije
     if (runtimeHelpers.isNative()) {
@@ -52,7 +53,7 @@ export async function shareContent(data: ShareData): Promise<ShareResult> {
     return await shareFallback(data);
     
   } catch (error) {
-    console.error('❌ [Share] Share failed:', error);
+    logger.error('❌ [Share] Share failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Sharing failed'
@@ -65,7 +66,7 @@ export async function shareContent(data: ShareData): Promise<ShareResult> {
  */
 async function shareNative(data: ShareData): Promise<ShareResult> {
   try {
-    console.log('📱 [Share] Using native sharing');
+    logger.log('📱 [Share] Using native sharing');
     
     // Dinamički import Capacitor Share plugin-a
     const { Share } = await import('@capacitor/share');
@@ -80,7 +81,7 @@ async function shareNative(data: ShareData): Promise<ShareResult> {
     // Capacitor Share API poziv
     const result = await Share.share(shareOptions);
     
-    console.log('✅ [Share] Native share successful:', result);
+    logger.log('✅ [Share] Native share successful:', result);
     
     return {
       success: true,
@@ -88,11 +89,11 @@ async function shareNative(data: ShareData): Promise<ShareResult> {
     };
     
   } catch (error) {
-    console.error('❌ [Share] Native share failed:', error);
+    logger.error('❌ [Share] Native share failed:', error);
     
     // Fallback na web sharing ako native ne radi
     if (canUseWebShareAPI(data)) {
-      console.log('🔄 [Share] Falling back to web share');
+      logger.log('🔄 [Share] Falling back to web share');
       return await shareWeb(data);
     }
     
@@ -106,12 +107,12 @@ async function shareNative(data: ShareData): Promise<ShareResult> {
  */
 async function shareWeb(data: ShareData): Promise<ShareResult> {
   try {
-    console.log('🌐 [Share] Using Web Share API');
+    logger.log('🌐 [Share] Using Web Share API');
     
     // Proveri da li su files podržani
     if (data.files && data.files.length > 0) {
       if (!canShareFiles()) {
-        console.warn('⚠️ [Share] Files not supported, using fallback');
+        logger.warn('⚠️ [Share] Files not supported, using fallback');
         return await shareFallback(data);
       }
     }
@@ -127,7 +128,7 @@ async function shareWeb(data: ShareData): Promise<ShareResult> {
     // Navigator.share API poziv
     await navigator.share(shareData);
     
-    console.log('✅ [Share] Web share successful');
+    logger.log('✅ [Share] Web share successful');
     
     return {
       success: true,
@@ -135,7 +136,7 @@ async function shareWeb(data: ShareData): Promise<ShareResult> {
     };
     
   } catch (error) {
-    console.error('❌ [Share] Web share failed:', error);
+    logger.error('❌ [Share] Web share failed:', error);
     
     // Ako je korisnik otkazao sharing, to nije greška
     if (error instanceof Error && error.name === 'AbortError') {
@@ -155,7 +156,7 @@ async function shareWeb(data: ShareData): Promise<ShareResult> {
  */
 async function shareFallback(data: ShareData): Promise<ShareResult> {
   try {
-    console.log('📋 [Share] Using clipboard fallback');
+    logger.log('📋 [Share] Using clipboard fallback');
     
     // Kreiraj text za copying
     let textToCopy = '';
@@ -171,7 +172,7 @@ async function shareFallback(data: ShareData): Promise<ShareResult> {
       // Prikaži success toast (ako je dostupan)
       showShareToast('Podaci su kopirani u clipboard!', 'success');
       
-      console.log('✅ [Share] Clipboard fallback successful');
+      logger.log('✅ [Share] Clipboard fallback successful');
       
       return {
         success: true,
@@ -182,7 +183,7 @@ async function shareFallback(data: ShareData): Promise<ShareResult> {
     }
     
   } catch (error) {
-    console.error('❌ [Share] Clipboard fallback failed:', error);
+    logger.error('❌ [Share] Clipboard fallback failed:', error);
     
     // Prikaži error toast
     showShareToast('Greška pri dijeljenju sadržaja', 'error');
@@ -225,7 +226,7 @@ async function copyToClipboard(text: string): Promise<void> {
     }
     
   } catch (error) {
-    console.error('❌ [Share] Clipboard copy failed:', error);
+    logger.error('❌ [Share] Clipboard copy failed:', error);
     throw error;
   }
 }
@@ -249,11 +250,11 @@ function showShareToast(message: string, type: 'success' | 'error' = 'success'):
     if (type === 'error') {
       alert(message);
     } else {
-      console.log(`📢 [Share] ${message}`);
+      logger.log(`📢 [Share] ${message}`);
     }
     
   } catch (error) {
-    console.error('❌ [Share] Toast failed:', error);
+    logger.error('❌ [Share] Toast failed:', error);
   }
 }
 
@@ -562,7 +563,7 @@ export async function shareSparePartOrder(orderData: any): Promise<ShareResult> 
     // DIREKTNO kopiraj u clipboard
     await navigator.clipboard.writeText(shareText);
     
-    console.log('📋 Kompletan sadržaj rezervnog dijela kopiran u clipboard za Viber dijeljenje');
+    logger.log('📋 Kompletan sadržaj rezervnog dijela kopiran u clipboard za Viber dijeljenje');
     
     return {
       success: true,
@@ -570,7 +571,7 @@ export async function shareSparePartOrder(orderData: any): Promise<ShareResult> 
     };
     
   } catch (error) {
-    console.error('❌ Greška pri kopiranju sadržaja rezervnog dijela:', error);
+    logger.error('❌ Greška pri kopiranju sadržaja rezervnog dijela:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Clipboard copy failed'
@@ -593,5 +594,5 @@ if (runtimeHelpers.isDevelopment() && typeof window !== 'undefined') {
     isFileSharingAvailable,
   };
   
-  console.log('🛠️ [Share] Debug helpers available at window.shareDebug');
+  logger.log('🛠️ [Share] Debug helpers available at window.shareDebug');
 }

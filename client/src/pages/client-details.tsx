@@ -60,6 +60,7 @@ interface ExtendedService extends Service {
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { 
+import { logger } from '@/utils/logger';
   ArrowLeft, 
   Phone, 
   Mail, 
@@ -105,10 +106,10 @@ export default function ClientDetails() {
           throw new Error("Klijent nije pronađen");
         }
         const data = await res.json();
-        console.log("Detalji klijenta učitani:", data);
+        logger.log("Detalji klijenta učitani:", data);
         return data;
       } catch (err) {
-        console.error("Greška pri dobavljanju detalja klijenta:", err);
+        logger.error("Greška pri dobavljanju detalja klijenta:", err);
         throw err;
       }
     },

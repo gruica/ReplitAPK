@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@/utils/logger';
 
 // Osnovni stil za stranicu
 const styles = {
@@ -133,7 +134,7 @@ const DiagnosticServicesPage = () => {
         setParsedData([]);
       }
     } catch (err: any) {
-      console.error('Greška pri učitavanju servisa:', err);
+      logger.error('Greška pri učitavanju servisa:', err);
       setError(err.message || 'Nepoznata greška pri učitavanju podataka');
       setParsedData([]);
     } finally {

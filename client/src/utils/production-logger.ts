@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 // 🟢 NIZAK PRIORITET: Production Logging System (zamena console.log)
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -41,7 +42,7 @@ class ProductionLogger {
     this.addLog(entry);
     
     if (this.isDevelopment) {
-      console.debug(`🔍 [DEBUG] ${context ? `${context}: ` : ''}${message}`, data);
+      logger.debug(`🔍 [DEBUG] ${context ? `${context}: ` : ''}${message}`, data);
     }
   }
 
@@ -50,7 +51,7 @@ class ProductionLogger {
     this.addLog(entry);
     
     if (this.isDevelopment) {
-      console.info(`ℹ️ [INFO] ${context ? `${context}: ` : ''}${message}`, data);
+      logger.info(`ℹ️ [INFO] ${context ? `${context}: ` : ''}${message}`, data);
     }
   }
 
@@ -58,14 +59,14 @@ class ProductionLogger {
     const entry = this.createLogEntry('warn', message, data, context, component);
     this.addLog(entry);
     
-    console.warn(`⚠️ [WARN] ${context ? `${context}: ` : ''}${message}`, data);
+    logger.warn(`⚠️ [WARN] ${context ? `${context}: ` : ''}${message}`, data);
   }
 
   error(message: string, data?: any, context?: string, component?: string) {
     const entry = this.createLogEntry('error', message, data, context, component);
     this.addLog(entry);
     
-    console.error(`🚨 [ERROR] ${context ? `${context}: ` : ''}${message}`, data);
+    logger.error(`🚨 [ERROR] ${context ? `${context}: ` : ''}${message}`, data);
   }
 
   // Admin panel specific logging methods

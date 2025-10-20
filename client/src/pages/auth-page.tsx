@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
+import { logger } from '@/utils/logger';
 
 // Define login and registration schemas
 const loginSchema = z.object({
@@ -94,7 +95,7 @@ export default function AuthPage() {
   });
 
   function onLoginSubmit(values: LoginValues) {
-    console.log("Submitting login with username:", values.username);
+    logger.log("Submitting login with username:", values.username);
     
     // Prvo ispraznimo sve prethodne podatke o korisniku
     queryClient.setQueryData(["/api/user"], null);

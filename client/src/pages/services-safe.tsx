@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { logger } from '@/utils/logger';
 
 /**
  * Potpuno nova i jednostavna implementacija stranice servisa
@@ -22,17 +23,17 @@ export default function ServicesSafe() {
     const fetchServices = async () => {
       try {
         setIsLoading(true);
-        console.log("Učitavanje servisa...");
+        logger.log("Učitavanje servisa...");
         
         const response = await fetch('/api/services');
-        console.log("Status kod:", response.status);
+        logger.log("Status kod:", response.status);
         
         if (!response.ok) {
           throw new Error(`HTTP greška: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log("Primljeni podaci:", typeof data, Array.isArray(data) ? data.length : "nije niz");
+        logger.log("Primljeni podaci:", typeof data, Array.isArray(data) ? data.length : "nije niz");
         
         // Obrada podataka
         const safeData = Array.isArray(data) ? data.map(service => ({
@@ -42,11 +43,11 @@ export default function ServicesSafe() {
           createdAt: service.createdAt || service.created_at || new Date().toISOString(),
         })) : [];
         
-        console.log("Obrađeni podaci:", safeData.length);
+        logger.log("Obrađeni podaci:", safeData.length);
         setServices(safeData);
         setError(null);
       } catch (err) {
-        console.error("Greška pri učitavanju servisa:", err);
+        logger.error("Greška pri učitavanju servisa:", err);
         setError(err instanceof Error ? err.message : "Nepoznata greška");
       } finally {
         setIsLoading(false);
@@ -62,7 +63,7 @@ export default function ServicesSafe() {
       const date = new Date(dateString);
       return date.toLocaleDateString("sr-ME");
     } catch (error) {
-      console.error("Greška pri formatiranju datuma:", dateString, error);
+      logger.error("Greška pri formatiranju datuma:", dateString, error);
       return "Nevažeći datum";
     }
   };

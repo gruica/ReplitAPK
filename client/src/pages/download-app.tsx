@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { 
+import { logger } from '@/utils/logger';
   Download, 
   Smartphone, 
   Monitor, 
@@ -129,7 +130,7 @@ export default function DownloadAppPage() {
             setQrCodeUrl(url);
           }
         } catch (error) {
-          console.error('Failed to generate QR code:', error);
+          logger.error('Failed to generate QR code:', error);
         } finally {
           setIsGeneratingQR(false);
         }
@@ -174,7 +175,7 @@ export default function DownloadAppPage() {
       }, 2000);
 
     } catch (error) {
-      console.error('Download failed:', error);
+      logger.error('Download failed:', error);
       toast({
         title: "Greška",
         description: "Preuzimanje nije uspešno. Molimo pokušajte ponovo.",
@@ -194,7 +195,7 @@ export default function DownloadAppPage() {
         description: `${type === 'landing' ? 'Landing' : 'Download'} link je kopiran u clipboard.`,
       });
     } catch (error) {
-      console.error('Failed to copy link:', error);
+      logger.error('Failed to copy link:', error);
       toast({
         title: "Greška",
         description: "Nije moguće kopirati link. Molimo pokušajte ponovo.",

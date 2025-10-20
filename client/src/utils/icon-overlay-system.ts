@@ -4,6 +4,7 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { IconMapper } from '@/components/ui/icon-mapper';
+import { logger } from '@/utils/logger';
 
 // Mapiranje Material Icons naziva na odgovarajuće Lucide nazive
 const iconMapping = {
@@ -65,7 +66,7 @@ export function initializeIconOverlaySystem() {
   // Periodično procesuj tekstualne ikone (za dinamički sadržaj)
   setInterval(processTextualIcons, 2000);
   
-  console.log('🎯 Icon Overlay System aktiviran - Material Icons → Lucide React');
+  logger.log('🎯 Icon Overlay System aktiviran - Material Icons → Lucide React');
 }
 
 // Procesuiraj postojeće Material Icons elemente
@@ -111,7 +112,7 @@ function processTextualIcons() {
       
       root.render(createElement(IconMapper, iconProps));
       
-      console.log(`🔄 Dodata ikona za "${textContent}"`);
+      logger.log(`🔄 Dodata ikona za "${textContent}"`);
     }
   });
 }
@@ -168,7 +169,7 @@ function replaceMaterialIcon(iconElement: HTMLElement) {
   
   root.render(createElement(IconMapper, iconProps));
   
-  console.log(`🔄 Zamenjen "${iconName}" → Lucide React ikona`);
+  logger.log(`🔄 Zamenjen "${iconName}" → Lucide React ikona`);
 }
 
 // Deaktiviraj sistem (ako je potrebno)
@@ -192,7 +193,7 @@ export function deactivateIconOverlaySystem() {
     htmlIcon.removeAttribute('data-overlay-processed');
   });
   
-  console.log('🔄 Icon Overlay System deaktiviran');
+  logger.log('🔄 Icon Overlay System deaktiviran');
 }
 
 // Auto-inicijalizacija kada se DOM učita

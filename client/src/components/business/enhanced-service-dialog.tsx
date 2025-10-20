@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { 
+import { logger } from '@/utils/logger';
   User, 
   Phone, 
   Mail, 
@@ -258,7 +259,7 @@ export default function EnhancedServiceDialog({
         description: `PDF izvještaj je preuzet`,
       });
     } catch (error) {
-      console.error("Greška pri preuzimanju PDF izvještaja:", error);
+      logger.error("Greška pri preuzimanju PDF izvještaja:", error);
       toast({
         title: "Greška",
         description: "Greška pri preuzimanju izvještaja",
@@ -302,7 +303,7 @@ export default function EnhancedServiceDialog({
       setRecipientEmail("");
       setRecipientName("");
     } catch (error) {
-      console.error("Greška pri slanju PDF izvještaja:", error);
+      logger.error("Greška pri slanju PDF izvještaja:", error);
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Greška pri slanju izvještaja",

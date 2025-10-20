@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 /**
  * OCR PERFORMANCE OPTIMIZER
  * Optimizuje OCR performance kroz image preprocessing, caching, i parallel processing
@@ -168,7 +169,7 @@ class OCRPerformanceOptimizer {
       return result;
 
     } catch (error) {
-      console.error('❌ OCR OPTIMIZER: Greška tokom optimizacije:', error);
+      logger.error('❌ OCR OPTIMIZER: Greška tokom optimizacije:', error);
       return {
         success: false,
         processingTime: Date.now() - startTime,

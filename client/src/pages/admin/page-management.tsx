@@ -11,6 +11,7 @@ import { Eye, Save, RefreshCw, FileText, Globe, CheckCircle, AlertCircle } from 
 import { AdminLayout } from '@/components/layout/admin-layout';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
+import { logger } from '@/utils/logger';
 
 interface StaticPage {
   name: string;
@@ -72,7 +73,7 @@ export default function PageManagement() {
       setPageContent(data.content || '');
       setLastSaved(data.lastModified || '');
     } catch (error: any) {
-      console.error('Error loading page content:', error);
+      logger.error('Error loading page content:', error);
       
       // Check if it's a 401 error (unauthorized)
       if (error.message && error.message.includes('401')) {
@@ -109,7 +110,7 @@ export default function PageManagement() {
         description: "Stranica je uspešno sačuvana",
       });
     } catch (error) {
-      console.error('Error saving page content:', error);
+      logger.error('Error saving page content:', error);
       toast({
         title: "Greška",
         description: "Greška pri čuvanju stranice",

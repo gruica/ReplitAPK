@@ -38,6 +38,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { 
+import { logger } from '@/utils/logger';
   Pencil, 
   Plus, 
   Search, 
@@ -180,7 +181,7 @@ function formatDate(dateString: string | null | undefined) {
     const date = new Date(dateString);
     return format(date, "dd.MM.yyyy", { locale: srLatn });
   } catch (error) {
-    console.error("Greška pri formatiranju datuma:", error);
+    logger.error("Greška pri formatiranju datuma:", error);
     return dateString;
   }
 }
@@ -192,7 +193,7 @@ function formatDateTime(dateString: string | null | undefined) {
     const date = new Date(dateString);
     return format(date, "dd.MM.yyyy HH:mm", { locale: srLatn });
   } catch (error) {
-    console.error("Greška pri formatiranju datuma/vremena:", error);
+    logger.error("Greška pri formatiranju datuma/vremena:", error);
     return dateString;
   }
 }
@@ -218,7 +219,7 @@ function getAvatarColor(name: string) {
     const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
   } catch (error) {
-    console.error("Greška pri generisanju boje avatara:", error);
+    logger.error("Greška pri generisanju boje avatara:", error);
     return "bg-gray-500";
   }
 }
@@ -330,7 +331,7 @@ export default function EnhancedServices() {
           parsedUsedParts = JSON.parse(service.usedParts);
         }
       } catch (e) {
-        console.warn(`Nevalidan JSON za usedParts u servisu #${service.id}:`, e);
+        logger.warn(`Nevalidan JSON za usedParts u servisu #${service.id}:`, e);
       }
       
       return {
@@ -352,7 +353,7 @@ export default function EnhancedServices() {
         createdBy: creator,
       };
     } catch (error) {
-      console.error(`Greška pri obogaćivanju servisa #${service.id}:`, error);
+      logger.error(`Greška pri obogaćivanju servisa #${service.id}:`, error);
       // Return basic service without additional data if there's an error
       return {
         ...service,
@@ -475,7 +476,7 @@ export default function EnhancedServices() {
         data.usedParts = JSON.stringify(data.usedParts);
       }
       
-      console.log("Podaci za slanje:", data);
+      logger.log("Podaci za slanje:", data);
       if (selectedService) {
         // Update service
         const res = await apiRequest(`/api/services/${selectedService.id}`, { method: "PUT", body: JSON.stringify(data) });
@@ -487,7 +488,7 @@ export default function EnhancedServices() {
       }
     },
     onSuccess: (data) => {
-      console.log("Uspešno sačuvan servis:", data);
+      logger.log("Uspešno sačuvan servis:", data);
       
       // Optimizovana batch invalidacija
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
@@ -521,7 +522,7 @@ export default function EnhancedServices() {
       setSelectedClient(null);
     },
     onError: (error) => {
-      console.error("Greška pri čuvanju servisa:", error);
+      logger.error("Greška pri čuvanju servisa:", error);
       toast({
         title: "Greška",
         description: error.message || "Došlo je do greške pri čuvanju podataka",
@@ -537,7 +538,7 @@ export default function EnhancedServices() {
       return await res.json();
     },
     onSuccess: (data) => {
-      console.log("Uspešno dodeljen serviser:", data);
+      logger.log("Uspešno dodeljen serviser:", data);
       
       // Optimizovana invalidacija samo za servise
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
@@ -548,7 +549,7 @@ export default function EnhancedServices() {
       });
     },
     onError: (error) => {
-      console.error("Greška pri dodeljivanju servisera:", error);
+      logger.error("Greška pri dodeljivanju servisera:", error);
       toast({
         title: "Greška",
         description: error.message || "Došlo je do greške pri dodeljivanju servisera",
@@ -564,7 +565,7 @@ export default function EnhancedServices() {
       return await res.json();
     },
     onSuccess: async (data, variables) => {
-      console.log("Uspešno ažuriran status:", data);
+      logger.log("Uspešno ažuriran status:", data);
       
       // Optimizovana invalidacija samo za servise
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
@@ -589,7 +590,7 @@ export default function EnhancedServices() {
             });
 
             if (response.ok) {
-              console.log('📱 [WHATSAPP AUTO] Obaveštenja poslata za servis:', variables.serviceId);
+              logger.log('📱 [WHATSAPP AUTO] Obaveštenja poslata za servis:', variables.serviceId);
               toast({
                 title: "📱 WhatsApp obaveštenja poslata",
                 description: "Svi učesnici su obavešteni o završetku servisa"
@@ -597,12 +598,12 @@ export default function EnhancedServices() {
             }
           }
         } catch (error) {
-          console.warn('⚠️ [WHATSAPP AUTO] Greška pri obaveštenjima:', error);
+          logger.warn('⚠️ [WHATSAPP AUTO] Greška pri obaveštenjima:', error);
         }
       }
     },
     onError: (error) => {
-      console.error("Greška pri ažuriranju statusa:", error);
+      logger.error("Greška pri ažuriranju statusa:", error);
       toast({
         title: "Greška",
         description: error.message || "Došlo je do greške pri ažuriranju statusa",
@@ -618,7 +619,7 @@ export default function EnhancedServices() {
       return await res.json();
     },
     onSuccess: (data) => {
-      console.log("Uspešno kreiran aparat:", data);
+      logger.log("Uspešno kreiran aparat:", data);
       
       // Invalidate appliance queries
       queryClient.invalidateQueries({ queryKey: ["/api/appliances"] });
@@ -639,7 +640,7 @@ export default function EnhancedServices() {
       }
     },
     onError: (error) => {
-      console.error("Greška pri kreiranju aparata:", error);
+      logger.error("Greška pri kreiranju aparata:", error);
       toast({
         title: "Greška",
         description: error.message || "Došlo je do greške pri kreiranju aparata",
@@ -658,7 +659,7 @@ export default function EnhancedServices() {
       return await res.json();
     },
     onSuccess: (data) => {
-      console.log("SMS uspešno poslat:", data);
+      logger.log("SMS uspešno poslat:", data);
       
       toast({
         title: "✅ SMS poslat",
@@ -671,7 +672,7 @@ export default function EnhancedServices() {
       setSelectedServiceForSms(null);
     },
     onError: (error) => {
-      console.error("Greška pri slanju SMS-a:", error);
+      logger.error("Greška pri slanju SMS-a:", error);
       toast({
         title: "Greška",
         description: error.message || "Došlo je do greške pri slanju SMS-a",
@@ -687,7 +688,7 @@ export default function EnhancedServices() {
       return await res.json();
     },
     onSuccess: (newClient) => {
-      console.log("Novi klijent kreiran:", newClient);
+      logger.log("Novi klijent kreiran:", newClient);
       
       // Invalidate clients query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
@@ -705,7 +706,7 @@ export default function EnhancedServices() {
       });
     },
     onError: (error) => {
-      console.error("Greška pri kreiranju klijenta:", error);
+      logger.error("Greška pri kreiranju klijenta:", error);
       toast({
         title: "Greška",
         description: error.message || "Došlo je do greške pri dodavanju klijenta",

@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MobilePhotoUploader } from '@/components/MobilePhotoUploader';
 import { ArrowLeft, Camera, FileText } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export default function CameraUpload() {
   const [match, params] = useRoute('/mobile/camera/:serviceId');
@@ -32,14 +33,14 @@ export default function CameraUpload() {
         setService(serviceData);
       }
     } catch (error) {
-      console.error('Error loading service:', error);
+      logger.error('Error loading service:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handlePhotoUploaded = (photo: any) => {
-    console.log('Photo uploaded:', photo);
+    logger.log('Photo uploaded:', photo);
     // Could navigate back or show success message
   };
 

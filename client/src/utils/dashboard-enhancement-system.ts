@@ -4,6 +4,7 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
+import { logger } from '@/utils/logger';
   LayoutDashboard, 
   Users, 
   Wrench, 
@@ -51,7 +52,7 @@ function enhanceDashboard() {
   // Dodaj toggle dugme
   addToggleButton();
   
-  console.log('🎨 Dashboard Enhancement System aktiviran sa Lucide ikonama');
+  logger.log('🎨 Dashboard Enhancement System aktiviran sa Lucide ikonama');
 }
 
 function addEnhancementStyles() {
@@ -266,7 +267,7 @@ export function deactivateDashboardEnhancement() {
     }
   });
   
-  console.log('🎨 Dashboard Enhancement System deaktiviran');
+  logger.log('🎨 Dashboard Enhancement System deaktiviran');
 }
 
 // Auto-inicijalizacija

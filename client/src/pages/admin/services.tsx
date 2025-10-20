@@ -50,6 +50,7 @@ import { SimpleServicePhotos } from "@/components/SimpleServicePhotos";
 import { ConversationHistory } from "@/components/ConversationHistory";
 import { WhatsAppMessenger } from "@/components/WhatsAppMessenger";
 import { shareServiceInfo } from "@/utils/shareUtils";
+import { logger } from '@/utils/logger';
 
 interface AdminService {
   id: number;
@@ -269,7 +270,7 @@ const CompletionReportView = memo(function CompletionReportView({ service }: { s
       spareParts = partsData;
     }
   } catch (e) {
-    console.error('Greška pri parsiranju spare parts:', e);
+    logger.error('Greška pri parsiranju spare parts:', e);
     // Ako parsing ne uspe, probaj da koristi kao običan text
     const partsStr = displayData?.usedSpareParts;
     if (partsStr && typeof partsStr === 'string') {
@@ -445,7 +446,7 @@ const CompletionReportView = memo(function CompletionReportView({ service }: { s
     </ScrollArea>
   );
   } catch (renderError) {
-    console.error('Greška pri renderovanju CompletionReportView:', renderError);
+    logger.error('Greška pri renderovanju CompletionReportView:', renderError);
     return (
       <div className="text-center py-8">
         <p className="text-red-500">Greška pri prikazivanju detaljnog izveštaja</p>
@@ -775,7 +776,7 @@ const AdminServices = memo(function AdminServices() {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log('📧 [UI] Email sa PDF-om uspješno poslat:', data);
+      logger.log('📧 [UI] Email sa PDF-om uspješno poslat:', data);
       toast({
         title: "✅ Email uspešno poslat",
         description: `Profesionalni izveštaj sa PDF-om je poslat na email adresu klijenta.`,
@@ -783,7 +784,7 @@ const AdminServices = memo(function AdminServices() {
       });
     },
     onError: (error: any) => {
-      console.error('📧 [UI] Greška pri slanju email-a:', error);
+      logger.error('📧 [UI] Greška pri slanju email-a:', error);
       toast({
         title: "Greška pri slanju email-a",
         description: error.message || "Došlo je do greške pri slanju email-a sa PDF-om.",
@@ -1018,10 +1019,10 @@ const AdminServices = memo(function AdminServices() {
         variant: "default"
       });
       
-      console.log('📋 Kompletan sadržaj servisa kopiran u clipboard za Viber dijeljenje');
+      logger.log('📋 Kompletan sadržaj servisa kopiran u clipboard za Viber dijeljenje');
       
     } catch (error) {
-      console.error('❌ Greška pri kopiranju sadržaja servisa:', error);
+      logger.error('❌ Greška pri kopiranju sadržaja servisa:', error);
       toast({
         title: "Greška pri kopiranju",
         description: "Nastala je greška tokom kopiranja sadržaja servisa. Pokušajte ponovo.",
@@ -1033,7 +1034,7 @@ const AdminServices = memo(function AdminServices() {
   // Handle PDF report generation
   const handlePdfReport = async (service: AdminService) => {
     try {
-      console.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
+      logger.log(`📄 Generisanje PDF izvještaja za servis ${service.id}`);
       
       // Pozovi PDF endpoint
       const response = await fetch(`/api/admin/service-report-pdf/${service.id}`, {
@@ -1049,7 +1050,7 @@ const AdminServices = memo(function AdminServices() {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      console.log(`📄 PDF uspešno dobijen od servera`);
+      logger.log(`📄 PDF uspešno dobijen od servera`);
 
       // Kreiranje blob-a za download
       const pdfBlob = await response.blob();
@@ -1066,7 +1067,7 @@ const AdminServices = memo(function AdminServices() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log(`📄 PDF izvještaj uspešno preuzet`);
+      logger.log(`📄 PDF izvještaj uspešno preuzet`);
       
       toast({
         title: "PDF izvještaj",
@@ -1074,7 +1075,7 @@ const AdminServices = memo(function AdminServices() {
       });
 
     } catch (error) {
-      console.error('📄 Greška pri generisanju PDF izvještaja:', error);
+      logger.error('📄 Greška pri generisanju PDF izvještaja:', error);
       toast({
         title: "Greška",
         description: error instanceof Error ? error.message : "Greška pri generisanju PDF izvještaja",

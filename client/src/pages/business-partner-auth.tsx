@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Building, UserPlus, LogIn } from "lucide-react";
+import { logger } from '@/utils/logger';
 
 // Šema za validaciju forme za prijavu
 const loginSchema = z.object({
@@ -51,7 +52,7 @@ export default function BusinessPartnerAuthPage() {
         navigate("/business");
       } else if (user.role === "admin") {
         // Don't redirect admin - show logout option instead
-        console.log("Admin korisnik pokušava pristup business partner stranici");
+        logger.log("Admin korisnik pokušava pristup business partner stranici");
       } else {
         navigate("/auth"); // Others go to regular auth
       }
@@ -92,7 +93,7 @@ export default function BusinessPartnerAuthPage() {
 
   function onRegisterSubmit(values: RegisterValues) {
     // Dodajemo ulogu poslovnog partnera
-    console.log("Poslovni partner - podaci za registraciju:", values);
+    logger.log("Poslovni partner - podaci za registraciju:", values);
     
     registerMutation.mutate({
       username: values.username,

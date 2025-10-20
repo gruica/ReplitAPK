@@ -1,5 +1,6 @@
 // Ovo je minimalna verzija stranice servisa, bez ikakvih složenih komponenti
 import React, { useEffect, useState } from 'react';
+import { logger } from '@/utils/logger';
 
 // Minimalna stilizacija
 const styles = {
@@ -86,20 +87,20 @@ const BasicServicesPage = () => {
       }
       
       const data = await response.json();
-      console.log('Učitani podaci:', data);
+      logger.log('Učitani podaci:', data);
       
       // Detaljniji debug log za prvi element, ako postoji
       if (Array.isArray(data) && data.length > 0) {
-        console.log('Prvi element iz API-ja:', JSON.stringify(data[0], null, 2));
-        console.log('Imena polja prvog elementa:', Object.keys(data[0]));
+        logger.log('Prvi element iz API-ja:', JSON.stringify(data[0], null, 2));
+        logger.log('Imena polja prvog elementa:', Object.keys(data[0]));
         
         // Provjera da li element sadrži 'createdAt' ili 'created_at'
         if (data[0].createdAt) {
-          console.log("API vraća polje 'createdAt':", data[0].createdAt);
+          logger.log("API vraća polje 'createdAt':", data[0].createdAt);
         } else if (data[0].created_at) {
-          console.log("API vraća polje 'created_at':", data[0].created_at);
+          logger.log("API vraća polje 'created_at':", data[0].created_at);
         } else {
-          console.log("Niti 'createdAt' niti 'created_at' nije pronađeno u podacima!");
+          logger.log("Niti 'createdAt' niti 'created_at' nije pronađeno u podacima!");
         }
       }
       
@@ -109,12 +110,12 @@ const BasicServicesPage = () => {
         let dateField = '';
         if (service.createdAt) {
           dateField = service.createdAt;
-          console.log(`Koristeći createdAt: ${dateField}`);
+          logger.log(`Koristeći createdAt: ${dateField}`);
         } else if (service.created_at) {
           dateField = service.created_at;
-          console.log(`Koristeći created_at: ${dateField}`);
+          logger.log(`Koristeći created_at: ${dateField}`);
         } else {
-          console.warn(`Servis ID ${service.id} nema datum!`);
+          logger.warn(`Servis ID ${service.id} nema datum!`);
         }
         
         return {
@@ -125,10 +126,10 @@ const BasicServicesPage = () => {
         };
       }) : [];
       
-      console.log('Transformirani podaci:', transformedData);
+      logger.log('Transformirani podaci:', transformedData);
       setServices(transformedData);
     } catch (err) {
-      console.error('Greška pri učitavanju servisa:', err);
+      logger.error('Greška pri učitavanju servisa:', err);
       setError((err as Error).message || 'Greška pri učitavanju podataka');
     } finally {
       setLoading(false);
@@ -159,7 +160,7 @@ const BasicServicesPage = () => {
         day: '2-digit'
       });
     } catch {
-      console.warn(`Neuspješno parsiranje datuma: ${dateString}`);
+      logger.warn(`Neuspješno parsiranje datuma: ${dateString}`);
       return dateString;
     }
   };
