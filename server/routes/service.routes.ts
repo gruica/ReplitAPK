@@ -355,7 +355,8 @@ export function registerServiceRoutes(app: Express) {
       
       try {
         // SMS/WhatsApp notifications su opcioni - ne blokira kreiranje servisa
-        // const { smsService } = await import('../sms-service.js'); // TODO: Fix import - file doesn't exist
+        // NOTE: SMS service nije implementiran - WhatsApp se koristi za notifikacije
+        // const { smsService } = await import('../sms-service.js');
         const { whatsappBusinessAPIService } = await import('../whatsapp-business-api-service.js');
         
         // WhatsApp notifikacije su trenutno onemogućene

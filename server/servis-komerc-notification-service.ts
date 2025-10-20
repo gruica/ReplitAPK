@@ -96,8 +96,8 @@ export class ServisKomercNotificationService {
       const subject = `🔧 Završen Beko Servis #${data.serviceId} - ${data.clientName}`;
       const htmlContent = this.generateServiceCompletionHTML(data);
 
-      // TODO: Zamijeniti sa pravom email adresom Servis Komerc-a
-      const servisKomercEmail = 'servis.komerc@example.com';
+      // NOTE: Production email - konfigurisati preko environment variable SERVIS_KOMERC_EMAIL
+      const servisKomercEmail = process.env.SERVIS_KOMERC_EMAIL || 'info@serviscommerce.me';
 
       const success = await this.emailService.sendEmail({
         to: servisKomercEmail,
