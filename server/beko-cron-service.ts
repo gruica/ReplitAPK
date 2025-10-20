@@ -35,11 +35,12 @@ export class BekoCronService {
       cron.schedule('30 22 * * *', async () => {
         console.log('[BEKO CRON] 🕙 Pokretanje automatskog dnevnog Beko izveštaja...');
         try {
-          // Lista email adresa za Beko izveštaje
+          // NOTE: Production email adrese - konfigurisati preko .env ako treba promeniti
+          // BEKO_SERVICE_EMAIL i BEKO_BILLING_EMAIL
           const bekoReportEmails = [
             'gruica@frigosistemtodosijevic.com',
-            'servis@bekoserbija.com', // TODO: dodati pravu email adresu za Beko
-            'fakturisanje@bekoserbija.com' // TODO: dodati pravu email adresu za fakturisanje
+            process.env.BEKO_SERVICE_EMAIL || 'servis@bekoserbija.com',
+            process.env.BEKO_BILLING_EMAIL || 'fakturisanje@bekoserbija.com'
           ];
           
           // Šalje izveštaj svim odgovornim osobama
