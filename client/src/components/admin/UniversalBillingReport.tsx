@@ -307,7 +307,11 @@ export default function UniversalBillingReport({
   };
 
   const handleExportToCSV = () => {
-    if (!billingData?.services.length) return;
+    console.log('CSV Export clicked!', billingData?.services.length);
+    if (!billingData?.services.length) {
+      console.log('No billing data, returning early');
+      return;
+    }
 
     const csvHeaders = 'Broj servisa;Klijent;Telefon;Adresa;Grad;Uređaj;Brend;Model;Serijski broj;Serviser;Datum završetka;Cena;Opis problema;Izvršeni rad;Utrošeni rezervni dijelovi\n';
     
@@ -321,20 +325,28 @@ export default function UniversalBillingReport({
 
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvHeaders + csvData], { type: 'text/csv;charset=utf-8;' });
+    console.log('CSV Blob created, size:', blob.size);
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', csvFilename);
+    console.log('CSV Download filename:', csvFilename);
     document.body.appendChild(link);
     link.click();
+    console.log('CSV Link clicked!');
     document.body.removeChild(link);
   };
 
   const handleDownloadPDF = async () => {
-    if (!selectedMonth || !selectedYear) return;
+    console.log('PDF Download clicked!', selectedMonth, selectedYear);
+    if (!selectedMonth || !selectedYear) {
+      console.log('No month/year selected, returning early');
+      return;
+    }
     
     try {
       const token = localStorage.getItem('auth_token');
+      console.log('Auth token exists:', !!token);
       if (!token) {
         toast({
           title: "Greška",
@@ -345,6 +357,7 @@ export default function UniversalBillingReport({
       }
 
       const url = `${apiEndpoint}/enhanced/pdf/${selectedYear}/${selectedMonth}`;
+      console.log('Fetching PDF from:', url);
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -357,12 +370,15 @@ export default function UniversalBillingReport({
       }
 
       const blob = await response.blob();
+      console.log('PDF Blob received, size:', blob.size);
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = pdfFilename;
+      console.log('PDF Download filename:', pdfFilename);
       document.body.appendChild(link);
       link.click();
+      console.log('PDF Link clicked!');
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
       
