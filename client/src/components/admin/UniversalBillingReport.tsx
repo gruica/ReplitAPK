@@ -320,7 +320,9 @@ export default function UniversalBillingReport({
         ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} (${p.partNumber}) x${p.quantity}`).join(', ')
         : (service.usedParts || 'Nema');
       
-      const price = parseFloat(service.billingPrice as any) || parseFloat(service.cost as any) || 0;
+      const billingPriceNum = parseFloat(service.billingPrice as any);
+      const costNum = parseFloat(service.cost as any);
+      const price = !isNaN(billingPriceNum) ? billingPriceNum : (!isNaN(costNum) ? costNum : 0);
         
       return `${service.serviceNumber};"${service.clientName}";"${service.clientPhone}";"${service.clientAddress}";"${service.clientCity}";"${service.applianceCategory}";"${service.manufacturerName}";"${service.applianceModel}";"${service.serialNumber}";"${service.technicianName}";"${format(new Date(service.completedDate), 'dd.MM.yyyy')}";"${price.toFixed(2)}";"${(service.description || '').replace(/"/g, '""')}";"${(service.technicianNotes || '').replace(/"/g, '""')}";"${partsText.replace(/"/g, '""')}"`;
     }).join('\n');

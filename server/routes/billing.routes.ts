@@ -1656,19 +1656,25 @@ export function registerBillingRoutes(app: Express) {
 
     // Kalkulacija ukupnih vrednosti
     const totalServices = billingServices.length;
-    const totalBillingAmount = billingServices.reduce((sum, s) => sum + parseFloat(String(s.billingPrice || 0)), 0);
+    const totalBillingAmount = billingServices.reduce((sum, s) => {
+      const amount = parseFloat(String(s.billingPrice ?? 0));
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
     
     const brandBreakdown = billingServices.reduce((acc, service) => {
       const brand = service.manufacturerName;
+      const amount = parseFloat(String(service.billingPrice ?? 0));
+      const validAmount = isNaN(amount) ? 0 : amount;
+      
       const existing = acc.find(b => b.brand === brand);
       if (existing) {
         existing.count++;
-        existing.totalAmount += parseFloat(String(service.billingPrice || 0));
+        existing.totalAmount += validAmount;
       } else {
         acc.push({
           brand,
           count: 1,
-          totalAmount: parseFloat(String(service.billingPrice || 0))
+          totalAmount: validAmount
         });
       }
       return acc;
