@@ -485,6 +485,7 @@ export class MemStorage implements IStorage {
       fullName: "Jelena Todosijević", 
       password: hashedPassword,
       technicianId: null,
+      supplierId: null,
       email: "admin@frigosistemtodosijevic.com",
       phone: null,
       address: null,
@@ -1157,6 +1158,56 @@ export class MemStorage implements IStorage {
     this.services.set(serviceId, updatedService);
     
     return this.getAdminServiceById(serviceId);
+  }
+
+  // User methods for MemStorage
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.userId++;
+    const user: User = {
+      id,
+      username: insertUser.username || '',
+      password: insertUser.password || '',
+      fullName: insertUser.fullName || '',
+      role: insertUser.role || 'customer',
+      technicianId: insertUser.technicianId || null,
+      supplierId: insertUser.supplierId || null,
+      email: insertUser.email || null,
+      phone: insertUser.phone || null,
+      address: insertUser.address || null,
+      city: insertUser.city || null,
+      companyName: insertUser.companyName || null,
+      companyId: insertUser.companyId || null,
+      isVerified: insertUser.isVerified || false,
+      registeredAt: new Date(),
+      verifiedAt: insertUser.isVerified ? new Date() : null,
+      verifiedBy: null
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  // Technician methods for MemStorage
+  async createTechnician(insertTechnician: InsertTechnician): Promise<Technician> {
+    const id = this.technicianId++;
+    const technician: Technician = {
+      id,
+      fullName: insertTechnician.fullName,
+      phone: insertTechnician.phone || null,
+      email: insertTechnician.email || null,
+      specialization: insertTechnician.specialization || null,
+      active: insertTechnician.active !== undefined ? insertTechnician.active : true
+    };
+    this.technicians.set(id, technician);
+    return technician;
+  }
+
+  async getTechnician(id: number): Promise<Technician | undefined> {
+    return this.technicians.get(id);
+  }
+
+  // Client methods for MemStorage
+  async getClient(id: number): Promise<Client | undefined> {
+    return this.clients.get(id);
   }
 }
 
