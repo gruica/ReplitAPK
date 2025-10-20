@@ -716,13 +716,32 @@
             });
         });
       } else if ("serviceWorker" in navigator) {
-        // U development modu - unregister postojeći SW
+        // U development modu - unregister postojeći SW i OBRIŠI SVE KEŠ FAJLOVE
         navigator.serviceWorker
           .getRegistrations()
           .then(function (registrations) {
             for (let registration of registrations) {
               registration.unregister();
               console.log("🗑️ Service Worker unregister u development modu");
+            }
+            
+            // KOMPLETNO OBRIŠI SVE KEŠIRANE FAJLOVE
+            if ('caches' in window) {
+              caches.keys().then(function(cacheNames) {
+                return Promise.all(
+                  cacheNames.map(function(cacheName) {
+                    console.log('🔥 Brišem keš:', cacheName);
+                    return caches.delete(cacheName);
+                  })
+                );
+              }).then(function() {
+                console.log('✅ Svi keš fajlovi obrisani - stranica će se osvežiti');
+                // Osvježi stranicu samo jednom da učita nove fajlove
+                if (!sessionStorage.getItem('cache_cleared')) {
+                  sessionStorage.setItem('cache_cleared', 'true');
+                  window.location.reload(true);
+                }
+              });
             }
           });
       }
