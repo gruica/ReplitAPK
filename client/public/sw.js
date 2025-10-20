@@ -1,8 +1,8 @@
 // Service Worker za Frigo Sistem Todosijević - 2025 Performance Optimized
-const CACHE_NAME = 'frigo-sistem-v2025.1.1';
-const STATIC_CACHE = 'frigo-static-v2025.1.1';
-const DYNAMIC_CACHE = 'frigo-dynamic-v2025.1.1';
-const IMAGE_CACHE = 'frigo-images-v2025.1.1';
+const CACHE_NAME = 'frigo-sistem-v2025.1.2';
+const STATIC_CACHE = 'frigo-static-v2025.1.2';
+const DYNAMIC_CACHE = 'frigo-dynamic-v2025.1.2';
+const IMAGE_CACHE = 'frigo-images-v2025.1.2';
 
 // URLs koje treba cache-ovati odmah
 const STATIC_ASSETS = [
@@ -167,12 +167,20 @@ async function handleImageRequest(request) {
 
 // Strategija za statičke resurse - Network First (fix za Vite hash fajlove)
 async function handleStaticAsset(request) {
+  const url = new URL(request.url);
+  
+  // NIKADA ne keširaj Vite chunk fajlove sa verzijom (chunk-*.js?v=xxx)
+  if (url.pathname.includes('/deps/chunk-') || url.searchParams.has('v')) {
+    console.log('🔥 Service Worker: NEVER cache Vite chunks - fetching fresh:', url.pathname);
+    return fetch(request);
+  }
+  
   try {
     // PRVO pokušaj network zahtev (fix za Vite build hash fajlove)
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok && networkResponse.status === 200) {
-      // Cache-uj SAMO uspešne odgovore
+      // Cache-uj SAMO uspešne odgovore (ali ne i Vite chunks)
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
     }
