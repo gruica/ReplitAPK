@@ -225,14 +225,17 @@ export default function UniversalBillingReport({
         billingPriceReason
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ 
+        queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint],
+        exact: false
+      });
+      await refetchBillingData();
       toast({
         title: "Uspjeh",
         description: "Cijena uspješno ažurirana",
       });
       setEditDialogOpen(false);
-      refetchBillingData();
     },
     onError: () => {
       toast({
@@ -247,14 +250,17 @@ export default function UniversalBillingReport({
     mutationFn: async ({ serviceId, exclude }: { serviceId: number; exclude: boolean }) => {
       return apiRequestWithAuth('PATCH', `/api/admin/services/${serviceId}/exclude`, { exclude });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ 
+        queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint],
+        exact: false
+      });
+      await refetchBillingData();
       toast({
         title: "Uspjeh",
         description: "Servis isključen iz billinga",
       });
       setExcludeDialogOpen(false);
-      refetchBillingData();
     },
     onError: () => {
       toast({
