@@ -100,4 +100,10 @@ class Logger {
   }
 }
 
-export const logger = new Logger();
+const loggerInstance = new Logger();
+
+// Named export (for existing imports)
+export const logger = loggerInstance;
+
+// Default export (for esbuild compatibility)
+export default loggerInstance;
