@@ -6,8 +6,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { 
 import { logger } from '@/utils/logger';
+import { 
   Download, 
   Smartphone, 
   Monitor, 

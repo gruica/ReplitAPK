@@ -37,8 +37,8 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { 
 import { logger } from '@/utils/logger';
+import { 
   Pencil, 
   Plus, 
   Search, 
