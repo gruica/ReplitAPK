@@ -9,7 +9,6 @@ import Dashboard from "@/pages/dashboard";
 const Clients = lazy(() => import("@/pages/clients"));
 const ClientDetails = lazy(() => import("@/pages/client-details"));
 const Services = lazy(() => import("@/pages/services"));
-const SimplifiedServices = lazy(() => import("@/pages/simplified-services"));
 const BasicServicesPage = lazy(() => import("@/pages/basic/services"));
 const EnhancedServices = lazy(() => import("@/pages/enhanced-services"));
 const AdminServices = lazy(() => import("@/pages/admin/services"));
@@ -182,8 +181,6 @@ function Router() {
       {/* Javne verzije servisa za testiranje */}
       <Route path="/services" component={EnhancedServices} />
       <Route path="/services-basic" component={BasicServicesPage} />
-      <Route path="/services-alt" component={SimplifiedServices} />
-      <Route path="/services-safe" component={React.lazy(() => import('@/pages/services-safe'))} />
       <RoleProtectedRoute path="/appliances" component={Appliances} allowedRoles={["admin"]} />
       <RoleProtectedRoute path="/users" component={Users} allowedRoles={["admin"]} />
       <RoleProtectedRoute path="/create-tech-user" component={CreateTechnicianUser} allowedRoles={["admin"]} />
