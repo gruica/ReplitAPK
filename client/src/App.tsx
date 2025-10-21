@@ -8,7 +8,6 @@ import Dashboard from "@/pages/dashboard";
 // PERFORMANCE BOOST: Lazy load heavy components
 const Clients = lazy(() => import("@/pages/clients"));
 const ClientDetails = lazy(() => import("@/pages/client-details"));
-const Services = lazy(() => import("@/pages/services"));
 const BasicServicesPage = lazy(() => import("@/pages/basic/services"));
 const EnhancedServices = lazy(() => import("@/pages/enhanced-services"));
 const AdminServices = lazy(() => import("@/pages/admin/services"));
