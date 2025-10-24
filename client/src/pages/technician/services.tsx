@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { logger } from '@/utils/logger';
+import { DevicePickupDialog } from "@/components/technician/DevicePickupDialog";
 
 // Service status configuration
 const statusConfig = {
@@ -60,6 +61,9 @@ interface Service {
   scheduledDate?: string;
   cost?: string;
   technicianNotes?: string;
+  devicePickedUp?: boolean;
+  pickupDate?: string;
+  pickupNotes?: string;
   client: {
     id: number;
     fullName: string;
@@ -87,6 +91,7 @@ export default function TechnicianServices() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isStatusUpdateOpen, setIsStatusUpdateOpen] = useState(false);
+  const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusNotes, setStatusNotes] = useState("");
 
@@ -475,6 +480,15 @@ export default function TechnicianServices() {
                   </div>
                 )}
 
+                {service.devicePickedUp && (
+                  <div className="flex items-center gap-1 text-xs">
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Package className="h-3 w-3 mr-1" />
+                      Aparat preuzet {service.pickupDate && `- ${formatDate(service.pickupDate)}`}
+                    </Badge>
+                  </div>
+                )}
+
                 <div className="flex gap-2 pt-2">
                   <Button 
                     size="sm" 
@@ -489,13 +503,30 @@ export default function TechnicianServices() {
                     variant="secondary"
                     onClick={() => handlePdfReport(service)}
                     title="Preuzmi PDF izvještaj"
+                    data-testid={`button-pdf-${service.id}`}
                   >
                     <FileText className="h-3 w-3 mr-1" />
                     PDF
                   </Button>
+                  {!service.devicePickedUp && service.status !== 'completed' && service.status !== 'cancelled' && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedService(service);
+                        setIsPickupDialogOpen(true);
+                      }}
+                      title="Označi preuzimanje aparata"
+                      data-testid={`button-pickup-${service.id}`}
+                    >
+                      <Package className="h-3 w-3 mr-1" />
+                      Preuzmi
+                    </Button>
+                  )}
                   <Button 
                     size="sm" 
                     onClick={() => handleStatusUpdate(service)}
+                    data-testid={`button-status-${service.id}`}
                   >
                     <Settings className="h-3 w-3 mr-1" />
                     Status
@@ -609,6 +640,13 @@ export default function TechnicianServices() {
           </DialogContent>
         </Dialog>
 
+        {/* Device Pickup Dialog */}
+        <DevicePickupDialog
+          service={selectedService}
+          isOpen={isPickupDialogOpen}
+          onClose={() => setIsPickupDialogOpen(false)}
+          onSuccess={() => refetch()}
+        />
 
       </div>
     </div>
