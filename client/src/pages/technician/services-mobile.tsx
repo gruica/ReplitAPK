@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SupplementGeneraliFormSimple } from "@/components/technician/supplement-generali-form-simple";
 import { MobileServicePhotos } from "@/components/MobileServicePhotos";
 import { logger } from '@/utils/logger';
+import { DevicePickupDialog } from "@/components/technician/DevicePickupDialog";
 
 // Status ikone - NAPOMENA: Privremeno koriste placeholder vrednosti
 const serviceTodoIcon = "";
@@ -74,6 +75,9 @@ interface Service {
   scheduledDate?: string;
   cost?: string;
   technicianNotes?: string;
+  devicePickedUp?: boolean;
+  pickupDate?: string;
+  pickupNotes?: string;
   // Flat polja iz backend JOIN-a
   clientName?: string;
   clientPhone?: string;
@@ -98,6 +102,34 @@ interface Service {
     model?: string;
     serialNumber?: string;
   };
+}
+
+function DevicePickupButton({ service }: { service: Service }) {
+  const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  return (
+    <>
+      <Button 
+        onClick={() => setIsPickupDialogOpen(true)}
+        variant="outline"
+        className="w-full h-12 border-blue-200 text-blue-700 hover:bg-blue-50 mt-2"
+        data-testid={`button-pickup-${service.id}`}
+      >
+        <Package className="h-4 w-4 mr-2" />
+        Preuzmi aparat
+      </Button>
+      
+      <DevicePickupDialog
+        service={service}
+        isOpen={isPickupDialogOpen}
+        onClose={() => setIsPickupDialogOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/my-services'] });
+        }}
+      />
+    </>
+  );
 }
 
 function ServiceCard({ service }: { service: Service }) {
@@ -704,10 +736,28 @@ function ServiceCard({ service }: { service: Service }) {
           onClick={handlePdfReport}
           variant="outline"
           className="w-full h-12 border-purple-200 text-purple-700 hover:bg-purple-50 mt-2"
+          data-testid={`button-pdf-${service.id}`}
         >
           <FileText className="h-4 w-4 mr-2" />
           Preuzmi PDF izvještaj
         </Button>
+
+        {/* Device Pickup Status/Action */}
+        {service.devicePickedUp ? (
+          <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-medium text-green-800">
+                Aparat preuzet {service.pickupDate && `- ${formatDate(service.pickupDate)}`}
+              </span>
+            </div>
+            {service.pickupNotes && (
+              <p className="text-xs text-gray-600 mt-1">{service.pickupNotes}</p>
+            )}
+          </div>
+        ) : service.status !== 'completed' && service.status !== 'cancelled' && (
+          <DevicePickupButton service={service} />
+        )}
 
         {/* Professional Service Actions */}
         <div className="mt-4 space-y-2">
