@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { logger } from '@/utils/logger';
+import { EmailVerificationModal, PasswordResetModal } from "@/components/auth";
 
 // Define login and registration schemas
 const loginSchema = z.object({
@@ -46,6 +47,13 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { user, loginMutation, registerMutation } = useAuth();
   const [, navigate] = useLocation();
+  
+  // Email verification state
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  
+  // Password reset state
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   // Redirect if user is already logged in
   useEffect(() => {
