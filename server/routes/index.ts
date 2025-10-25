@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { registerAuthRoutes } from "./auth.routes";
+import authVerificationRoutes from "./auth-verification.routes";
 import { registerClientRoutes } from "./client.routes";
 import { registerApplianceRoutes } from "./appliance.routes";
 import { registerServiceRoutes } from "./service.routes";
@@ -20,6 +21,7 @@ export function registerAllRoutes(app: Express) {
   
   // Register all route modules
   registerAuthRoutes(app);
+  app.use("/api/auth", authVerificationRoutes); // Modularni auth verification routes
   registerClientRoutes(app);
   registerApplianceRoutes(app);
   registerServiceRoutes(app);
