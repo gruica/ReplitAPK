@@ -50,9 +50,11 @@ class UserStorage {
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.email, email));
-    const [user] = result;
-    return user;
+    // Koristi RAW SQL da zaobiđe Drizzle schema cache problem
+    const result = await db.execute<User>(
+      sql`SELECT * FROM users WHERE email = ${email} LIMIT 1`
+    );
+    return result.rows[0] as User | undefined;
   }
   
   async getUserByTechnicianId(technicianId: number): Promise<User | undefined> {
