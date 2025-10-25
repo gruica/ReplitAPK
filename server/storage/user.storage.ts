@@ -204,6 +204,18 @@ class UserStorage {
     return updatedUser;
   }
 
+  /**
+   * Ažurira lozinku korisnika (koristi se za password reset)
+   * @param userId - ID korisnika
+   * @param hashedPassword - Već heširana lozinka
+   */
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
+  }
+
   async deleteUser(id: number): Promise<boolean> {
     try {
       const result = await db.delete(users).where(eq(users.id, id));

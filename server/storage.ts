@@ -203,6 +203,13 @@ export interface IStorage {
   validateEmailVerification(email: string, code: string): Promise<boolean>;
   cleanupExpiredEmailVerifications(): Promise<void>;
   
+  // Password reset methods
+  createPasswordReset(reset: any): Promise<any>;
+  validatePasswordReset(email: string, code: string): Promise<boolean>;
+  updateUserPassword(userId: number, hashedPassword: string): Promise<void>;
+  markPasswordResetAsUsed(email: string, code: string): Promise<void>;
+  cleanupExpiredPasswordResets(): Promise<void>;
+  
   // Admin service methods
   getAdminServices(): Promise<any[]>;
   getAdminServiceById(id: number): Promise<any | undefined>;
@@ -1910,6 +1917,27 @@ export class DatabaseStorage implements IStorage {
 
   async cleanupExpiredEmailVerifications(): Promise<void> {
     return securityStorage.cleanupExpiredEmailVerifications();
+  }
+
+  // Password reset methods
+  async createPasswordReset(reset: any): Promise<any> {
+    return securityStorage.createPasswordReset(reset);
+  }
+
+  async validatePasswordReset(email: string, code: string): Promise<boolean> {
+    return securityStorage.validatePasswordReset(email, code);
+  }
+
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
+    return userStorage.updateUserPassword(userId, hashedPassword);
+  }
+
+  async markPasswordResetAsUsed(email: string, code: string): Promise<void> {
+    return securityStorage.markPasswordResetAsUsed(email, code);
+  }
+
+  async cleanupExpiredPasswordResets(): Promise<void> {
+    return securityStorage.cleanupExpiredPasswordResets();
   }
 
   // Admin service methods

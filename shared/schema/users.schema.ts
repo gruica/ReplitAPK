@@ -122,3 +122,27 @@ export const insertEmailVerificationSchema = createInsertSchema(emailVerificatio
 
 export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;
 export type EmailVerification = typeof emailVerification.$inferSelect;
+
+// Tabela za password reset (resetovanje lozinke)
+export const passwordReset = pgTable("password_reset", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),
+  resetCode: text("reset_code").notNull(), // Nasumični kod (6 cifara)
+  used: boolean("used").default(false).notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(), // Važi 30 minuta
+}, (table) => ({
+  emailIdx: index("password_reset_email_idx").on(table.email),
+}));
+
+export const insertPasswordResetSchema = createInsertSchema(passwordReset).pick({
+  email: true,
+  resetCode: true,
+  used: true,
+  attempts: true,
+  expiresAt: true
+});
+
+export type InsertPasswordReset = z.infer<typeof insertPasswordResetSchema>;
+export type PasswordReset = typeof passwordReset.$inferSelect;
