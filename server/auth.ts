@@ -8,6 +8,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { pool } from "./db";
 import { User as SelectUser } from "@shared/schema";
+import { emailVerificationService } from "./email-verification";
 
 declare global {
   namespace Express {
@@ -120,8 +121,12 @@ export function setupAuth(app: Express) {
             return done(null, false, { message: 'Neispravno korisničko ime ili lozinka' });
           }
           
-          // Dodatna provera: da li je korisnik verifikovan
-          // Administratori mogu da se prijave uvek, ostali korisnici moraju biti verifikovani
+          // Email verifikacija - svi korisnici osim admina moraju da verifikuju email
+          if (user.role !== 'admin' && !user.emailVerified) {
+            return done(null, false, { message: 'Molimo verifikujte vašu email adresu pre prijave. Proverite vaš inbox za verifikacijski kod.' });
+          }
+          
+          // Admin verifikacija - ostali korisnici moraju biti verifikovani od admina
           if (user.role !== 'admin' && !user.isVerified) {
             return done(null, false, { message: 'Vaš nalog nije još verifikovan od strane administratora. Molimo sačekajte potvrdu.' });
           }
@@ -221,9 +226,7 @@ export function setupAuth(app: Express) {
       // Ukloni lozinku iz odgovora
       const { password, ...userWithoutPassword } = user;
       
-      // Logujemo registraciju
-      
-      // Administrator može odmah da se prijavi, ostali korisnici dobijaju poruku o potrebnoj verifikaciji
+      // Administrator može odmah da se prijavi, ostali korisnici moraju verifikovati email
       if (user.role === 'admin') {
         req.login(user, (err) => {
           if (err) return next(err);
@@ -233,17 +236,21 @@ export function setupAuth(app: Express) {
           });
         });
       } else {
-        // Za obične korisnike vraćamo samo podatke bez prijave
-        // Posebna poruka za poslovne partnere
-        if (user.role === 'business_partner') {
+        // Za obične korisnike šaljemo email verifikacijski kod
+        const emailResult = await emailVerificationService.sendVerificationEmail(user.email!);
+        
+        if (emailResult.success) {
           res.status(201).json({
             ...userWithoutPassword,
-            message: "Registracija uspešna! Vaš zahtev je prosleđen administratoru na pregled. Bićete obavešteni putem email-a kada je nalog aktiviran."
+            message: "Registracija uspešna! Verifikacijski kod je poslat na vašu email adresu. Molimo proverite inbox.",
+            requiresEmailVerification: true
           });
         } else {
           res.status(201).json({
             ...userWithoutPassword,
-            message: "Registracija uspešna! Molimo sačekajte da administrator verifikuje vaš nalog pre prijave."
+            message: "Registracija uspešna, ali greška pri slanju email-a. Možete zatražiti novi kod.",
+            requiresEmailVerification: true,
+            emailError: emailResult.message
           });
         }
       }
