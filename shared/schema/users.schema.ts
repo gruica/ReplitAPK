@@ -2,6 +2,12 @@ import { pgTable, text, serial, integer, boolean, timestamp, index } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+/**
+ * SCHEMA VERSION: 2025-10-25T06:05:00Z
+ * Last update: Added emailVerified column for email verification system
+ */
+export const USERS_SCHEMA_VERSION = "2025-10-25T06:05:00Z";
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
