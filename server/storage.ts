@@ -494,6 +494,7 @@ export class MemStorage implements IStorage {
       technicianId: null,
       supplierId: null,
       email: "admin@frigosistemtodosijevic.com",
+      emailVerified: true, // Admin je automatski email-verifikovan
       phone: null,
       address: null,
       city: null,
@@ -1179,6 +1180,7 @@ export class MemStorage implements IStorage {
       technicianId: insertUser.technicianId || null,
       supplierId: insertUser.supplierId || null,
       email: insertUser.email || null,
+      emailVerified: false, // Novi korisnici nisu email-verifikovani po defaultu
       phone: insertUser.phone || null,
       address: insertUser.address || null,
       city: insertUser.city || null,
