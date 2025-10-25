@@ -121,8 +121,9 @@ export function setupAuth(app: Express) {
             return done(null, false, { message: 'Neispravno korisničko ime ili lozinka' });
           }
           
-          // Email verifikacija - svi korisnici osim admina moraju da verifikuju email
-          if (user.role !== 'admin' && !user.emailVerified) {
+          // Email verifikacija - samo customeri moraju da verifikuju email (sami se registruju)
+          // Ostale korisnike (technician, supplier, admin) kreira i verifikuje admin
+          if (user.role === 'customer' && !user.emailVerified) {
             return done(null, false, { message: 'Molimo verifikujte vašu email adresu pre prijave. Proverite vaš inbox za verifikacijski kod.' });
           }
           
