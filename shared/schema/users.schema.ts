@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   technicianId: integer("technician_id"), // Reference to technician if user is a technician
   supplierId: integer("supplier_id"), // Reference to supplier if user is a supplier
   email: text("email"), // Email adresa korisnika
+  emailVerified: boolean("email_verified").default(false).notNull(), // Da li je email verifikovan (korisnik potvrdio kod)
   phone: text("phone"), // Broj telefona korisnika
   address: text("address"), // Adresa korisnika
   city: text("city"), // Grad korisnika
