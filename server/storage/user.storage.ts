@@ -34,33 +34,19 @@ class UserStorage {
   // ============================================
   
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    // Koristi RAW SQL da zaobiđe Drizzle schema cache problem
+    const result = await db.execute<User>(
+      sql`SELECT * FROM users WHERE id = ${id} LIMIT 1`
+    );
+    return result.rows[0] as User | undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    // NOTE: Eksplicitno navodimo kolone zbog Drizzle schema cache problema
-    const [user] = await db.select({
-      id: users.id,
-      username: users.username,
-      password: users.password,
-      fullName: users.fullName,
-      role: users.role,
-      technicianId: users.technicianId,
-      supplierId: users.supplierId,
-      email: users.email,
-      emailVerified: users.emailVerified,
-      phone: users.phone,
-      address: users.address,
-      city: users.city,
-      companyName: users.companyName,
-      companyId: users.companyId,
-      isVerified: users.isVerified,
-      registeredAt: users.registeredAt,
-      verifiedAt: users.verifiedAt,
-      verifiedBy: users.verifiedBy
-    }).from(users).where(eq(users.username, username));
-    return user;
+    // NOTE: Koristi raw SQL da zaobiđe Drizzle schema cache problem
+    const result = await db.execute<User>(
+      sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`
+    );
+    return result.rows[0] as User | undefined;
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -162,6 +148,7 @@ class UserStorage {
         technicianId: userToInsert.technicianId,
         supplierId: userToInsert.supplierId,
         email: userToInsert.email,
+        emailVerified: insertUser.role !== 'customer', // Non-customers ne trebaju verifikaciju
         phone: userToInsert.phone,
         address: userToInsert.address,
         city: userToInsert.city,
@@ -188,6 +175,7 @@ class UserStorage {
         technicianId: userResult.technicianId,
         supplierId: userResult.supplierId,
         email: userResult.email,
+        emailVerified: userResult.emailVerified,
         phone: userResult.phone,
         address: userResult.address,
         city: userResult.city,
@@ -216,12 +204,12 @@ class UserStorage {
       }
     }
 
-    const [updatedUser] = await db
+    await db
       .update(users)
       .set(updateData)
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+      .where(eq(users.id, id));
+    
+    return this.getUser(id);
   }
 
   /**
@@ -249,17 +237,16 @@ class UserStorage {
   async verifyUser(id: number, adminId: number): Promise<User | undefined> {
     const now = new Date();
     
-    const [updatedUser] = await db
-      .update(users)
-      .set({
-        isVerified: true,
-        verifiedAt: now,
-        verifiedBy: adminId
-      })
-      .where(eq(users.id, id))
-      .returning();
+    // Koristi RAW SQL da zaobiđe Drizzle schema cache problem
+    await db.execute(
+      sql`UPDATE users 
+          SET is_verified = true, 
+              verified_at = ${now.toISOString()}, 
+              verified_by = ${adminId} 
+          WHERE id = ${id}`
+    );
       
-    return updatedUser;
+    return this.getUser(id);
   }
 
   // ============================================
