@@ -5,13 +5,15 @@
  */
 
 import { db } from "../db.js";
-import { botVerification, emailVerification } from "../../shared/schema/index.js";
+import { botVerification, emailVerification, passwordReset } from "../../shared/schema/index.js";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import type { 
   BotVerification, 
   InsertBotVerification,
   EmailVerification,
-  InsertEmailVerification
+  InsertEmailVerification,
+  PasswordReset,
+  InsertPasswordReset
 } from "../../shared/schema/index.js";
 
 export class SecurityStorage {
@@ -134,6 +136,79 @@ export class SecurityStorage {
         .where(lte(emailVerification.expiresAt, now));
     } catch (error) {
       console.error('Greška pri čišćenju isteklih email verifikacija:', error);
+    }
+  }
+
+  // ===== PASSWORD RESET METHODS =====
+  
+  async createPasswordReset(reset: InsertPasswordReset): Promise<PasswordReset> {
+    const [newReset] = await db
+      .insert(passwordReset)
+      .values(reset)
+      .returning();
+    return newReset;
+  }
+
+  async getPasswordReset(email: string): Promise<PasswordReset | undefined> {
+    try {
+      const [reset] = await db
+        .select()
+        .from(passwordReset)
+        .where(and(
+          eq(passwordReset.email, email),
+          eq(passwordReset.used, false),
+          gte(passwordReset.expiresAt, new Date())
+        ))
+        .orderBy(desc(passwordReset.createdAt));
+      return reset;
+    } catch (error) {
+      console.error('Greška pri dohvatanju password reset:', error);
+      return undefined;
+    }
+  }
+
+  async validatePasswordReset(email: string, code: string): Promise<boolean> {
+    try {
+      const reset = await this.getPasswordReset(email);
+      if (!reset) return false;
+      
+      if (reset.resetCode === code) {
+        return true;
+      } else {
+        await db
+          .update(passwordReset)
+          .set({ attempts: reset.attempts + 1 })
+          .where(eq(passwordReset.id, reset.id));
+        return false;
+      }
+    } catch (error) {
+      console.error('Greška pri validaciji password reset koda:', error);
+      return false;
+    }
+  }
+
+  async markPasswordResetAsUsed(email: string, code: string): Promise<void> {
+    try {
+      await db
+        .update(passwordReset)
+        .set({ used: true })
+        .where(and(
+          eq(passwordReset.email, email),
+          eq(passwordReset.resetCode, code)
+        ));
+    } catch (error) {
+      console.error('Greška pri označavanju password reset kao iskorišćenog:', error);
+    }
+  }
+
+  async cleanupExpiredPasswordResets(): Promise<void> {
+    try {
+      const now = new Date();
+      await db
+        .delete(passwordReset)
+        .where(lte(passwordReset.expiresAt, now));
+    } catch (error) {
+      console.error('Greška pri čišćenju isteklih password reset kodova:', error);
     }
   }
 }
