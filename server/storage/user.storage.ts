@@ -39,7 +39,27 @@ class UserStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    // NOTE: Eksplicitno navodimo kolone zbog Drizzle schema cache problema
+    const [user] = await db.select({
+      id: users.id,
+      username: users.username,
+      password: users.password,
+      fullName: users.fullName,
+      role: users.role,
+      technicianId: users.technicianId,
+      supplierId: users.supplierId,
+      email: users.email,
+      emailVerified: users.emailVerified,
+      phone: users.phone,
+      address: users.address,
+      city: users.city,
+      companyName: users.companyName,
+      companyId: users.companyId,
+      isVerified: users.isVerified,
+      registeredAt: users.registeredAt,
+      verifiedAt: users.verifiedAt,
+      verifiedBy: users.verifiedBy
+    }).from(users).where(eq(users.username, username));
     return user;
   }
   
