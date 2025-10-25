@@ -125,8 +125,19 @@ export default function AuthPage() {
       address: values.address,
       city: values.city,
       role: "customer", // Uvek postavljamo rolu na customer
+    }, {
+      onSuccess: () => {
+        // Prikaži email verification modal nakon registracije
+        setRegisteredEmail(values.username);
+        setShowEmailVerification(true);
+      }
     });
   }
+  
+  const handleEmailVerificationSuccess = () => {
+    setShowEmailVerification(false);
+    setActiveTab("login"); // Prebaci na login tab nakon verifikacije
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
@@ -194,9 +205,14 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      <a href="#" className="text-sm text-primary hover:underline">
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordReset(true)}
+                        className="text-sm text-primary hover:underline"
+                        data-testid="link-forgot-password"
+                      >
                         Zaboravili ste lozinku?
-                      </a>
+                      </button>
                     </div>
                     {loginMutation.isError && (
                       <div className="bg-red-50 p-3 rounded-md text-red-500 text-sm mb-2">
@@ -359,6 +375,20 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
+      
+      {/* Email Verification Modal */}
+      <EmailVerificationModal
+        isOpen={showEmailVerification}
+        email={registeredEmail}
+        onSuccess={handleEmailVerificationSuccess}
+        onClose={() => setShowEmailVerification(false)}
+      />
+      
+      {/* Password Reset Modal */}
+      <PasswordResetModal
+        isOpen={showPasswordReset}
+        onClose={() => setShowPasswordReset(false)}
+      />
     </div>
   );
 }
