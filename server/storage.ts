@@ -1399,8 +1399,11 @@ export class DatabaseStorage implements IStorage {
   private async initializeDatabaseIfEmpty(): Promise<void> {
     try {
       // Provera da li postoje korisnici
-      const existingUsers = await db.select().from(users);
-      if (existingUsers.length === 0) {
+      // NOTE: Koristimo COUNT umesto SELECT * zbog Drizzle schema cache problema
+      const countResult = await db.select({ count: sql<number>`count(*)::int` }).from(users);
+      const userCount = countResult[0]?.count || 0;
+      
+      if (userCount === 0) {
         console.log("Inicijalizacija baze podataka...");
         await this.seedApplianceCategories();
         await this.seedManufacturers();
@@ -1495,6 +1498,8 @@ export class DatabaseStorage implements IStorage {
           username: "serviser@example.com",
           password: hashedServiserPassword,
           fullName: firstTech.fullName,
+          email: "serviser@example.com",
+          emailVerified: true, // Seed korisnici su automatski email-verifikovani
           role: "technician",
           technicianId: firstTech.id
         });
@@ -1521,9 +1526,13 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Check if supplier user already exists
-      const [existingUser] = await db.select().from(users).where(eq(users.username, "servis@eurotehnikamn.me"));
+      // NOTE: Koristimo COUNT umesto SELECT * zbog Drizzle schema cache problema
+      const countResult = await db.select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.username, "servis@eurotehnikamn.me"));
+      const userExists = (countResult[0]?.count || 0) > 0;
       
-      if (existingUser) {
+      if (userExists) {
         console.log("Supplier user servis@eurotehnikamn.me already exists");
         return;
       }
@@ -1536,6 +1545,7 @@ export class DatabaseStorage implements IStorage {
         password: hashedPassword,
         fullName: "Eurotehnika Servis",
         email: "servis@eurotehnikamn.me",
+        emailVerified: true, // Supplier je automatski email-verifikovan
         role: "supplier",
         supplierId: 3,
         isVerified: true
