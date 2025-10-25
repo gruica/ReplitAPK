@@ -92,6 +92,7 @@ export default function AuthPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
+      email: "", // Email je OBAVEZAN u schema!
       password: "",
       confirmPassword: "",
       fullName: "",
@@ -116,20 +117,27 @@ export default function AuthPage() {
   }
 
   function onRegisterSubmit(values: RegisterValues) {
+    console.log("[AUTH-PAGE] onRegisterSubmit called with:", values);
+    console.log("[AUTH-PAGE] Form errors:", registerForm.formState.errors);
+    
     registerMutation.mutate({
-      username: values.username,
+      username: values.email, // Koristimo email kao username
       password: values.password,
       fullName: values.fullName,
-      email: values.username, // Koristimo username kao email
+      email: values.email,
       phone: values.phone,
       address: values.address,
       city: values.city,
       role: "customer", // Uvek postavljamo rolu na customer
     }, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log("[AUTH-PAGE] Registration success, data:", data);
         // Prikaži email verification modal nakon registracije
-        setRegisteredEmail(values.username);
+        setRegisteredEmail(values.email);
         setShowEmailVerification(true);
+      },
+      onError: (error) => {
+        console.error("[AUTH-PAGE] Registration error:", error);
       }
     });
   }
@@ -249,12 +257,22 @@ export default function AuthPage() {
                     />
                     <FormField
                       control={registerForm.control}
-                      name="username"
+                      name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Korisničko ime</FormLabel>
+                          <FormLabel>Email adresa</FormLabel>
                           <FormControl>
-                            <Input placeholder="Unesite korisničko ime" {...field} />
+                            <Input 
+                              type="email" 
+                              placeholder="vas@email.com" 
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // Auto-popuni username sa email-om
+                                registerForm.setValue('username', e.target.value);
+                              }}
+                              data-testid="input-email"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

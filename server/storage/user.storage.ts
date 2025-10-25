@@ -140,53 +140,51 @@ class UserStorage {
         verifiedBy: null
       };
 
-      // Koristimo Drizzle ORM sa type-safe insert().returning() pattern
+      // WORKAROUND: Koristimo RAW SQL da zaobiđemo Drizzle schema cache problem sa email_verified kolonom
+      // Kolona postoji u bazi ali Drizzle nije uvek vidi zbog cache-a
+      const emailVerified = insertUser.role !== 'customer'; // Non-customers ne trebaju verifikaciju
       
-      const result = await db.insert(users).values({
-        username: userToInsert.username,
-        password: userToInsert.password,
-        fullName: userToInsert.fullName,
-        role: userToInsert.role,
-        technicianId: userToInsert.technicianId,
-        supplierId: userToInsert.supplierId,
-        email: userToInsert.email,
-        emailVerified: insertUser.role !== 'customer', // Non-customers ne trebaju verifikaciju
-        phone: userToInsert.phone,
-        address: userToInsert.address,
-        city: userToInsert.city,
-        companyName: userToInsert.companyName,
-        companyId: userToInsert.companyId,
-        isVerified: userToInsert.isVerified,
-        registeredAt: userToInsert.registeredAt,
-        verifiedAt: userToInsert.verifiedAt,
-        verifiedBy: userToInsert.verifiedBy
-      }).returning();
+      const result = await db.execute<User>(
+        sql`INSERT INTO users (
+          username, password, full_name, role, technician_id, supplier_id,
+          email, email_verified, phone, address, city, company_name, company_id,
+          is_verified, registered_at, verified_at, verified_by
+        ) VALUES (
+          ${userToInsert.username}, ${userToInsert.password}, ${userToInsert.fullName},
+          ${userToInsert.role}, ${userToInsert.technicianId}, ${userToInsert.supplierId},
+          ${userToInsert.email}, ${emailVerified}, ${userToInsert.phone}, ${userToInsert.address},
+          ${userToInsert.city}, ${userToInsert.companyName}, ${userToInsert.companyId},
+          ${userToInsert.isVerified}, ${userToInsert.registeredAt.toISOString()}, 
+          ${userToInsert.verifiedAt ? userToInsert.verifiedAt.toISOString() : null}, 
+          ${userToInsert.verifiedBy}
+        ) RETURNING *`
+      );
       
-      if (!result || result.length === 0) {
+      if (!result || result.rows.length === 0) {
         throw new Error("Došlo je do greške pri kreiranju korisnika. Korisnik nije vraćen iz baze.");
       }
       
-      // Mapiranje rezultata u User objekat
-      const userResult = result[0];
+      // Mapiranje RAW SQL rezultata u User objekat (snake_case → camelCase)
+      const row = result.rows[0] as any;
       const user: User = {
-        id: userResult.id,
-        username: userResult.username,
-        password: userResult.password,
-        fullName: userResult.fullName,
-        role: userResult.role,
-        technicianId: userResult.technicianId,
-        supplierId: userResult.supplierId,
-        email: userResult.email,
-        emailVerified: userResult.emailVerified,
-        phone: userResult.phone,
-        address: userResult.address,
-        city: userResult.city,
-        companyName: userResult.companyName,
-        companyId: userResult.companyId,
-        isVerified: userResult.isVerified,
-        registeredAt: userResult.registeredAt ? new Date(userResult.registeredAt) : new Date(),
-        verifiedAt: userResult.verifiedAt ? new Date(userResult.verifiedAt) : null,
-        verifiedBy: userResult.verifiedBy
+        id: row.id,
+        username: row.username,
+        password: row.password,
+        fullName: row.full_name,
+        role: row.role,
+        technicianId: row.technician_id,
+        supplierId: row.supplier_id,
+        email: row.email,
+        emailVerified: row.email_verified,
+        phone: row.phone,
+        address: row.address,
+        city: row.city,
+        companyName: row.company_name,
+        companyId: row.company_id,
+        isVerified: row.is_verified,
+        registeredAt: row.registered_at ? new Date(row.registered_at) : new Date(),
+        verifiedAt: row.verified_at ? new Date(row.verified_at) : null,
+        verifiedBy: row.verified_by
       };
       
       return user;
