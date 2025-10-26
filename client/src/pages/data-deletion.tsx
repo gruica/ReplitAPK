@@ -72,6 +72,11 @@ export default function DataDeletion() {
 
       const data = await response.json();
       
+      if (response.status === 429) {
+        // Rate limit error
+        throw new Error(data.message || "Previše zahteva. Pokušajte ponovo kasnije.");
+      }
+      
       if (data.success) {
         toast({
           title: "Zahtev poslat",
@@ -85,13 +90,16 @@ export default function DataDeletion() {
         setReason('');
         setSpecificData('');
       } else {
-        throw new Error(data.error || 'Neočekivana greška');
+        throw new Error(data.message || data.error || 'Neočekivana greška');
       }
       
-    } catch (error) {
+    } catch (error: any) {
+      // Pokušaj da dohvati specifičnu grešku iz odgovora
+      const errorMessage = error.message || "Došlo je do greške pri slanju zahteva. Molimo pokušajte ponovo.";
+      
       toast({
         title: "Greška",
-        description: "Došlo je do greške pri slanju zahteva. Molimo pokušajte ponovo.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

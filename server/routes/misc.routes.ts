@@ -709,11 +709,24 @@ export function registerMiscRoutes(app: Express) {
   app.post("/api/data-deletion-request", async (req, res) => {
     try {
       // 🔒 SECURITY: Rate limiting - 3 zahteva po satu po IP adresi
-      const clientIp = (req.ip || req.connection.remoteAddress || 'unknown').toString();
-      const rateLimitCheck = checkDataDeletionRateLimit(clientIp);
+      // U development modu koristimo session ID ako postoji, inače IP
+      let rateLimitKey: string;
+      if (process.env.NODE_ENV === 'development') {
+        // U development/test modu koristimo kombinaciju IP + User-Agent za bolju kontrolu
+        const clientIp = (req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown').toString();
+        const userAgent = req.get('User-Agent') || 'unknown';
+        rateLimitKey = `${clientIp}:${userAgent.substring(0, 50)}`;
+        logger.debug(`[DATA-DELETION] Rate limit key (dev): ${rateLimitKey}`);
+      } else {
+        // U produkciji koristimo samo IP
+        rateLimitKey = (req.ip || req.connection.remoteAddress || 'unknown').toString();
+      }
+      
+      const rateLimitCheck = checkDataDeletionRateLimit(rateLimitKey);
+      logger.debug(`[DATA-DELETION] Rate limit check for ${rateLimitKey}: allowed=${rateLimitCheck.allowed}, current map size=${dataDeletionRateLimit.size}`);
       
       if (!rateLimitCheck.allowed) {
-        logger.security(`Data deletion rate limit exceeded from IP: ${clientIp}`);
+        logger.security(`Data deletion rate limit exceeded from: ${rateLimitKey}`);
         return res.status(429).json({ 
           error: "Previše zahteva",
           message: `Možete poslati maksimalno 3 zahteva za brisanje podataka po satu. Pokušajte ponovo za ${Math.ceil((rateLimitCheck.retryAfter || 0) / 60)} minuta.`,
@@ -725,7 +738,7 @@ export function registerMiscRoutes(app: Express) {
       
       const validatedData = insertDataDeletionRequestSchema.parse({
         ...req.body,
-        ipAddress: clientIp,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: sanitizeUserAgent(req.get('User-Agent')),
       });
       
