@@ -1853,5 +1853,60 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // POST /api/admin/check-account - Check account status (NO AUTH, SECRET KEY)
+  app.post("/api/admin/check-account", async (req, res) => {
+    try {
+      const { secretKey, email } = req.body;
+      
+      const VERIFY_SECRET = process.env.ADMIN_VERIFY_SECRET || 'frigo-verify-2025-staff-accounts';
+      
+      if (secretKey !== VERIFY_SECRET) {
+        return res.status(401).json({ error: "Nevažeći tajni ključ" });
+      }
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email je obavezan" });
+      }
+      
+      const { db } = await import('../db.js');
+      const { users } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      const user = await db.select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        role: users.role,
+        isVerified: users.isVerified,
+        emailVerified: users.emailVerified,
+        verifiedAt: users.verifiedAt,
+        createdAt: users.createdAt
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+      
+      if (user.length === 0) {
+        return res.json({
+          exists: false,
+          message: `Nalog sa email-om ${email} ne postoji u bazi`
+        });
+      }
+      
+      res.json({
+        exists: true,
+        account: user[0],
+        message: "Nalog pronađen"
+      });
+      
+    } catch (error) {
+      logger.error("[ADMIN] Greška pri proveri naloga:", error);
+      res.status(500).json({ 
+        error: "Greška pri proveri naloga",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   console.log("✅ Admin routes registered");
 }
