@@ -28,7 +28,21 @@ export class EmailVerificationService {
    */
   public async sendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
     try {
-      // Generiše novi kod (uvek, čak i ako korisnik već postoji - omogućava ponovno slanje)
+      // Provera da li email već postoji u bazi
+      const existingUser = await storage.getUserByEmail(email);
+      
+      // Ako korisnik već postoji I email je verifikovan - odbij (već ima aktivan nalog)
+      if (existingUser && existingUser.emailVerified) {
+        return {
+          success: false,
+          message: "Email adresa je već verifikovana. Možete se prijaviti."
+        };
+      }
+      
+      // Ako korisnik postoji ali NIJE verifikovan - dozvoli ponovno slanje koda
+      // Ako korisnik ne postoji - znači da se poziva iz registracije, takođe dozvoli
+      
+      // Generiše novi kod
       const verificationCode = this.generateVerificationCode();
       
       // Postavlja vreme isteka (15 minuta)
