@@ -31,16 +31,6 @@ export class EmailVerificationService {
       // Provera da li email već postoji u bazi
       const existingUser = await storage.getUserByEmail(email);
       
-      // 🐛 DEBUG: Proveri šta Drizzle zapravo vraća
-      if (existingUser) {
-        console.log('[EMAIL-VERIFICATION-DEBUG] User object:', {
-          email: existingUser.email,
-          emailVerified: existingUser.emailVerified,
-          has_emailVerified_property: 'emailVerified' in existingUser,
-          keys: Object.keys(existingUser)
-        });
-      }
-      
       // Ako korisnik već postoji I email je verifikovan - odbij (već ima aktivan nalog)
       if (existingUser && existingUser.emailVerified) {
         return {
