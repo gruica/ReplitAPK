@@ -332,4 +332,41 @@ router.post('/webhook/test', jwtAuth, requireRole(['admin']), async (req: Reques
   }
 });
 
+/**
+ * POST /api/whatsapp-business/test-send (DEV ONLY - bez autentifikacije)
+ * Testira slanje WhatsApp poruke - SAMO ZA DEVELOPMENT
+ */
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/test-send', async (req: Request, res: Response) => {
+    try {
+      const { phoneNumber, message } = req.body;
+      
+      if (!phoneNumber || !message) {
+        return res.status(400).json({
+          error: 'Broj telefona i poruka su obavezni'
+        });
+      }
+      
+      const result = await whatsappBusinessAPIService.sendTextMessage(
+        phoneNumber,
+        message,
+        false
+      );
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error: any) {
+      console.error('[WHATSAPP API TEST] Greška pri slanju poruke:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Greška pri slanju poruke',
+        message: error.message
+      });
+    }
+  });
+}
+
 export { router as whatsappBusinessRoutes };
