@@ -42,6 +42,22 @@ export const dataDeletionRequests = pgTable("data_deletion_requests", {
   userAgent: text("user_agent"),
 });
 
+export const insertDataDeletionRequestSchema = createInsertSchema(dataDeletionRequests).omit({
+  id: true,
+  requestedAt: true,
+  processedAt: true,
+  processedBy: true,
+  adminNotes: true,
+}).extend({
+  email: z.string().email("Neispravna email adresa"),
+  fullName: z.string().min(2, "Ime mora imati najmanje 2 karaktera"),
+  phone: z.string().optional(),
+  reason: z.string().optional(),
+  ipAddress: z.string().optional(),
+  userAgent: z.string().optional(),
+});
+
+export type InsertDataDeletionRequest = z.infer<typeof insertDataDeletionRequestSchema>;
 export type DataDeletionRequest = typeof dataDeletionRequests.$inferSelect;
 
 // Service Audit Logs

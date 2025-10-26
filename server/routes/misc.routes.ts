@@ -700,6 +700,7 @@ export function registerMiscRoutes(app: Express) {
       }
       
       res.status(201).json({ 
+        success: true,
         message: "Zahtev za brisanje podataka je uspešno poslat. Kontaktiraćemo vas u najkraćem roku.",
         requestId: newRequest.id 
       });

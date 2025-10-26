@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DataDeletion() {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [reason, setReason] = useState('');
@@ -43,10 +44,10 @@ export default function DataDeletion() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email && !phone) {
+    if (!fullName || !email) {
       toast({
         title: "Greška",
-        description: "Molimo unesite email ili telefon za identifikaciju.",
+        description: "Molimo unesite puno ime i email adresu.",
         variant: "destructive"
       });
       return;
@@ -61,6 +62,7 @@ export default function DataDeletion() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          fullName,
           email,
           phone,
           reason,
@@ -77,6 +79,7 @@ export default function DataDeletion() {
         });
         
         // Reset form
+        setFullName('');
         setEmail('');
         setPhone('');
         setReason('');
@@ -252,19 +255,31 @@ export default function DataDeletion() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Puno ime <span className="text-red-500">*</span></label>
+                  <Input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Vaše ime i prezime"
+                    className="w-full"
+                    required
+                  />
+                </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Email adresa</label>
+                    <label className="block text-sm font-medium mb-2">Email adresa <span className="text-red-500">*</span></label>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="vasa@email.com"
                       className="w-full"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Broj telefona</label>
+                    <label className="block text-sm font-medium mb-2">Broj telefona (opciono)</label>
                     <Input
                       type="tel"
                       value={phone}
