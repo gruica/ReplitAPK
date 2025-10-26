@@ -140,41 +140,45 @@ class UserStorage {
         verifiedBy: null
       };
 
-      // ULTIMATE WORKAROUND: Skip email_verified kolonu potpuno - postavićemo je POSLE insert-a
-      // Razlog: Neon serverless + Drizzle cache persistence bug koji se ne može rešiti
+      // RADIKALNO REŠENJE: Zaobiđi Drizzle potpuno zbog nepreboljivog schema cache buga
+      // Koristimo direktan pool.query sa čistim SQL-om
+      const emailVerified = insertUser.role !== 'customer' ? true : false;
       
-      const [newUser] = await db.insert(users).values({
-        username: userToInsert.username,
-        password: userToInsert.password,
-        fullName: userToInsert.fullName,
-        role: userToInsert.role,
-        technicianId: userToInsert.technicianId,
-        supplierId: userToInsert.supplierId,
-        email: userToInsert.email,
-        // email_verified ĆE BITI POST AVLJENA ODMAH NAKON INSERTA
-        phone: userToInsert.phone,
-        address: userToInsert.address,
-        city: userToInsert.city,
-        companyName: userToInsert.companyName,
-        companyId: userToInsert.companyId,
-        isVerified: userToInsert.isVerified,
-        registeredAt: userToInsert.registeredAt,
-        verifiedAt: userToInsert.verifiedAt,
-        verifiedBy: userToInsert.verifiedBy
-      }).returning();
+      const { pool } = await import('../db');
       
-      if (!newUser) {
-        throw new Error("Kreiranje korisnika nije uspelo");
-      }
+      // Direktan SQL INSERT sa parametrima (bezbedno od SQL injection)
+      const insertQuery = `
+        INSERT INTO users (
+          username, password, full_name, role, 
+          technician_id, supplier_id, email, email_verified,
+          phone, address, city, company_name, company_id,
+          is_verified, registered_at, verified_at, verified_by
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+        ) RETURNING *
+      `;
       
-      // Odmah ažuriraj email_verified koristeći RAW SQL (NAKON što je user kreiran)
-      const emailVerified = insertUser.role !== 'customer';
-      await db.execute(
-        sql`UPDATE users SET email_verified = ${emailVerified} WHERE id = ${newUser.id}`
-      );
+      const insertValues = [
+        userToInsert.username,
+        userToInsert.password,
+        userToInsert.fullName,
+        userToInsert.role,
+        userToInsert.technicianId,
+        userToInsert.supplierId,
+        userToInsert.email,
+        emailVerified,
+        userToInsert.phone,
+        userToInsert.address,
+        userToInsert.city,
+        userToInsert.companyName,
+        userToInsert.companyId,
+        userToInsert.isVerified,
+        userToInsert.registeredAt,
+        userToInsert.verifiedAt,
+        userToInsert.verifiedBy
+      ];
       
-      // Vrati koristitka sa ažuriranim emailVerified poljem
-      const result = { rows: [{...newUser, email_verified: emailVerified}] };
+      const result = await pool.query(insertQuery, insertValues);
       
       if (!result || result.rows.length === 0) {
         throw new Error("Došlo je do greške pri kreiranju korisnika. Korisnik nije vraćen iz baze.");
