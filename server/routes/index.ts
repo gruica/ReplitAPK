@@ -12,6 +12,7 @@ import { registerMiscRoutes } from "./misc.routes";
 import { registerApiV1Routes } from "./api-v1.routes";
 import { registerBusinessPartnerRoutes } from "../business-partner-routes";
 import { registerSupplierRoutes } from "./supplier.routes";
+import { whatsappBusinessRoutes } from "./whatsapp-business.routes.js";
 
 /**
  * Main Router - Registers all route modules
@@ -32,6 +33,11 @@ export function registerAllRoutes(app: Express) {
   registerMiscRoutes(app);
   registerBusinessPartnerRoutes(app);
   registerSupplierRoutes(app);
+  
+  // WhatsApp Business API routes
+  app.use("/api/whatsapp-business", whatsappBusinessRoutes);
+  app.use("/api/whatsapp-webhook", whatsappBusinessRoutes);
+  console.log("✅ WhatsApp Business API routes registered");
   
   // Register API v1 versioning (must be after original routes)
   registerApiV1Routes(app);
