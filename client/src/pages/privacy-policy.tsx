@@ -1,5 +1,7 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Link } from 'wouter';
+import { ArrowLeft, Shield, Lock, MessageCircle, Database, Eye } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 
 export default function PrivacyPolicyPage() {
@@ -7,195 +9,353 @@ export default function PrivacyPolicyPage() {
     <>
       <SEO 
         title="Politika Privatnosti - Frigo Sistem Todosijević | Zaštita Podataka"
-        description="Politika privatnosti i zaštita ličnih podataka - Frigo Sistem Todosijević. GDPR usklađenost, transparentnost i sigurnost vaših podataka."
-        keywords="politika privatnosti, gdpr, zaštita podataka, lični podaci, bezbednost"
-        canonical="https://www.tehnikamne.me/privacy/policy"
+        description="Politika privatnosti i zaštita ličnih podataka - Frigo Sistem Todosijević. GDPR usklađenost, WhatsApp Business API komunikacija, transparentnost i sigurnost vaših podataka."
+        keywords="politika privatnosti, gdpr, zaštita podataka, lični podaci, bezbednost, whatsapp business"
+        canonical="https://www.frigosistemtodosijevic.me/privacy-policy"
       />
       <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Privacy Policy for Frigo Sistem Todosijević</CardTitle>
-            <p className="text-center text-gray-600">Last Updated: 09. January 2025.</p>
-          </CardHeader>
-          
-          <CardContent className="prose prose-gray max-w-none space-y-6">
-            <section>
-              <h2 className="text-xl font-semibold mb-3">1. Introduction</h2>
-              <p>
-                Welcome to Frigo Sistem Todosijević (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and its associated services.
-              </p>
-              <p>
-                We respect your privacy and are committed to protecting your personal data. By choosing to use our App and logging in with Facebook, you agree to the collection and use of information in accordance with this policy.
-              </p>
-            </section>
+        <div className="container mx-auto max-w-4xl px-4">
+          {/* Header */}
+          <div className="mb-8">
+            <Button variant="ghost" asChild className="mb-4">
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Nazad na početnu
+              </Link>
+            </Button>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Politika privatnosti</h1>
+            <p className="text-gray-600">Poslednja izmena: {new Date().toLocaleDateString('sr-RS')}</p>
+          </div>
 
-            <section>
-              <h2 className="text-xl font-semibold mb-3">2. Information We Collect</h2>
-              <p>
-                When you use Facebook Login to access our App, we may collect the following types of information from your Facebook profile, only after you explicitly grant us permission:
-              </p>
-              
-              <div className="ml-4 space-y-4">
-                <div>
-                  <h3 className="font-semibold">Information from Facebook Login:</h3>
-                  <ul className="list-disc ml-6 space-y-1">
-                    <li><strong>Public Profile:</strong> This includes your name, profile picture, age range, gender, and your public information on Facebook.</li>
-                    <li><strong>Email Address:</strong> Your primary email address associated with your Facebook account.</li>
-                    <li><strong>Other Information:</strong> Any other information you agree to share with us through the Facebook permissions screen.</li>
-                  </ul>
+          {/* Main Content */}
+          <div className="space-y-6">
+            {/* Introduction */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  Uvod
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>
+                  Dobrodošli u Frigo Sistem Todosijević aplikaciju. Ova politika privatnosti objašnjava kako 
+                  prikupljamo, koristimo, otkrivamo i čuvamo vaše informacije kada koristite našu mobilnu 
+                  aplikaciju, web platformu i WhatsApp Business API usluge.
+                </p>
+                <p>
+                  Poštujemo vašu privatnost i posvećeni smo zaštiti vaših ličnih podataka. Korišćenjem naših 
+                  usluga pristajete na prikupljanje i upotrebu informacija u skladu sa ovom politikom.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Company Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Informacije o kompaniji</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p><strong>Naziv:</strong> Frigo Sistem Todosijević</p>
+                  <p><strong>Adresa:</strong> Lastva Grbaljska 85317 Kotor, Crna Gora</p>
+                  <p><strong>Telefon:</strong> +382 67 051 141</p>
+                  <p><strong>Email:</strong> info@frigosistemtodosijevic.me</p>
+                  <p><strong>Website:</strong> www.frigosistemtodosijevic.me</p>
+                  <p><strong>Email za privatnost:</strong> privacy@frigosistemtodosijevic.me</p>
                 </div>
-                
-                <div>
-                  <h3 className="font-semibold">Information We Collect Directly:</h3>
-                  <ul className="list-disc ml-6 space-y-1">
-                    <li><strong>App Usage Data:</strong> We may automatically collect certain information about how you interact with the App. This includes your device type, operating system, unique device identifiers, IP address, and information about your use of our features and services.</li>
-                    <li><strong>User-Provided Content:</strong> Any information, content, or materials you voluntarily create or submit within the App.</li>
-                  </ul>
+              </CardContent>
+            </Card>
+
+            {/* Data Collection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5 text-green-600" />
+                  Informacije koje prikupljamo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <h4>Informacije koje nam pružate direktno:</h4>
+                <ul>
+                  <li><strong>Osnovne informacije:</strong> Ime, prezime, broj telefona, email adresa, fizička adresa</li>
+                  <li><strong>Informacije o uređajima:</strong> Model, serijski broj, opis kvara, fotografije uređaja</li>
+                  <li><strong>Istorija servisa:</strong> Datum servisa, izvedeni radovi, korišćeni delovi, status servisa</li>
+                  <li><strong>Email korespondencija:</strong> Komunikacija putem email-a o servisima i zahtevima</li>
+                </ul>
+
+                <h4>Informacije koje automatski prikupljamo:</h4>
+                <ul>
+                  <li><strong>Podaci o korišćenju aplikacije:</strong> Tip uređaja, operativni sistem, IP adresa</li>
+                  <li><strong>Tehnički podaci:</strong> Jedinstveni identifikatori uređaja, informacije o korišćenju funkcija i usluga</li>
+                  <li><strong>Log podaci:</strong> Datumi i vremena pristupa, akcije u aplikaciji</li>
+                </ul>
+
+                <h4>WhatsApp Business API komunikacija:</h4>
+                <ul>
+                  <li><strong>Broj telefona:</strong> WhatsApp broj za slanje obaveštenja</li>
+                  <li><strong>Poruke:</strong> Sadržaj WhatsApp poruka koje razmenjujemo (potvrde, obaveštenja, status servisa)</li>
+                  <li><strong>Fotografije:</strong> Fotografije sa servisa poslate putem WhatsApp-a</li>
+                  <li><strong>Metapodaci:</strong> Vreme slanja/primanja poruka, status isporuke</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* WhatsApp Communication */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-green-600" />
+                  WhatsApp Business API komunikacija
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <h4>Kako koristimo WhatsApp Business API:</h4>
+                <p>
+                  Koristimo Meta WhatsApp Business Cloud API za komunikaciju sa klijentima. Ovaj servis omogućava:
+                </p>
+                <ul>
+                  <li>Slanje automatskih potvrda prijema zahteva za servis</li>
+                  <li>Obaveštenja o zakazanim terminima</li>
+                  <li>Statusne poruke o napretku servisa</li>
+                  <li>Obaveštenja o potrebnim rezervnim delovima i cenama</li>
+                  <li>Potvrde o završetku servisa</li>
+                  <li>Slanje fotografija sa servisa uz vaš pristanak</li>
+                </ul>
+
+                <h4>Saglasnost za WhatsApp komunikaciju:</h4>
+                <p>
+                  Prilikom registracije ili podnošenja zahteva za servis, možete da date saglasnost za primanje 
+                  WhatsApp poruka. Vaš broj telefona će biti korišćen isključivo za komunikaciju vezanu za vaše servise.
+                </p>
+
+                <h4>Odustajanje od WhatsApp komunikacije:</h4>
+                <p>
+                  Možete u bilo kom trenutku da se odjavite od primanja WhatsApp poruka tako što:
+                </p>
+                <ul>
+                  <li>Pošaljete poruku "STOP" na naš WhatsApp broj</li>
+                  <li>Kontaktirate našu podršku na info@frigosistemtodosijevic.me</li>
+                  <li>Pozovete nas na +382 67 051 141</li>
+                </ul>
+
+                <h4>WhatsApp podaci koji se dele sa Meta platformom:</h4>
+                <p>
+                  Kada koristimo WhatsApp Business API, Meta (Facebook) može prikupljati:
+                </p>
+                <ul>
+                  <li>Vaš WhatsApp broj telefona</li>
+                  <li>Metapodatke poruka (vreme, status isporuke)</li>
+                  <li>Informacije o vašem uređaju i vezi</li>
+                </ul>
+                <p>
+                  Meta procesuira ove podatke u skladu sa svojom <a href="https://www.whatsapp.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">politikom privatnosti WhatsApp-a</a>.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Data Usage */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-purple-600" />
+                  Kako koristimo vaše informacije
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>Vaše informacije koristimo za sledeće svrhe:</p>
+                <ul>
+                  <li><strong>Pružanje usluga:</strong> Kreiranje naloga, upravljanje servisima, praćenje statusa</li>
+                  <li><strong>Komunikacija:</strong> Slanje obaveštenja, potvrda, tehničkih poruka putem WhatsApp-a, email-a ili SMS-a</li>
+                  <li><strong>Poboljšanje usluge:</strong> Personalizacija iskustva, analiza trendova korišćenja</li>
+                  <li><strong>Tehnička podrška:</strong> Rešavanje problema, pružanje pomoći</li>
+                  <li><strong>Sigurnost:</strong> Otkrivanje i sprečavanje zloupotreba, zaštita sistema</li>
+                  <li><strong>Pravne obaveze:</strong> Ispunjavanje pravnih i regulatornih zahteva</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* GDPR Compliance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Pravni osnov za obradu podataka (GDPR usklađenost)</CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>Ako se nalazite u Evropskom ekonomskom prostoru (EEA), naš pravni osnov za prikupljanje i korišćenje vaših informacija je:</p>
+                <ul>
+                  <li><strong>Vaša saglasnost:</strong> Davanjem dozvole za WhatsApp komunikaciju i korišćenje aplikacije pristajete na prikupljanje i upotrebu vaših informacija</li>
+                  <li><strong>Izvršavanje ugovora:</strong> Pružanje usluga koje ste zatražili</li>
+                  <li><strong>Legitimni interesi:</strong> Upravljanje našim poslom i uslugama, pod uslovom da vaša osnovna prava ne prevazilaze te interese</li>
+                  <li><strong>Pravne obaveze:</strong> Čuvanje podataka u skladu sa poreskim i računovodstvenim zakonima</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Data Sharing */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Deljenje informacija</CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>Ne prodajemo, ne trgujemo niti iznajmljujemo vaše lične podatke trećim stranama. Možemo deliti informacije u sledećim situacijama:</p>
+                <ul>
+                  <li><strong>Pružaoci usluga:</strong> Možemo deliti informacije sa trećim stranama koje pružaju usluge u naše ime (npr. cloud hosting servisi, WhatsApp Business API, email servisi). Ove strane su obavezne da drže vaše informacije poverljivim.</li>
+                  <li><strong>Pravni zahtevi:</strong> Možemo otkriti vaše informacije ako je to zakonom propisano ili kao odgovor na validne zahteve javnih organa</li>
+                  <li><strong>Meta (WhatsApp):</strong> Kada koristite WhatsApp komunikaciju, Meta procesuira određene podatke u skladu sa svojom politikom privatnosti</li>
+                </ul>
+
+                <h4>Politika odgovora na zahteve vlasti:</h4>
+                <p>Svaki zahtev vladinih organa podleže obaveznom pravnom pregledu. Pružamo samo minimalno potrebne podatke i, gde je zakonom dozvoljeno, obaveštavamo korisnike o zahtevima.</p>
+              </CardContent>
+            </Card>
+
+            {/* Data Security */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-red-600" />
+                  Sigurnost podataka
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>Koristimo administrativne, tehničke i fizičke sigurnosne mere za zaštitu vaših ličnih podataka:</p>
+                <ul>
+                  <li><strong>Šifrovanje:</strong> SSL/TLS šifrovanje za prenos podataka</li>
+                  <li><strong>Kontrola pristupa:</strong> Ograničen pristup podacima samo ovlašćenom osoblju</li>
+                  <li><strong>Sigurne baze podataka:</strong> PostgreSQL baza sa modernim sigurnosnim mehanizmima</li>
+                  <li><strong>Redovne rezerve:</strong> Automatske backup kopije podataka</li>
+                  <li><strong>Monitoring:</strong> Praćenje sistema za otkrivanje neovlašćenog pristupa</li>
+                </ul>
+                <p className="mt-4 text-sm text-gray-600">
+                  Napomena: Nijedan metod prenosa preko interneta ili metod elektronskog skladištenja nije 100% siguran.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Data Retention */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Zadržavanje podataka</CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>
+                  Zadržavamo vaše lične podatke samo onoliko koliko je potrebno za svrhe navedene u ovoj politici privatnosti, 
+                  za ispunjavanje naših pravnih obaveza, rešavanje sporova i sprovođenje naših politika.
+                </p>
+                <ul>
+                  <li><strong>Aktivni korisnički podaci:</strong> Dok je vaš nalog aktivan</li>
+                  <li><strong>Istorija servisa:</strong> 5 godina radi garancije i podrške</li>
+                  <li><strong>Finansijski zapisi:</strong> Prema zakonskim obavezama (obično 10 godina)</li>
+                  <li><strong>WhatsApp komunikacija:</strong> 2 godine ili dok ne zatražite brisanje</li>
+                  <li><strong>Fotografije servisa:</strong> 1 godina nakon završetka servisa</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* User Rights */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Vaša prava na zaštitu podataka</CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>U zavisnosti od vaše lokacije, možete imati sledeća prava u vezi sa vašim ličnim podacima:</p>
+                <ul>
+                  <li><strong>Pristup i prenosivost:</strong> Pravo da zatražite kopije svojih ličnih podataka</li>
+                  <li><strong>Ispravka:</strong> Pravo da zatražite ispravku netačnih podataka</li>
+                  <li><strong>Brisanje ("Pravo na zaborav"):</strong> Pravo da zatražite brisanje svojih ličnih podataka pod određenim uslovima</li>
+                  <li><strong>Ograničenje obrade:</strong> Pravo da zatražite ograničenje obrade vaših podataka</li>
+                  <li><strong>Prigovor na obradu:</strong> Pravo da prigovorite obradi vaših podataka</li>
+                  <li><strong>Povlačenje saglasnosti:</strong> Pravo da povučete saglasnost u bilo kom trenutku</li>
+                </ul>
+                <p className="mt-4">
+                  Da biste ostvarili bilo koje od ovih prava, kontaktirajte nas na{' '}
+                  <a href="mailto:privacy@frigosistemtodosijevic.me" className="text-blue-600 hover:underline">
+                    privacy@frigosistemtodosijevic.me
+                  </a>{' '}
+                  ili posetite našu{' '}
+                  <Link href="/data-deletion" className="text-blue-600 hover:underline">
+                    stranicu za brisanje podataka
+                  </Link>.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Children's Privacy */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Privatnost dece</CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>
+                  Naša aplikacija nije namenjena deci mlađoj od 13 godina. Svesno ne prikupljamo lične podatke 
+                  od dece mlađe od 13 godina. Ako saznate da je dete pružilo lične podatke, molimo vas da nas kontaktirate.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* International Transfers */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Međunarodni transferi podataka</CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>
+                  Vaši podaci mogu biti preneti i održavani na serverima koji se nalaze van vaše države, 
+                  provincije, zemlje ili druge vladine jurisdikcije gde zakoni o zaštiti podataka mogu biti 
+                  različiti od onih u vašoj jurisdikciji.
+                </p>
+                <p>
+                  Koristimo odgovarajuće zaštitne mere da osiguramo da vaši lični podaci budu bezbedno i 
+                  u skladu sa ovom politikom privatnosti.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Changes to Policy */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Izmene ove politike privatnosti</CardTitle>
+              </CardHeader>
+              <CardContent className="prose max-w-none">
+                <p>
+                  Možemo s vremena na vreme ažurirati našu politiku privatnosti. O svim izmenama ćemo vas 
+                  obavestiti postavljanjem nove politike privatnosti na ovu stranicu i ažuriranjem datuma 
+                  "Poslednja izmena" na vrhu ove stranice.
+                </p>
+                <p>
+                  O značajnim izmenama ćemo vas obavestiti putem WhatsApp poruke, email-a ili istaknutim 
+                  obaveštenjem u aplikaciji pre nego što izmene stupe na snagu.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Contact */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Kontakt</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  Ako imate pitanja ili nedoumice u vezi sa ovom politikom privatnosti ili našim praksama u vezi sa podacima, kontaktirajte nas:
+                </p>
+                <div className="space-y-2">
+                  <p><strong>Email za privatnost:</strong> <a href="mailto:privacy@frigosistemtodosijevic.me" className="text-blue-600 hover:underline">privacy@frigosistemtodosijevic.me</a></p>
+                  <p><strong>Email za podršku:</strong> <a href="mailto:info@frigosistemtodosijevic.me" className="text-blue-600 hover:underline">info@frigosistemtodosijevic.me</a></p>
+                  <p><strong>Telefon:</strong> +382 67 051 141</p>
+                  <p><strong>WhatsApp:</strong> +382 67 051 141</p>
+                  <p><strong>Website:</strong> <a href="https://www.frigosistemtodosijevic.me" className="text-blue-600 hover:underline">www.frigosistemtodosijevic.me</a></p>
+                  <p><strong>Adresa:</strong> Lastva Grbaljska 85317 Kotor, Crna Gora</p>
                 </div>
-              </div>
-            </section>
+              </CardContent>
+            </Card>
+          </div>
 
-            <section>
-              <h2 className="text-xl font-semibold mb-3">3. How We Use Your Information</h2>
-              <p>We use the information we collect for the following purposes:</p>
-              <ul className="list-disc ml-6 space-y-1">
-                <li>To create and manage your user account.</li>
-                <li>To provide, maintain, and improve the core functionality of the App.</li>
-                <li>To communicate with you, including sending you technical notices, updates, and support messages.</li>
-                <li>To personalize and improve your experience within the App.</li>
-                <li>To monitor and analyze trends and usage of the App.</li>
-                <li>To detect, prevent, and address technical issues.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">4. Legal Basis for Processing (GDPR Compliance)</h2>
-              <p>If you are from the European Economic Area (EEA), our legal basis for collecting and using your information is:</p>
-              <ul className="list-disc ml-6 space-y-1">
-                <li><strong>Your Consent:</strong> By granting permissions through Facebook Login, you consent to our collection and use of your information.</li>
-                <li><strong>Performance of a Contract:</strong> To provide you with the services you request.</li>
-                <li><strong>Legitimate Interests:</strong> To operate our App and services, provided your fundamental rights do not override those interests.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">5. How We Share Your Information</h2>
-              <p>We do not sell, trade, or rent your personal information to third parties. We may share information in the following situations:</p>
-              <ul className="list-disc ml-6 space-y-1">
-                <li><strong>Service Providers:</strong> We may share your information with third-party vendors and service providers who perform services on our behalf (e.g., cloud hosting, data analysis). These parties are obligated to keep your information confidential.</li>
-                <li><strong>Legal Requirements:</strong> We may disclose your information if required to do so by law or in response to valid requests by public authorities, subject to our Government Data Request Policy outlined below.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">5.1. Government Data Request Policy</h2>
-              <p>We have established comprehensive policies for handling requests for personal data from government agencies and public authorities:</p>
-              
-              <div className="ml-4 space-y-4">
-                <div>
-                  <h3 className="font-semibold">Mandatory Legal Review:</h3>
-                  <p>Every government data request undergoes mandatory legal review to verify its lawfulness, proper authorization, and compliance with applicable data protection laws including GDPR and local legislation.</p>
-                </div>
-                
-                <div>
-                  <h3 className="font-semibold">Challenge Procedures:</h3>
-                  <p>We maintain formal procedures for challenging government data requests that we determine to be:</p>
-                  <ul className="list-disc ml-6 space-y-1">
-                    <li>Legally insufficient or improperly authorized</li>
-                    <li>Overly broad or not proportionate to the stated purpose</li>
-                    <li>In violation of user privacy rights or applicable data protection laws</li>
-                    <li>Lacking proper legal basis or justification</li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h3 className="font-semibold">Data Minimization Policy:</h3>
-                  <p>When legally compelled to respond to valid government requests, we apply strict data minimization principles:</p>
-                  <ul className="list-disc ml-6 space-y-1">
-                    <li>We disclose only the minimum data necessary to satisfy the legal requirement</li>
-                    <li>We provide the narrowest possible scope of information relevant to the specific investigation</li>
-                    <li>We exclude unrelated personal data not specifically requested or legally required</li>
-                    <li>We seek to provide aggregated or anonymized data when possible instead of individual records</li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h3 className="font-semibold">Request Documentation and Reporting:</h3>
-                  <p>We maintain comprehensive documentation of all government data requests, including:</p>
-                  <ul className="list-disc ml-6 space-y-1">
-                    <li>Details of the requesting authority and legal basis for the request</li>
-                    <li>Scope and type of data requested vs. data actually provided</li>
-                    <li>Legal analysis and justification for our response</li>
-                    <li>Any challenges or objections raised and their outcomes</li>
-                    <li>Timeline of all communications and actions taken</li>
-                  </ul>
-                  <p className="mt-2">This documentation is retained for audit purposes and to ensure accountability in our data disclosure practices.</p>
-                </div>
-                
-                <div>
-                  <h3 className="font-semibold">User Notification:</h3>
-                  <p>Where legally permitted, we will notify affected users about government data requests concerning their personal information, unless such notification is prohibited by law or court order.</p>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">6. Data Retention</h2>
-              <p>
-                We will retain your personal information only for as long as is necessary for the purposes set out in this Privacy Policy, to comply with our legal obligations, resolve disputes, and enforce our policies.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">7. Your Data Protection Rights</h2>
-              <p>Depending on your location, you may have the following rights regarding your personal information:</p>
-              <ul className="list-disc ml-6 space-y-1">
-                <li><strong>Access and Portability:</strong> The right to request copies of your personal data.</li>
-                <li><strong>Rectification:</strong> The right to request that we correct any information you believe is inaccurate.</li>
-                <li><strong>Erasure ("Right to be Forgotten"):</strong> The right to request that we erase your personal data, under certain conditions.</li>
-                <li><strong>Withdraw Consent:</strong> The right to withdraw your consent at any time where we relied on your consent to process your personal information.</li>
-              </ul>
-              <p>To exercise any of these rights, please contact us at <a href="mailto:gruica@icloud.com" className="text-blue-600 hover:underline">gruica@icloud.com</a>.</p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">8. Data Security</h2>
-              <p>
-                We use administrative, technical, and physical security measures to help protect your personal information. However, please remember that no method of transmission over the Internet or method of electronic storage is 100% secure.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">9. Children's Privacy</h2>
-              <p>
-                Our App is not intended for use by children under the age of 13. We do not knowingly collect personally identifiable information from children under 13. If you become aware that a child has provided us with personal information, please contact us.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">10. Changes to This Privacy Policy</h2>
-              <p>
-                We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold mb-3">11. Contact Us</h2>
-              <p>If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:</p>
-              <ul className="list-disc ml-6 space-y-1">
-                <li>Email: <a href="mailto:gruica@icloud.com" className="text-blue-600 hover:underline">gruica@icloud.com</a></li>
-                <li>Website: <a href="https://www.frigosistemtodosijevic.me/privacy/policy" className="text-blue-600 hover:underline">www.frigosistemtodosijevic.me/privacy/policy</a></li>
-              </ul>
-            </section>
-
-            <div className="mt-8 pt-6 border-t text-center text-gray-600">
-              <p>© 2025 Frigo Sistem Todosijević. All rights reserved.</p>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Footer */}
+          <div className="mt-8 text-center text-sm text-gray-500">
+            <p>© 2025 Frigo Sistem Todosijević. Sva prava zadržana.</p>
+          </div>
+        </div>
       </div>
-    </div>
     </>
   );
 }
