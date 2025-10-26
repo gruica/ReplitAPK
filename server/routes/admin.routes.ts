@@ -1755,5 +1755,103 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  /**
+   * @swagger
+   * /api/admin/verify-all-staff:
+   *   post:
+   *     tags: [Admin - System]
+   *     summary: Verify all staff accounts with secret key
+   *     description: Auto-verify all admin, technician, business_partner, and supplier accounts using secret key
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               secretKey:
+   *                 type: string
+   *                 description: Secret verification key
+   *     responses:
+   *       200:
+   *         description: Staff accounts verified successfully
+   *       401:
+   *         description: Invalid secret key
+   *       500:
+   *         $ref: '#/components/responses/ServerError'
+   */
+  // POST /api/admin/verify-all-staff - Verify all staff accounts with secret key (NO AUTH REQUIRED)
+  app.post("/api/admin/verify-all-staff", async (req, res) => {
+    try {
+      const { secretKey } = req.body;
+      
+      // Secret key za verifikaciju - možete ga promeniti preko environment varijable
+      const VERIFY_SECRET = process.env.ADMIN_VERIFY_SECRET || 'frigo-verify-2025-staff-accounts';
+      
+      if (secretKey !== VERIFY_SECRET) {
+        logger.warn(`[ADMIN] Neuspešan pokušaj verifikacije staff naloga - nevažeći secret key`);
+        return res.status(401).json({ error: "Nevažeći tajni ključ" });
+      }
+      
+      const { db } = await import('../db.js');
+      const { users } = await import('@shared/schema');
+      const { eq, and, inArray } = await import('drizzle-orm');
+      
+      // Find all unverified admin, technician, business_partner, and supplier accounts
+      const unverifiedStaff = await db.select()
+        .from(users)
+        .where(
+          and(
+            eq(users.isVerified, false),
+            inArray(users.role, ['admin', 'technician', 'business_partner', 'supplier'])
+          )
+        );
+      
+      if (unverifiedStaff.length === 0) {
+        return res.json({
+          success: true,
+          message: "Svi staff nalozi su već verifikovani",
+          verifiedCount: 0
+        });
+      }
+      
+      logger.info(`[ADMIN] Verifikacija ${unverifiedStaff.length} staff naloga sa tajnim ključem`, {
+        count: unverifiedStaff.length,
+        timestamp: new Date().toISOString()
+      });
+      
+      const verifiedEmails: string[] = [];
+      
+      // Verify all staff accounts
+      for (const user of unverifiedStaff) {
+        await db.update(users)
+          .set({
+            isVerified: true,
+            emailVerified: true,
+            verifiedAt: new Date(),
+            verifiedBy: 1 // System verification
+          })
+          .where(eq(users.id, user.id));
+        
+        verifiedEmails.push(`${user.role}: ${user.email}`);
+        logger.info(`[ADMIN] Verifikovan ${user.role} nalog: ${user.email}`);
+      }
+      
+      res.json({
+        success: true,
+        message: `Uspešno verifikovano ${unverifiedStaff.length} staff naloga`,
+        verifiedCount: unverifiedStaff.length,
+        verifiedAccounts: verifiedEmails
+      });
+      
+    } catch (error) {
+      logger.error("[ADMIN] Greška pri verifikaciji staff naloga:", error);
+      res.status(500).json({ 
+        error: "Greška pri verifikaciji staff naloga",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   console.log("✅ Admin routes registered");
 }
