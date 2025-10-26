@@ -91,8 +91,27 @@ function sanitizeUserAgent(userAgent: string | undefined): string {
     .substring(0, 200); // Limit na 200 karaktera za sigurnost
 }
 
+// 🔒 SECURITY: HTML Escape funkcija za XSS zaštitu u email template-ovima
+function escapeHtml(text: string | undefined | null): string {
+  if (!text) return '';
+  
+  const htmlEscapeMap: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;'
+  };
+  
+  return String(text).replace(/[&<>"'\/]/g, (char) => htmlEscapeMap[char]);
+}
+
 // Rate limiting for QR generation (per IP)
 const qrRateLimit = new Map<string, { count: number; resetTime: number }>();
+
+// 🔒 SECURITY: Rate limiting for data deletion requests (per IP) - 3 zahteva po satu
+const dataDeletionRateLimit = new Map<string, { count: number; resetTime: number }>();
 
 function isValidUrl(url: string): boolean {
   try {
@@ -127,6 +146,27 @@ function checkQRRateLimit(ip: string): boolean {
   
   limit.count++;
   return true;
+}
+
+// 🔒 SECURITY: Rate limiting za data deletion zahteve - 3 zahteva po satu po IP adresi
+function checkDataDeletionRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const limit = dataDeletionRateLimit.get(ip);
+  
+  if (!limit || now > limit.resetTime) {
+    // Reset nakon 1 sata, dozvoli 3 zahteva po periodu
+    dataDeletionRateLimit.set(ip, { count: 1, resetTime: now + 3600000 }); // 1 sat = 3600000ms
+    return { allowed: true };
+  }
+  
+  if (limit.count >= 3) {
+    const retryAfter = Math.ceil((limit.resetTime - now) / 1000); // sekunde do sledećeg pokušaja
+    logger.security(`Data deletion rate limit exceeded for IP: ${ip}`);
+    return { allowed: false, retryAfter };
+  }
+  
+  limit.count++;
+  return { allowed: true };
 }
 
 // Service photo access check helper
@@ -685,12 +725,12 @@ export function registerMiscRoutes(app: Express) {
           subject: '🔒 Novi zahtev za brisanje podataka - GDPR',
           html: `
             <h2>🔒 Novi zahtev za brisanje podataka</h2>
-            <p><strong>Email:</strong> ${validatedData.email}</p>
-            <p><strong>Ime i prezime:</strong> ${validatedData.fullName}</p>
-            <p><strong>Telefon:</strong> ${validatedData.phone || 'Nije naveden'}</p>
-            <p><strong>Razlog:</strong> ${validatedData.reason || 'Nije naveden'}</p>
+            <p><strong>Email:</strong> ${escapeHtml(validatedData.email)}</p>
+            <p><strong>Ime i prezime:</strong> ${escapeHtml(validatedData.fullName)}</p>
+            <p><strong>Telefon:</strong> ${escapeHtml(validatedData.phone)}</p>
+            <p><strong>Razlog:</strong> ${escapeHtml(validatedData.reason)}</p>
             <p><strong>Vreme zahteva:</strong> ${new Date().toLocaleString('sr-RS')}</p>
-            <p><strong>IP adresa:</strong> ${validatedData.ipAddress}</p>
+            <p><strong>IP adresa:</strong> ${escapeHtml(validatedData.ipAddress)}</p>
             <hr>
             <p>Molimo da obradi zahtev u admin panelu aplikacije.</p>
           `
