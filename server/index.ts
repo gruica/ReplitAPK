@@ -315,6 +315,50 @@ app.use((req, res, next) => {
     }
   }
   
+  // 🔐 PRODUCTION: Auto-verify admin, technician, and supplier accounts on first startup
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const { db } = await import('./db.js');
+      const { users } = await import('@shared/schema');
+      const { eq, or, and, inArray } = await import('drizzle-orm');
+      
+      // Find all unverified admin, technician, business_partner, and supplier accounts
+      const unverifiedStaff = await db.select()
+        .from(users)
+        .where(
+          and(
+            eq(users.isVerified, false),
+            inArray(users.role, ['admin', 'technician', 'business_partner', 'supplier'])
+          )
+        );
+      
+      if (unverifiedStaff.length > 0) {
+        console.log(`🔐 [PRODUCTION] Pronađeno ${unverifiedStaff.length} neverifikovanih staff naloga`);
+        
+        // Verify all staff accounts
+        for (const user of unverifiedStaff) {
+          await db.update(users)
+            .set({
+              isVerified: true,
+              emailVerified: true,
+              verifiedAt: new Date(),
+              verifiedBy: 1 // System auto-verification
+            })
+            .where(eq(users.id, user.id));
+          
+          console.log(`✅ [PRODUCTION] Auto-verifikovan ${user.role} nalog: ${user.email}`);
+        }
+        
+        console.log(`✅ [PRODUCTION] Svi staff nalozi su uspešno verifikovani`);
+      } else {
+        console.log(`ℹ️  [PRODUCTION] Svi staff nalozi su već verifikovani`);
+      }
+    } catch (error) {
+      console.error('⚠️  [PRODUCTION] Greška pri auto-verifikaciji staff naloga:', error);
+      // Aplikacija i dalje može da radi bez auto-verifikacije
+    }
+  }
+  
   // Register all modular routes
   registerAllRoutes(app);
   
