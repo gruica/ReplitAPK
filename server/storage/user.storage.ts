@@ -140,25 +140,41 @@ class UserStorage {
         verifiedBy: null
       };
 
-      // WORKAROUND: Koristimo RAW SQL da zaobiđemo Drizzle schema cache problem sa email_verified kolonom
-      // Kolona postoji u bazi ali Drizzle nije uvek vidi zbog cache-a
-      const emailVerified = insertUser.role !== 'customer'; // Non-customers ne trebaju verifikaciju
+      // ULTIMATE WORKAROUND: Skip email_verified kolonu potpuno - postavićemo je POSLE insert-a
+      // Razlog: Neon serverless + Drizzle cache persistence bug koji se ne može rešiti
       
-      const result = await db.execute<User>(
-        sql`INSERT INTO users (
-          username, password, full_name, role, technician_id, supplier_id,
-          email, email_verified, phone, address, city, company_name, company_id,
-          is_verified, registered_at, verified_at, verified_by
-        ) VALUES (
-          ${userToInsert.username}, ${userToInsert.password}, ${userToInsert.fullName},
-          ${userToInsert.role}, ${userToInsert.technicianId}, ${userToInsert.supplierId},
-          ${userToInsert.email}, ${emailVerified}, ${userToInsert.phone}, ${userToInsert.address},
-          ${userToInsert.city}, ${userToInsert.companyName}, ${userToInsert.companyId},
-          ${userToInsert.isVerified}, ${userToInsert.registeredAt.toISOString()}, 
-          ${userToInsert.verifiedAt ? userToInsert.verifiedAt.toISOString() : null}, 
-          ${userToInsert.verifiedBy}
-        ) RETURNING *`
+      const [newUser] = await db.insert(users).values({
+        username: userToInsert.username,
+        password: userToInsert.password,
+        fullName: userToInsert.fullName,
+        role: userToInsert.role,
+        technicianId: userToInsert.technicianId,
+        supplierId: userToInsert.supplierId,
+        email: userToInsert.email,
+        // email_verified ĆE BITI POST AVLJENA ODMAH NAKON INSERTA
+        phone: userToInsert.phone,
+        address: userToInsert.address,
+        city: userToInsert.city,
+        companyName: userToInsert.companyName,
+        companyId: userToInsert.companyId,
+        isVerified: userToInsert.isVerified,
+        registeredAt: userToInsert.registeredAt,
+        verifiedAt: userToInsert.verifiedAt,
+        verifiedBy: userToInsert.verifiedBy
+      }).returning();
+      
+      if (!newUser) {
+        throw new Error("Kreiranje korisnika nije uspelo");
+      }
+      
+      // Odmah ažuriraj email_verified koristeći RAW SQL (NAKON što je user kreiran)
+      const emailVerified = insertUser.role !== 'customer';
+      await db.execute(
+        sql`UPDATE users SET email_verified = ${emailVerified} WHERE id = ${newUser.id}`
       );
+      
+      // Vrati koristitka sa ažuriranim emailVerified poljem
+      const result = { rows: [{...newUser, email_verified: emailVerified}] };
       
       if (!result || result.rows.length === 0) {
         throw new Error("Došlo je do greške pri kreiranju korisnika. Korisnik nije vraćen iz baze.");
