@@ -94,6 +94,7 @@ const ServisKomerc = lazy(() => import("@/pages/admin/servis-komerc"));
 const AIPredictiveMaintenancePage = lazy(() => import("@/pages/admin/ai-predictive-maintenance"));
 const ComplusDashboard = lazy(() => import("@/pages/complus"));
 const PrivacyPolicyPage = lazy(() => import("@/pages/privacy-policy"));
+const ContactPage = lazy(() => import("@/pages/contact"));
 const DownloadAppPage = lazy(() => import("@/pages/download-app"));
 // Inline test komponenta
 const SimpleTestPage = () => {
@@ -133,6 +134,7 @@ function Router() {
       
       {/* Privacy Policy - javno dostupna stranica */}
       <Route path="/privacy/policy" component={PrivacyPolicyPage} />
+      <Route path="/privacy-policy" component={PrivacyPolicyPage} />
       <Route path="/data-deletion-request" component={SimpleTestPage} />
       
       {/* APK Download Landing Page - javno dostupna */}
@@ -141,6 +143,7 @@ function Router() {
       {/* Legal pages for Facebook App Review compliance - JAVNO DOSTUPNE */}
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/data-deletion" component={DataDeletion} />
+      <Route path="/contact" component={ContactPage} />
       
       {/* Facebook Reviewer Demo Page - JAVNO DOSTUPNA */}
       <Route path="/reviewer" component={React.lazy(() => import("@/pages/reviewer").then(m => ({ default: m.default })))} />
