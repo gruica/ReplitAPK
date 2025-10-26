@@ -708,11 +708,24 @@ export function registerMiscRoutes(app: Express) {
   // ===== DATA DELETION REQUEST ENDPOINTS - GDPR COMPLIANCE =====
   app.post("/api/data-deletion-request", async (req, res) => {
     try {
+      // 🔒 SECURITY: Rate limiting - 3 zahteva po satu po IP adresi
+      const clientIp = (req.ip || req.connection.remoteAddress || 'unknown').toString();
+      const rateLimitCheck = checkDataDeletionRateLimit(clientIp);
+      
+      if (!rateLimitCheck.allowed) {
+        logger.security(`Data deletion rate limit exceeded from IP: ${clientIp}`);
+        return res.status(429).json({ 
+          error: "Previše zahteva",
+          message: `Možete poslati maksimalno 3 zahteva za brisanje podataka po satu. Pokušajte ponovo za ${Math.ceil((rateLimitCheck.retryAfter || 0) / 60)} minuta.`,
+          retryAfter: rateLimitCheck.retryAfter
+        });
+      }
+      
       const { insertDataDeletionRequestSchema, dataDeletionRequests } = await import("@shared/schema");
       
       const validatedData = insertDataDeletionRequestSchema.parse({
         ...req.body,
-        ipAddress: req.ip || req.connection.remoteAddress,
+        ipAddress: clientIp,
         userAgent: sanitizeUserAgent(req.get('User-Agent')),
       });
       
