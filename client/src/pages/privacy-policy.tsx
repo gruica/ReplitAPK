@@ -11,7 +11,7 @@ export default function PrivacyPolicyPage() {
         title="Politika Privatnosti - Frigo Sistem Todosijević | Zaštita Podataka"
         description="Politika privatnosti i zaštita ličnih podataka - Frigo Sistem Todosijević. GDPR usklađenost, WhatsApp Business API komunikacija, transparentnost i sigurnost vaših podataka."
         keywords="politika privatnosti, gdpr, zaštita podataka, lični podaci, bezbednost, whatsapp business"
-        canonical="https://www.frigosistemtodosijevic.me/privacy-policy"
+        canonical="https://www.tehnikamne.me/privacy-policy"
       />
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto max-w-4xl px-4">
@@ -343,7 +343,7 @@ export default function PrivacyPolicyPage() {
                   <p><strong>Email za podršku:</strong> <a href="mailto:info@frigosistemtodosijevic.me" className="text-blue-600 hover:underline">info@frigosistemtodosijevic.me</a></p>
                   <p><strong>Telefon:</strong> +382 67 051 141</p>
                   <p><strong>WhatsApp:</strong> +382 67 051 141</p>
-                  <p><strong>Website:</strong> <a href="https://www.frigosistemtodosijevic.me" className="text-blue-600 hover:underline">www.frigosistemtodosijevic.me</a></p>
+                  <p><strong>Website:</strong> <a href="https://www.tehnikamne.me" className="text-blue-600 hover:underline">www.tehnikamne.me</a></p>
                   <p><strong>Adresa:</strong> Lastva Grbaljska 85317 Kotor, Crna Gora</p>
                 </div>
               </CardContent>
