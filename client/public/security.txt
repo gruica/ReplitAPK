@@ -1,5 +1,5 @@
 Contact: info@frigosistemtodosijevic.me
 Preferred-Languages: sr, en
-Canonical: https://www.frigosistemtodosijevic.me/.well-known/security.txt
-Acknowledgments: https://www.frigosistemtodosijevic.me/about
-Policy: https://www.frigosistemtodosijevic.me/privacy
+Canonical: https://www.tehnikamne.me/.well-known/security.txt
+Acknowledgments: https://www.tehnikamne.me/about
+Policy: https://www.tehnikamne.me/privacy-policy

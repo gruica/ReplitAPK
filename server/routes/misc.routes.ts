@@ -830,11 +830,11 @@ export function registerMiscRoutes(app: Express) {
   app.get('/.well-known/security.txt', (req, res) => {
     res.type('text/plain');
     res.send(`Contact: info@frigosistemtodosijevic.me
-Canonical: https://frigosistemtodosijevic.me/.well-known/security.txt
+Canonical: https://www.tehnikamne.me/.well-known/security.txt
 Preferred-Languages: sr, en
-Acknowledgments: https://frigosistemtodosijevic.me/about
-Policy: https://frigosistemtodosijevic.me/privacy/policy
-Hiring: https://frigosistemtodosijevic.me/about
+Acknowledgments: https://www.tehnikamne.me/about
+Policy: https://www.tehnikamne.me/privacy-policy
+Hiring: https://www.tehnikamne.me/about
 Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
   });
 

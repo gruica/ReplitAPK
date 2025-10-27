@@ -11,7 +11,7 @@ export default function ContactPage() {
         title="Kontakt - Frigo Sistem Todosijević | Pozovite Nas"
         description="Kontaktirajte Frigo Sistem Todosijević za servis bele tehnike. Telefon, WhatsApp, email - dostupni smo radnim danima 08:00-17:00h."
         keywords="kontakt, telefon, email, whatsapp, servis, frigo sistem, kotor"
-        canonical="https://www.frigosistemtodosijevic.me/contact"
+        canonical="https://www.tehnikamne.me/contact"
       />
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto max-w-4xl px-4">
