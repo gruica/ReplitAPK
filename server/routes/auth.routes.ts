@@ -151,9 +151,10 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ error: "[PASSWORD_CHECK_FAILED] Neispravno korisničko ime ili lozinka" });
       }
       
-      // Check if user is verified
-      if (!user.isVerified) {
-        logger.debug(`JWT Login: User not verified`);
+      // Check if user is verified - ONLY for customers
+      // Staff (admin, technician, supplier, business_partner) can login without verification
+      if (!user.isVerified && user.role === 'customer') {
+        logger.debug(`JWT Login: Customer not verified`);
         return res.status(401).json({ error: "Račun nije verifikovan. Kontaktirajte administratora." });
       }
       

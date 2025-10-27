@@ -101,7 +101,9 @@ export function registerApiV1Routes(app: Express) {
         return res.status(401).json({ error: "Neispravno korisničko ime ili lozinka" });
       }
       
-      if (!user.isVerified) {
+      // Check if user is verified - ONLY for customers
+      // Staff (admin, technician, supplier, business_partner) can login without verification
+      if (!user.isVerified && user.role === 'customer') {
         return res.status(401).json({ error: "Račun nije verifikovan. Kontaktirajte administratora." });
       }
       
