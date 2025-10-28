@@ -151,14 +151,22 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ error: "[PASSWORD_CHECK_FAILED] Neispravno korisničko ime ili lozinka" });
       }
       
-      // Check if user is verified - ONLY for customers
-      // Staff (admin, technician, supplier, business_partner) can login without verification
-      if (!user.isVerified && user.role === 'customer') {
-        logger.debug(`JWT Login: Customer not verified`);
+      // Check if user is verified
+      if (!user.isVerified) {
+        logger.debug(`JWT Login: User not verified`);
         return res.status(401).json({ error: "Račun nije verifikovan. Kontaktirajte administratora." });
       }
       
+      // 🔧 FIX: Validate technician has technicianId
+      if (user.role === "technician" && !user.technicianId) {
+        logger.error(`Technician ${user.username} missing technicianId in database`);
+        return res.status(401).json({ 
+          error: "Greška u konfiguraciji naloga. Kontaktirajte administratora." 
+        });
+      }
+      
       // Generate JWT token with supplierId and technicianId for optimized auth
+      // 🔧 FIX: Pass values directly without conversion
       const token = generateToken({
         userId: user.id,
         username: user.username,

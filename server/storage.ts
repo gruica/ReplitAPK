@@ -203,13 +203,6 @@ export interface IStorage {
   validateEmailVerification(email: string, code: string): Promise<boolean>;
   cleanupExpiredEmailVerifications(): Promise<void>;
   
-  // Password reset methods
-  createPasswordReset(reset: any): Promise<any>;
-  validatePasswordReset(email: string, code: string): Promise<boolean>;
-  updateUserPassword(userId: number, hashedPassword: string): Promise<void>;
-  markPasswordResetAsUsed(email: string, code: string): Promise<void>;
-  cleanupExpiredPasswordResets(): Promise<void>;
-  
   // Admin service methods
   getAdminServices(): Promise<any[]>;
   getAdminServiceById(id: number): Promise<any | undefined>;
@@ -494,7 +487,6 @@ export class MemStorage implements IStorage {
       technicianId: null,
       supplierId: null,
       email: "admin@frigosistemtodosijevic.com",
-      emailVerified: true, // Admin je automatski email-verifikovan
       phone: null,
       address: null,
       city: null,
@@ -1180,7 +1172,6 @@ export class MemStorage implements IStorage {
       technicianId: insertUser.technicianId || null,
       supplierId: insertUser.supplierId || null,
       email: insertUser.email || null,
-      emailVerified: false, // Novi korisnici nisu email-verifikovani po defaultu
       phone: insertUser.phone || null,
       address: insertUser.address || null,
       city: insertUser.city || null,
@@ -1399,11 +1390,8 @@ export class DatabaseStorage implements IStorage {
   private async initializeDatabaseIfEmpty(): Promise<void> {
     try {
       // Provera da li postoje korisnici
-      // NOTE: Koristimo COUNT umesto SELECT * zbog Drizzle schema cache problema
-      const countResult = await db.select({ count: sql<number>`count(*)::int` }).from(users);
-      const userCount = countResult[0]?.count || 0;
-      
-      if (userCount === 0) {
+      const existingUsers = await db.select().from(users);
+      if (existingUsers.length === 0) {
         console.log("Inicijalizacija baze podataka...");
         await this.seedApplianceCategories();
         await this.seedManufacturers();
@@ -1498,8 +1486,6 @@ export class DatabaseStorage implements IStorage {
           username: "serviser@example.com",
           password: hashedServiserPassword,
           fullName: firstTech.fullName,
-          email: "serviser@example.com",
-          emailVerified: true, // Seed korisnici su automatski email-verifikovani
           role: "technician",
           technicianId: firstTech.id
         });
@@ -1526,13 +1512,9 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Check if supplier user already exists
-      // NOTE: Koristimo COUNT umesto SELECT * zbog Drizzle schema cache problema
-      const countResult = await db.select({ count: sql<number>`count(*)::int` })
-        .from(users)
-        .where(eq(users.username, "servis@eurotehnikamn.me"));
-      const userExists = (countResult[0]?.count || 0) > 0;
+      const [existingUser] = await db.select().from(users).where(eq(users.username, "servis@eurotehnikamn.me"));
       
-      if (userExists) {
+      if (existingUser) {
         console.log("Supplier user servis@eurotehnikamn.me already exists");
         return;
       }
@@ -1545,7 +1527,6 @@ export class DatabaseStorage implements IStorage {
         password: hashedPassword,
         fullName: "Eurotehnika Servis",
         email: "servis@eurotehnikamn.me",
-        emailVerified: true, // Supplier je automatski email-verifikovan
         role: "supplier",
         supplierId: 3,
         isVerified: true
@@ -1929,27 +1910,6 @@ export class DatabaseStorage implements IStorage {
 
   async cleanupExpiredEmailVerifications(): Promise<void> {
     return securityStorage.cleanupExpiredEmailVerifications();
-  }
-
-  // Password reset methods
-  async createPasswordReset(reset: any): Promise<any> {
-    return securityStorage.createPasswordReset(reset);
-  }
-
-  async validatePasswordReset(email: string, code: string): Promise<boolean> {
-    return securityStorage.validatePasswordReset(email, code);
-  }
-
-  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
-    return userStorage.updateUserPassword(userId, hashedPassword);
-  }
-
-  async markPasswordResetAsUsed(email: string, code: string): Promise<void> {
-    return securityStorage.markPasswordResetAsUsed(email, code);
-  }
-
-  async cleanupExpiredPasswordResets(): Promise<void> {
-    return securityStorage.cleanupExpiredPasswordResets();
   }
 
   // Admin service methods

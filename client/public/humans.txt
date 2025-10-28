@@ -35,8 +35,8 @@ Hitni servis: 24/7 dostupan
 
 # SIGURNOST
 
-Privacy Policy: https://www.tehnikamne.me/privacy-policy
-Data Deletion: https://www.tehnikamne.me/data-deletion
+Privacy Policy: https://frigosistemtodosijevic.me/privacy/policy
+Data Deletion: https://frigosistemtodosijevic.me/data-deletion-request
 Security Contact: security@frigosistemtodosijevic.me
 Enkripcija: PGP ključ dostupan
 GDPR: Potpuna EU usklađenost

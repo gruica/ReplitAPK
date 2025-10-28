@@ -112,26 +112,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
-      logger.log("[REGISTER] Starting registration for:", credentials.email);
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
       
-      logger.log("[REGISTER] Response status:", res.status);
-      
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Registration failed" }));
-        logger.error("[REGISTER] Error:", errorData);
-        throw new Error(errorData.error || errorData.message || "Registration failed");
+        throw new Error(errorData.error || "Registration failed");
       }
       const data = await res.json();
-      logger.log("[REGISTER] Success response:", data);
       return data;
     },
+    onSuccess: (data: any) => {
+      // Ako je korisnik poslovni partner, ne postavljamo ga u queryClient
+      // jer mora biti verifikovan pre pristupa
+      if (data.role === "business_partner") {
+        toast({
+          title: "Uspešna registracija",
+          description: data.message || "Zahtev za registraciju je uspešno poslat. Administrator će uskoro verifikovati vaš nalog.",
+        });
+      } else {
+        // Za ostale tipove korisnika, postavljamo podatke u queryClient
+        queryClient.setQueryData(["/api/jwt-user"], data);
+        toast({
+          title: "Uspešna registracija",
+          description: `Dobrodošli, ${data.fullName}!`,
+        });
+      }
+    },
     onError: (error: Error) => {
-      logger.error("[REGISTER] Mutation error:", error);
       toast({
         title: "Greška pri registraciji",
         description: error.message || "Korisničko ime već postoji",

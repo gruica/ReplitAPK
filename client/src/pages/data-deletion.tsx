@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DataDeletion() {
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [reason, setReason] = useState('');
@@ -44,10 +43,10 @@ export default function DataDeletion() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email) {
+    if (!email && !phone) {
       toast({
         title: "Greška",
-        description: "Molimo unesite puno ime i email adresu.",
+        description: "Molimo unesite email ili telefon za identifikaciju.",
         variant: "destructive"
       });
       return;
@@ -62,7 +61,6 @@ export default function DataDeletion() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          fullName,
           email,
           phone,
           reason,
@@ -72,11 +70,6 @@ export default function DataDeletion() {
 
       const data = await response.json();
       
-      if (response.status === 429) {
-        // Rate limit error
-        throw new Error(data.message || "Previše zahteva. Pokušajte ponovo kasnije.");
-      }
-      
       if (data.success) {
         toast({
           title: "Zahtev poslat",
@@ -84,22 +77,18 @@ export default function DataDeletion() {
         });
         
         // Reset form
-        setFullName('');
         setEmail('');
         setPhone('');
         setReason('');
         setSpecificData('');
       } else {
-        throw new Error(data.message || data.error || 'Neočekivana greška');
+        throw new Error(data.error || 'Neočekivana greška');
       }
       
-    } catch (error: any) {
-      // Pokušaj da dohvati specifičnu grešku iz odgovora
-      const errorMessage = error.message || "Došlo je do greške pri slanju zahteva. Molimo pokušajte ponovo.";
-      
+    } catch (error) {
       toast({
         title: "Greška",
-        description: errorMessage,
+        description: "Došlo je do greške pri slanju zahteva. Molimo pokušajte ponovo.",
         variant: "destructive"
       });
     } finally {
@@ -263,31 +252,19 @@ export default function DataDeletion() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Puno ime <span className="text-red-500">*</span></label>
-                  <Input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Vaše ime i prezime"
-                    className="w-full"
-                    required
-                  />
-                </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Email adresa <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium mb-2">Email adresa</label>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="vasa@email.com"
                       className="w-full"
-                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Broj telefona (opciono)</label>
+                    <label className="block text-sm font-medium mb-2">Broj telefona</label>
                     <Input
                       type="tel"
                       value={phone}
