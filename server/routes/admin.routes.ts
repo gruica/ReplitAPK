@@ -1908,5 +1908,126 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // 🔧 PRODUCTION FIX ENDPOINT - Admin može ručno pokrenuti fix za staff naloge
+  app.post("/api/admin/fix-production-data", jwtAuth, async (req, res) => {
+    try {
+      const userRole = (req.user as any)?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ error: "Samo admin može pokrenuti production fix" });
+      }
+
+      const { db } = await import('../db.js');
+      const { users, technicians } = await import('@shared/schema');
+      const { eq, and, inArray, isNull } = await import('drizzle-orm');
+      
+      const results: any = {
+        verified: 0,
+        fullNameFixed: 0,
+        technicianIdFixed: 0,
+        errors: []
+      };
+      
+      // FIX 1: Auto-verify staff accounts
+      const unverifiedStaff = await db.select()
+        .from(users)
+        .where(
+          and(
+            eq(users.isVerified, false),
+            inArray(users.role, ['admin', 'technician', 'business_partner', 'supplier'])
+          )
+        );
+      
+      for (const user of unverifiedStaff) {
+        await db.update(users)
+          .set({
+            isVerified: true,
+            emailVerified: true,
+            verifiedAt: new Date(),
+            verifiedBy: 1
+          })
+          .where(eq(users.id, user.id));
+        results.verified++;
+      }
+      
+      // FIX 2: Set fullName for staff without it
+      const staffWithoutFullName = await db.select()
+        .from(users)
+        .where(
+          and(
+            isNull(users.fullName),
+            inArray(users.role, ['admin', 'technician', 'business_partner', 'supplier'])
+          )
+        );
+      
+      for (const user of staffWithoutFullName) {
+        await db.update(users)
+          .set({
+            fullName: user.username
+          })
+          .where(eq(users.id, user.id));
+        results.fullNameFixed++;
+      }
+      
+      // FIX 3: Assign technicianId to technicians
+      const techniciansWithoutId = await db.select()
+        .from(users)
+        .where(
+          and(
+            eq(users.role, 'technician'),
+            isNull(users.technicianId)
+          )
+        );
+      
+      for (const user of techniciansWithoutId) {
+        try {
+          const technicianRecord = await db.select()
+            .from(technicians)
+            .where(eq(technicians.email, user.email!))
+            .limit(1);
+          
+          if (technicianRecord.length > 0) {
+            await db.update(users)
+              .set({
+                technicianId: technicianRecord[0].id
+              })
+              .where(eq(users.id, user.id));
+            results.technicianIdFixed++;
+          } else {
+            const newTechnician = await db.insert(technicians)
+              .values({
+                fullName: user.fullName || user.username,
+                email: user.email,
+                phone: user.phone,
+                active: true
+              })
+              .returning();
+            
+            await db.update(users)
+              .set({
+                technicianId: newTechnician[0].id
+              })
+              .where(eq(users.id, user.id));
+            results.technicianIdFixed++;
+          }
+        } catch (error) {
+          results.errors.push(`Greška za ${user.email}: ${error}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: "Production fix završen uspešno",
+        results
+      });
+      
+    } catch (error) {
+      logger.error("[ADMIN] Greška pri production fix-u:", error);
+      res.status(500).json({ 
+        error: "Greška pri production fix-u",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   console.log("✅ Admin routes registered");
 }
