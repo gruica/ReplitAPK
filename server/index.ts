@@ -380,6 +380,61 @@ app.use((req, res, next) => {
         
         console.log(`✅ [PRODUCTION FIX] Svi staff nalozi imaju fullName`);
       }
+      
+      // 🔧 FIX: Dodeli technicianId svim serviserima koji ga nemaju
+      const { technicians } = await import('@shared/schema');
+      const techniciansWithoutId = await db.select()
+        .from(users)
+        .where(
+          and(
+            eq(users.role, 'technician'),
+            isNull(users.technicianId)
+          )
+        );
+      
+      if (techniciansWithoutId.length > 0) {
+        console.log(`🔧 [PRODUCTION FIX] Pronađeno ${techniciansWithoutId.length} servisera bez technicianId`);
+        
+        for (const user of techniciansWithoutId) {
+          // Pronađi tehničara u technicians tabeli po email-u
+          const technicianRecord = await db.select()
+            .from(technicians)
+            .where(eq(technicians.email, user.email!))
+            .limit(1);
+          
+          if (technicianRecord.length > 0) {
+            // Dodeli postojeći technicianId
+            await db.update(users)
+              .set({
+                technicianId: technicianRecord[0].id
+              })
+              .where(eq(users.id, user.id));
+            
+            console.log(`✅ [PRODUCTION FIX] Dodeljen technicianId ${technicianRecord[0].id} za servisera: ${user.email}`);
+          } else {
+            // Kreiraj novi zapis u technicians tabeli
+            const newTechnician = await db.insert(technicians)
+              .values({
+                fullName: user.fullName || user.username,
+                email: user.email,
+                phone: user.phone,
+                active: true
+              })
+              .returning();
+            
+            // Dodeli novi technicianId
+            await db.update(users)
+              .set({
+                technicianId: newTechnician[0].id
+              })
+              .where(eq(users.id, user.id));
+            
+            console.log(`✅ [PRODUCTION FIX] Kreiran novi technician i dodeljen ID ${newTechnician[0].id} za: ${user.email}`);
+          }
+        }
+        
+        console.log(`✅ [PRODUCTION FIX] Svi serviseri imaju technicianId`);
+      }
     } catch (error) {
       console.error('⚠️  [PRODUCTION] Greška pri auto-verifikaciji staff naloga:', error);
       // Aplikacija i dalje može da radi bez auto-verifikacije
