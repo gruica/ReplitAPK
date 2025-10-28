@@ -180,11 +180,12 @@ export function registerAuthRoutes(app: Express) {
       logger.info(`JWT Login successful: role=${user.role}, ip=${req.ip}`);
       
       // Return token and user info
+      // 🔧 FIX: Fallback to username if fullName is missing (for old database records)
       res.json({
         user: {
           id: user.id,
           username: user.username,
-          fullName: user.fullName,
+          fullName: user.fullName || user.username,
           role: user.role,
           email: user.email,
           phone: user.phone,
@@ -233,10 +234,11 @@ export function registerAuthRoutes(app: Express) {
         return res.status(404).json({ error: "Korisnik nije pronađen" });
       }
       
+      // 🔧 FIX: Fallback to username if fullName is missing (for old database records)
       res.json({
         id: user.id,
         username: user.username,
-        fullName: user.fullName,
+        fullName: user.fullName || user.username,
         role: user.role,
         email: user.email,
         phone: user.phone,
