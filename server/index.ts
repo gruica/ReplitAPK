@@ -353,6 +353,33 @@ app.use((req, res, next) => {
       } else {
         console.log(`ℹ️  [PRODUCTION] Svi staff nalozi su već verifikovani`);
       }
+      
+      // 🔧 FIX: Popravi sve staff naloge koji nemaju fullName - postavi username kao fullName
+      const { isNull } = await import('drizzle-orm');
+      const staffWithoutFullName = await db.select()
+        .from(users)
+        .where(
+          and(
+            isNull(users.fullName),
+            inArray(users.role, ['admin', 'technician', 'business_partner', 'supplier'])
+          )
+        );
+      
+      if (staffWithoutFullName.length > 0) {
+        console.log(`🔧 [PRODUCTION FIX] Pronađeno ${staffWithoutFullName.length} staff naloga bez fullName`);
+        
+        for (const user of staffWithoutFullName) {
+          await db.update(users)
+            .set({
+              fullName: user.username
+            })
+            .where(eq(users.id, user.id));
+          
+          console.log(`✅ [PRODUCTION FIX] Postavljen fullName za ${user.role}: ${user.username}`);
+        }
+        
+        console.log(`✅ [PRODUCTION FIX] Svi staff nalozi imaju fullName`);
+      }
     } catch (error) {
       console.error('⚠️  [PRODUCTION] Greška pri auto-verifikaciji staff naloga:', error);
       // Aplikacija i dalje može da radi bez auto-verifikacije
