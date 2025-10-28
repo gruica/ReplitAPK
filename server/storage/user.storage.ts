@@ -34,24 +34,18 @@ class UserStorage {
   // ============================================
   
   async getUser(id: number): Promise<User | undefined> {
-    // Koristi RAW SQL da zaobiđe Drizzle schema cache problem
-    const result = await db.execute<User>(
-      sql`SELECT * FROM users WHERE id = ${id} LIMIT 1`
-    );
-    return result.rows[0] as User | undefined;
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    // NOTE: Koristi raw SQL da zaobiđe Drizzle schema cache problem
-    const result = await db.execute<User>(
-      sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`
-    );
-    return result.rows[0] as User | undefined;
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
-    // Koristimo Drizzle query builder koji AUTOMATSKI mapira snake_case → camelCase
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const result = await db.select().from(users).where(eq(users.email, email));
+    const [user] = result;
     return user;
   }
   
@@ -138,71 +132,51 @@ class UserStorage {
         verifiedBy: null
       };
 
-      // RADIKALNO REŠENJE: Zaobiđi Drizzle potpuno zbog nepreboljivog schema cache buga
-      // Koristimo direktan pool.query sa čistim SQL-om
-      const emailVerified = insertUser.role !== 'customer' ? true : false;
+      // Koristimo Drizzle ORM sa type-safe insert().returning() pattern
       
-      const { pool } = await import('../db');
+      const result = await db.insert(users).values({
+        username: userToInsert.username,
+        password: userToInsert.password,
+        fullName: userToInsert.fullName,
+        role: userToInsert.role,
+        technicianId: userToInsert.technicianId,
+        supplierId: userToInsert.supplierId,
+        email: userToInsert.email,
+        phone: userToInsert.phone,
+        address: userToInsert.address,
+        city: userToInsert.city,
+        companyName: userToInsert.companyName,
+        companyId: userToInsert.companyId,
+        isVerified: userToInsert.isVerified,
+        registeredAt: userToInsert.registeredAt,
+        verifiedAt: userToInsert.verifiedAt,
+        verifiedBy: userToInsert.verifiedBy
+      }).returning();
       
-      // Direktan SQL INSERT sa parametrima (bezbedno od SQL injection)
-      const insertQuery = `
-        INSERT INTO users (
-          username, password, full_name, role, 
-          technician_id, supplier_id, email, email_verified,
-          phone, address, city, company_name, company_id,
-          is_verified, registered_at, verified_at, verified_by
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
-        ) RETURNING *
-      `;
-      
-      const insertValues = [
-        userToInsert.username,
-        userToInsert.password,
-        userToInsert.fullName,
-        userToInsert.role,
-        userToInsert.technicianId,
-        userToInsert.supplierId,
-        userToInsert.email,
-        emailVerified,
-        userToInsert.phone,
-        userToInsert.address,
-        userToInsert.city,
-        userToInsert.companyName,
-        userToInsert.companyId,
-        userToInsert.isVerified,
-        userToInsert.registeredAt,
-        userToInsert.verifiedAt,
-        userToInsert.verifiedBy
-      ];
-      
-      const result = await pool.query(insertQuery, insertValues);
-      
-      if (!result || result.rows.length === 0) {
+      if (!result || result.length === 0) {
         throw new Error("Došlo je do greške pri kreiranju korisnika. Korisnik nije vraćen iz baze.");
       }
       
-      // Mapiranje RAW SQL rezultata u User objekat (snake_case → camelCase)
-      const row = result.rows[0] as any;
+      // Mapiranje rezultata u User objekat
+      const userResult = result[0];
       const user: User = {
-        id: row.id,
-        username: row.username,
-        password: row.password,
-        fullName: row.full_name,
-        role: row.role,
-        technicianId: row.technician_id,
-        supplierId: row.supplier_id,
-        email: row.email,
-        emailVerified: row.email_verified,
-        phone: row.phone,
-        address: row.address,
-        city: row.city,
-        companyName: row.company_name,
-        companyId: row.company_id,
-        isVerified: row.is_verified,
-        registeredAt: row.registered_at ? new Date(row.registered_at) : new Date(),
-        verifiedAt: row.verified_at ? new Date(row.verified_at) : null,
-        verifiedBy: row.verified_by
+        id: userResult.id,
+        username: userResult.username,
+        password: userResult.password,
+        fullName: userResult.fullName,
+        role: userResult.role,
+        technicianId: userResult.technicianId,
+        supplierId: userResult.supplierId,
+        email: userResult.email,
+        phone: userResult.phone,
+        address: userResult.address,
+        city: userResult.city,
+        companyName: userResult.companyName,
+        companyId: userResult.companyId,
+        isVerified: userResult.isVerified,
+        registeredAt: userResult.registeredAt ? new Date(userResult.registeredAt) : new Date(),
+        verifiedAt: userResult.verifiedAt ? new Date(userResult.verifiedAt) : null,
+        verifiedBy: userResult.verifiedBy
       };
       
       return user;
@@ -222,24 +196,12 @@ class UserStorage {
       }
     }
 
-    await db
+    const [updatedUser] = await db
       .update(users)
       .set(updateData)
-      .where(eq(users.id, id));
-    
-    return this.getUser(id);
-  }
-
-  /**
-   * Ažurira lozinku korisnika (koristi se za password reset)
-   * @param userId - ID korisnika
-   * @param hashedPassword - Već heširana lozinka
-   */
-  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
-    await db
-      .update(users)
-      .set({ password: hashedPassword })
-      .where(eq(users.id, userId));
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
   }
 
   async deleteUser(id: number): Promise<boolean> {
@@ -255,16 +217,17 @@ class UserStorage {
   async verifyUser(id: number, adminId: number): Promise<User | undefined> {
     const now = new Date();
     
-    // Koristi RAW SQL da zaobiđe Drizzle schema cache problem
-    await db.execute(
-      sql`UPDATE users 
-          SET is_verified = true, 
-              verified_at = ${now.toISOString()}, 
-              verified_by = ${adminId} 
-          WHERE id = ${id}`
-    );
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        isVerified: true,
+        verifiedAt: now,
+        verifiedBy: adminId
+      })
+      .where(eq(users.id, id))
+      .returning();
       
-    return this.getUser(id);
+    return updatedUser;
   }
 
   // ============================================

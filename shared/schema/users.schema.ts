@@ -2,12 +2,6 @@ import { pgTable, text, serial, integer, boolean, timestamp, index } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-/**
- * SCHEMA VERSION: 2025-10-25T06:05:00Z
- * Last update: Added emailVerified column for email verification system
- */
-export const USERS_SCHEMA_VERSION = "2025-10-25T06:05:00Z";
-
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -18,7 +12,6 @@ export const users = pgTable("users", {
   technicianId: integer("technician_id"), // Reference to technician if user is a technician
   supplierId: integer("supplier_id"), // Reference to supplier if user is a supplier
   email: text("email"), // Email adresa korisnika
-  emailVerified: boolean("email_verified").default(false).notNull(), // Da li je email verifikovan (korisnik potvrdio kod)
   phone: text("phone"), // Broj telefona korisnika
   address: text("address"), // Adresa korisnika
   city: text("city"), // Grad korisnika
@@ -129,27 +122,3 @@ export const insertEmailVerificationSchema = createInsertSchema(emailVerificatio
 
 export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;
 export type EmailVerification = typeof emailVerification.$inferSelect;
-
-// Tabela za password reset (resetovanje lozinke)
-export const passwordReset = pgTable("password_reset", {
-  id: serial("id").primaryKey(),
-  email: text("email").notNull(),
-  resetCode: text("reset_code").notNull(), // Nasumični kod (6 cifara)
-  used: boolean("used").default(false).notNull(),
-  attempts: integer("attempts").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at").notNull(), // Važi 30 minuta
-}, (table) => ({
-  emailIdx: index("password_reset_email_idx").on(table.email),
-}));
-
-export const insertPasswordResetSchema = createInsertSchema(passwordReset).pick({
-  email: true,
-  resetCode: true,
-  used: true,
-  attempts: true,
-  expiresAt: true
-});
-
-export type InsertPasswordReset = z.infer<typeof insertPasswordResetSchema>;
-export type PasswordReset = typeof passwordReset.$inferSelect;

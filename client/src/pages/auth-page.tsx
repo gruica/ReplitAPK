@@ -20,7 +20,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { logger } from '@/utils/logger';
-import { EmailVerificationModal, PasswordResetModal } from "@/components/auth";
 
 // Define login and registration schemas
 const loginSchema = z.object({
@@ -47,13 +46,6 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { user, loginMutation, registerMutation } = useAuth();
   const [, navigate] = useLocation();
-  
-  // Email verification state
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState('');
-  
-  // Password reset state
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   // Redirect if user is already logged in
   useEffect(() => {
@@ -92,7 +84,6 @@ export default function AuthPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
-      email: "", // Email je OBAVEZAN u schema!
       password: "",
       confirmPassword: "",
       fullName: "",
@@ -117,35 +108,17 @@ export default function AuthPage() {
   }
 
   function onRegisterSubmit(values: RegisterValues) {
-    console.log("[AUTH-PAGE] onRegisterSubmit called with:", values);
-    console.log("[AUTH-PAGE] Form errors:", registerForm.formState.errors);
-    
     registerMutation.mutate({
-      username: values.email, // Koristimo email kao username
+      username: values.username,
       password: values.password,
       fullName: values.fullName,
-      email: values.email,
+      email: values.username, // Koristimo username kao email
       phone: values.phone,
       address: values.address,
       city: values.city,
       role: "customer", // Uvek postavljamo rolu na customer
-    }, {
-      onSuccess: (data) => {
-        console.log("[AUTH-PAGE] Registration success, data:", data);
-        // Prikaži email verification modal nakon registracije
-        setRegisteredEmail(values.email);
-        setShowEmailVerification(true);
-      },
-      onError: (error) => {
-        console.error("[AUTH-PAGE] Registration error:", error);
-      }
     });
   }
-  
-  const handleEmailVerificationSuccess = () => {
-    setShowEmailVerification(false);
-    setActiveTab("login"); // Prebaci na login tab nakon verifikacije
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
@@ -213,14 +186,9 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswordReset(true)}
-                        className="text-sm text-primary hover:underline"
-                        data-testid="link-forgot-password"
-                      >
+                      <a href="#" className="text-sm text-primary hover:underline">
                         Zaboravili ste lozinku?
-                      </button>
+                      </a>
                     </div>
                     {loginMutation.isError && (
                       <div className="bg-red-50 p-3 rounded-md text-red-500 text-sm mb-2">
@@ -257,22 +225,12 @@ export default function AuthPage() {
                     />
                     <FormField
                       control={registerForm.control}
-                      name="email"
+                      name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email adresa</FormLabel>
+                          <FormLabel>Korisničko ime</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="email" 
-                              placeholder="vas@email.com" 
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                // Auto-popuni username sa email-om
-                                registerForm.setValue('username', e.target.value);
-                              }}
-                              data-testid="input-email"
-                            />
+                            <Input placeholder="Unesite korisničko ime" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -393,20 +351,6 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
-      
-      {/* Email Verification Modal */}
-      <EmailVerificationModal
-        isOpen={showEmailVerification}
-        email={registeredEmail}
-        onSuccess={handleEmailVerificationSuccess}
-        onClose={() => setShowEmailVerification(false)}
-      />
-      
-      {/* Password Reset Modal */}
-      <PasswordResetModal
-        isOpen={showPasswordReset}
-        onClose={() => setShowPasswordReset(false)}
-      />
     </div>
   );
 }
