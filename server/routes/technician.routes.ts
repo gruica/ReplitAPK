@@ -554,6 +554,89 @@ export function registerTechnicianRoutes(app: Express) {
     }
   });
 
+  // GET /api/services/technician/:technicianId/grouped-by-city - Get services grouped by city with priority
+  app.get('/api/services/technician/:technicianId/grouped-by-city', jwtAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+      const technicianId = parseInt(req.params.technicianId);
+      const user = (req as any).user;
+      
+      console.log(`[GROUPED-BY-CITY] Fetching services for technician ${technicianId}`);
+      
+      // Authorization check
+      if (user.role === 'technician' && user.technicianId !== technicianId) {
+        return res.status(403).json({ error: 'Nemate dozvolu za pristup ovim servisima' });
+      }
+      
+      // Get all services for technician
+      const services = await storage.getServicesByTechnician(technicianId);
+      console.log(`[GROUPED-BY-CITY] Found ${services.length} total services`);
+      
+      // Group services by city
+      const servicesByCity = new Map<string, any[]>();
+      
+      services.forEach(service => {
+        const city = service.client?.city || 'Nepoznat grad';
+        if (!servicesByCity.has(city)) {
+          servicesByCity.set(city, []);
+        }
+        servicesByCity.get(city)!.push(service);
+      });
+      
+      // Calculate priority for each city
+      const citiesWithPriority = Array.from(servicesByCity.entries()).map(([city, cityServices]) => {
+        const activeServices = cityServices.filter(s => !['completed', 'cancelled'].includes(s.status));
+        const urgentCount = activeServices.filter(s => s.priority === 'urgent').length;
+        const highCount = activeServices.filter(s => s.priority === 'high').length;
+        const hasUrgent = urgentCount > 0;
+        const hasHigh = highCount > 0;
+        
+        // Calculate priority score: urgent=100, high=10, normal=1
+        const priorityScore = urgentCount * 100 + highCount * 10 + activeServices.filter(s => s.priority === 'normal').length;
+        
+        return {
+          city,
+          services: cityServices,
+          activeServicesCount: activeServices.length,
+          completedServicesCount: cityServices.filter(s => s.status === 'completed').length,
+          hasUrgent,
+          hasHigh,
+          urgentCount,
+          highCount,
+          priorityScore,
+          hasActiveServices: activeServices.length > 0
+        };
+      });
+      
+      // Sort cities by priority
+      citiesWithPriority.sort((a, b) => {
+        // First, separate active vs completed cities
+        if (a.hasActiveServices !== b.hasActiveServices) {
+          return a.hasActiveServices ? -1 : 1; // Active cities first
+        }
+        
+        // For active cities, sort by priority score
+        if (a.hasActiveServices && b.hasActiveServices) {
+          return b.priorityScore - a.priorityScore;
+        }
+        
+        // For completed cities, sort alphabetically
+        return a.city.localeCompare(b.city, 'sr');
+      });
+      
+      console.log(`[GROUPED-BY-CITY] Grouped into ${citiesWithPriority.length} cities`);
+      
+      res.json({
+        cities: citiesWithPriority,
+        totalServices: services.length,
+        totalCities: citiesWithPriority.length
+      });
+      
+    } catch (error) {
+      console.error('[GROUPED-BY-CITY] Error:', error);
+      res.status(500).json({ error: 'Greška pri grupisanju servisa po gradovima' });
+    }
+  });
+
   // GET /api/technician/service-report-pdf/:serviceId - Generate service PDF report for technicians
   app.get('/api/technician/service-report-pdf/:serviceId', jwtAuthMiddleware, requireRole(['technician']), async (req: Request, res: Response) => {
     try {
