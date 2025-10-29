@@ -50,6 +50,7 @@ export function DevicePickupDialog({ service, isOpen, onClose, onSuccess }: Devi
       return apiRequest(`/api/services/${service.id}/status`, {
         method: "PUT",
         body: JSON.stringify({
+          status: service.status || "in_progress",
           devicePickedUp: true,
           pickupDate: data.pickupDate,
           pickupNotes: data.pickupNotes || ""
