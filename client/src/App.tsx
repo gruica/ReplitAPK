@@ -24,6 +24,7 @@ const Appliances = lazy(() => import("@/pages/appliances"));
 const Users = lazy(() => import("@/pages/users"));
 const UserProfile = lazy(() => import("@/pages/user-profile"));
 const TechnicianServicesMobile = lazy(() => import("@/pages/technician/services-mobile"));
+const TechnicianServicesGrouped = lazy(() => import("@/pages/technician/services-grouped"));
 const TechnicianProfile = lazy(() => import("@/pages/technician/profile"));
 const TechnicianMyProfile = lazy(() => import("@/pages/technician/my-profile"));
 const TechnicianNotifications = lazy(() => import("@/pages/technician/notifications"));
@@ -217,6 +218,7 @@ function Router() {
       
       {/* Technician routes */}
       <RoleProtectedRoute path="/tech" component={TechnicianServicesMobile} allowedRoles={["technician"]} />
+      <RoleProtectedRoute path="/tech/services-grouped" component={TechnicianServicesGrouped} allowedRoles={["technician"]} />
       <RoleProtectedRoute path="/tech/profile" component={TechnicianProfile} allowedRoles={["technician"]} />
       <RoleProtectedRoute path="/tech/my-profile" component={TechnicianMyProfile} allowedRoles={["technician"]} />
       <RoleProtectedRoute path="/tech/notifications" component={TechnicianNotifications} allowedRoles={["technician"]} />
