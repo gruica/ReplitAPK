@@ -793,21 +793,23 @@ export class MemStorage implements IStorage {
       appliance: appliance ? {
         id: appliance.id,
         model: appliance.model,
-        serialNumber: appliance.serialNumber
+        serialNumber: appliance.serialNumber,
+        purchaseDate: appliance.purchaseDate,
+        category: category ? {
+          id: category.id,
+          name: category.name
+        } : null,
+        manufacturer: manufacturer ? {
+          id: manufacturer.id,
+          name: manufacturer.name
+        } : null
       } : null,
       technician: technician ? {
         id: technician.id,
         fullName: technician.fullName,
         phone: technician.phone,
-        email: technician.email
-      } : null,
-      category: category ? {
-        id: category.id,
-        name: category.name
-      } : null,
-      manufacturer: manufacturer ? {
-        id: manufacturer.id,
-        name: manufacturer.name
+        email: technician.email,
+        specialization: technician.specialization
       } : null
     };
   }
