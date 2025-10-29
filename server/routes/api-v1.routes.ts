@@ -105,10 +105,13 @@ export function registerApiV1Routes(app: Express) {
         return res.status(401).json({ error: "Račun nije verifikovan. Kontaktirajte administratora." });
       }
       
+      // 🔧 FIX: Add technicianId and supplierId to token
       const token = generateToken({
         userId: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        ...(user.supplierId ? { supplierId: user.supplierId } : {}),
+        ...(user.technicianId ? { technicianId: user.technicianId } : {})
       });
       
       res.json({

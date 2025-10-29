@@ -144,6 +144,8 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ error: "[USER_NOT_FOUND] Neispravno korisničko ime ili lozinka" });
       }
       
+      console.log(`🔍 [JWT LOGIN DEBUG] User from storage:`, JSON.stringify(user, null, 2));
+      
       // Check password
       const isPasswordValid = await comparePassword(password, user.password);
       if (!isPasswordValid) {
@@ -167,13 +169,17 @@ export function registerAuthRoutes(app: Express) {
       
       // Generate JWT token with supplierId and technicianId for optimized auth
       // 🔧 FIX: Pass values directly without conversion
-      const token = generateToken({
+      const tokenPayload = {
         userId: user.id,
         username: user.username,
         role: user.role,
-        ...(user.supplierId && { supplierId: user.supplierId }),
-        ...(user.technicianId && { technicianId: user.technicianId })
-      });
+        ...(user.supplierId ? { supplierId: user.supplierId } : {}),
+        ...(user.technicianId ? { technicianId: user.technicianId } : {})
+      };
+      
+      console.log(`🔐 [TOKEN GENERATION] Payload for token:`, JSON.stringify(tokenPayload, null, 2));
+      
+      const token = generateToken(tokenPayload);
       
       // 🔒 SECURITY: Logujemo samo ulogu, ne i username
       logger.info(`JWT Login successful: role=${user.role}, ip=${req.ip}`);
