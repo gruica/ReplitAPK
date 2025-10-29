@@ -19,6 +19,47 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
 };
 
 /**
+ * Automatski određuje warranty status na osnovu datuma kupovine aparata
+ * Garancija traje 5 godina od datuma kupovine
+ * @param applianceId - ID aparata
+ * @param manualWarrantyStatus - Manuelno uneti warranty status (ako postoji)
+ * @returns 'u garanciji' ili 'van garancije'
+ */
+async function determineWarrantyStatus(
+  applianceId: number, 
+  manualWarrantyStatus?: string
+): Promise<string> {
+  try {
+    // Ako je manuelno uneto, koristi to (omogućava override)
+    if (manualWarrantyStatus && ['u garanciji', 'van garancije'].includes(manualWarrantyStatus)) {
+      console.log(`[WARRANTY] Koristi manuelno uneti status: ${manualWarrantyStatus}`);
+      return manualWarrantyStatus;
+    }
+
+    // Dohvati aparat iz baze
+    const appliance = await storage.getAppliance(applianceId);
+    if (!appliance || !appliance.purchaseDate) {
+      console.log(`[WARRANTY] Nema datuma kupovine za aparat ${applianceId}, defaultuje na 'van garancije'`);
+      return 'van garancije';
+    }
+
+    // Izračunaj da li je u garanciji (5 godina)
+    const purchaseDate = new Date(appliance.purchaseDate);
+    const now = new Date();
+    const yearsDiff = (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    
+    const warrantyStatus = yearsDiff <= 5 ? 'u garanciji' : 'van garancije';
+    
+    console.log(`[WARRANTY] Aparat ${applianceId} kupljen ${appliance.purchaseDate}, starost: ${yearsDiff.toFixed(2)} godina → ${warrantyStatus}`);
+    
+    return warrantyStatus;
+  } catch (error) {
+    console.error(`[WARRANTY] Greška pri određivanju warranty statusa:`, error);
+    return 'van garancije'; // Default fallback
+  }
+}
+
+/**
  * Service Routes
  * - Services CRUD (GET, POST, PUT, DELETE)
  * - Service assignment
@@ -333,12 +374,18 @@ export function registerServiceRoutes(app: Express) {
         });
       }
       
+      // Automatski odredimo warranty status na osnovu datuma kupovine (5 godina garancije)
+      const warrantyStatus = await determineWarrantyStatus(
+        parseInt(applianceId),
+        req.body.warrantyStatus
+      );
+      
       const validatedData = {
         clientId: parseInt(clientId),
         applianceId: parseInt(applianceId),
         description: description.trim(),
         status: req.body.status || "pending",
-        warrantyStatus: req.body.warrantyStatus || "out_of_warranty",
+        warrantyStatus: warrantyStatus,
         createdAt: req.body.createdAt || new Date().toISOString().split('T')[0],
         technicianId: req.body.technicianId && req.body.technicianId > 0 ? parseInt(req.body.technicianId) : null,
         scheduledDate: req.body.scheduledDate || null,
@@ -347,6 +394,7 @@ export function registerServiceRoutes(app: Express) {
       };
       
       console.log("Validovani podaci za kreiranje:", validatedData);
+      console.log(`✅ [WARRANTY AUTO] Automatski određen warranty status: ${warrantyStatus}`);
       
       const service = await storage.createService(validatedData);
       if (!service) return res.status(500).json({ error: "Greška pri kreiranju servisa" });
@@ -395,12 +443,19 @@ export function registerServiceRoutes(app: Express) {
       
       const { clientId, applianceId, description } = req.body;
       
+      // Automatski odredimo warranty status na osnovu datuma kupovine (5 godina garancije)
+      const finalApplianceId = applianceId ? parseInt(applianceId) : originalService.applianceId;
+      const warrantyStatus = await determineWarrantyStatus(
+        finalApplianceId,
+        req.body.warrantyStatus
+      );
+      
       const validatedData = {
         clientId: clientId ? parseInt(clientId) : originalService.clientId,
-        applianceId: applianceId ? parseInt(applianceId) : originalService.applianceId,
+        applianceId: finalApplianceId,
         description: description ? description.trim() : originalService.description,
         status: req.body.status || originalService.status,
-        warrantyStatus: req.body.warrantyStatus || originalService.warrantyStatus || "out_of_warranty",
+        warrantyStatus: warrantyStatus,
         createdAt: req.body.createdAt || originalService.createdAt,
         technicianId: req.body.technicianId !== undefined ? 
           (req.body.technicianId && req.body.technicianId > 0 ? parseInt(req.body.technicianId) : null) : 
