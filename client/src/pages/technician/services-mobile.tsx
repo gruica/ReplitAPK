@@ -1552,6 +1552,19 @@ export default function TechnicianServicesMobile() {
 
               {/* Menu Items */}
               <div className="p-6 space-y-4">
+                {/* Services by City */}
+                <Link href="/tech/services-grouped">
+                  <button className="w-full flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors border-2 border-blue-200 bg-blue-50">
+                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900">Servisi po gradovima</p>
+                      <p className="text-sm text-gray-500">Organizovano prema prioritetu</p>
+                    </div>
+                  </button>
+                </Link>
+
                 {/* Profile */}
                 <Link href="/tech/my-profile">
                   <button className="w-full flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors">
