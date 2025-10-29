@@ -575,11 +575,16 @@ export function registerTechnicianRoutes(app: Express) {
       const servicesByCity = new Map<string, any[]>();
       
       services.forEach(service => {
-        const city = service.client?.city || 'Nepoznat grad';
-        if (!servicesByCity.has(city)) {
-          servicesByCity.set(city, []);
+        // service returns flat fields: clientCity, clientName, etc.
+        const rawCity = (service as any).clientCity || 'Nepoznat grad';
+        // Normalize city name (trim and capitalize)
+        const city = rawCity.trim();
+        const normalizedCity = city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+        
+        if (!servicesByCity.has(normalizedCity)) {
+          servicesByCity.set(normalizedCity, []);
         }
-        servicesByCity.get(city)!.push(service);
+        servicesByCity.get(normalizedCity)!.push(service);
       });
       
       // Calculate priority for each city
