@@ -5,6 +5,7 @@ import { z } from "zod";
 // Service status enum
 export const serviceStatusEnum = z.enum([
   "pending", // čekanje
+  "assigned", // dodeljen serviseru
   "scheduled", // zakazano
   "in_progress", // u procesu
   "waiting_parts", // čeka delove
