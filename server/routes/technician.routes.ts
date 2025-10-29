@@ -648,6 +648,8 @@ export function registerTechnicianRoutes(app: Express) {
       const serviceId = parseInt(req.params.serviceId);
       const technicianId = (req as any).user?.technicianId;
       
+      console.log(`📄 [PDF AUTH] Service ID: ${serviceId}, User technicianId: ${technicianId}, User:`, (req as any).user);
+      
       if (isNaN(serviceId)) {
         return res.status(400).json({ 
           error: 'Nevaljan ID servisa' 
@@ -662,7 +664,10 @@ export function registerTechnicianRoutes(app: Express) {
         });
       }
 
+      console.log(`📄 [PDF AUTH] Service ${serviceId} technicianId: ${service.technicianId}, Expected: ${technicianId}, Match: ${service.technicianId === technicianId}`);
+
       if (service.technicianId !== technicianId) {
+        console.log(`📄 [PDF AUTH] ❌ AUTHORIZATION FAILED - service.technicianId (${service.technicianId}) !== technicianId (${technicianId})`);
         return res.status(403).json({
           error: "Nemate dozvolu",
           message: "Možete preuzeti PDF samo za svoje servise"
