@@ -454,18 +454,21 @@ export class ServiceStorage {
     }
     
     let appliance = null;
-    let category = null;
-    let manufacturer = null;
     
     if (service.applianceId) {
-      const [applianceData] = await db.select().from(appliances).where(eq(appliances.id, service.applianceId));
+      // Use raw SQL to avoid Drizzle mapping issues with purchaseDate
+      const applianceResult = await db.execute(
+        sql`SELECT id, client_id as "clientId", category_id as "categoryId", manufacturer_id as "manufacturerId", 
+            model, serial_number as "serialNumber", purchase_date as "purchaseDate", notes 
+            FROM appliances WHERE id = ${service.applianceId}`
+      );
+      const applianceData = applianceResult.rows[0] as any;
+      
+      console.log(`🔍 DEBUG - applianceData RAW (SQL):`, JSON.stringify(applianceData, null, 2));
       
       if (applianceData) {
-        appliance = {
-          id: applianceData.id,
-          model: applianceData.model,
-          serialNumber: applianceData.serialNumber
-        };
+        let category = null;
+        let manufacturer = null;
         
         if (applianceData.categoryId) {
           const [categoryData] = await db.select().from(applianceCategories).where(eq(applianceCategories.id, applianceData.categoryId));
@@ -486,6 +489,15 @@ export class ServiceStorage {
             };
           }
         }
+        
+        appliance = {
+          id: applianceData.id,
+          model: applianceData.model,
+          serialNumber: applianceData.serialNumber,
+          purchaseDate: applianceData.purchaseDate,
+          category,
+          manufacturer
+        };
       }
     }
     
@@ -510,8 +522,6 @@ export class ServiceStorage {
       client,
       appliance,
       technician,
-      category,
-      manufacturer,
       removedParts: removedPartsList
     };
   }
