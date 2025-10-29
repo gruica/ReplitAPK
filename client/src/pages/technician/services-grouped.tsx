@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
@@ -130,15 +130,18 @@ export default function TechnicianServicesGrouped() {
   // Initialize visible services count for each city
   useEffect(() => {
     if (groupedData?.cities) {
-      const initialCounts: Record<string, number> = {};
-      groupedData.cities.forEach(cityGroup => {
-        if (!visibleServicesPerCity[cityGroup.city]) {
-          initialCounts[cityGroup.city] = SERVICES_PER_PAGE;
+      setVisibleServicesPerCity(prev => {
+        const initialCounts: Record<string, number> = {};
+        groupedData.cities.forEach(cityGroup => {
+          if (!prev[cityGroup.city]) {
+            initialCounts[cityGroup.city] = SERVICES_PER_PAGE;
+          }
+        });
+        if (Object.keys(initialCounts).length > 0) {
+          return { ...prev, ...initialCounts };
         }
+        return prev;
       });
-      if (Object.keys(initialCounts).length > 0) {
-        setVisibleServicesPerCity(prev => ({ ...prev, ...initialCounts }));
-      }
     }
   }, [groupedData]);
 
@@ -151,19 +154,22 @@ export default function TechnicianServicesGrouped() {
         !['completed', 'cancelled'].includes(s.status) && !completedServices.has(s.id)
       );
       
-      const visibleCount = visibleServicesPerCity[cityGroup.city] || SERVICES_PER_PAGE;
-      const visibleActiveServices = activeServices.slice(0, visibleCount);
+      setVisibleServicesPerCity(prev => {
+        const visibleCount = prev[cityGroup.city] || SERVICES_PER_PAGE;
+        const visibleActiveServices = activeServices.slice(0, visibleCount);
 
-      // If we have fewer visible active services than the page size, auto-load more
-      if (visibleActiveServices.length < SERVICES_PER_PAGE && activeServices.length < cityGroup.services.length) {
-        const newCount = Math.min(visibleCount + SERVICES_PER_PAGE, cityGroup.services.length);
-        setVisibleServicesPerCity(prev => ({
-          ...prev,
-          [cityGroup.city]: newCount
-        }));
-      }
+        // If we have fewer visible active services than the page size, auto-load more
+        if (visibleActiveServices.length < SERVICES_PER_PAGE && activeServices.length < cityGroup.services.length) {
+          const newCount = Math.min(visibleCount + SERVICES_PER_PAGE, cityGroup.services.length);
+          return {
+            ...prev,
+            [cityGroup.city]: newCount
+          };
+        }
+        return prev;
+      });
     });
-  }, [completedServices, groupedData, visibleServicesPerCity]);
+  }, [completedServices, groupedData]);
 
   const handlePdfReport = async (service: Service) => {
     try {
@@ -286,6 +292,15 @@ export default function TechnicianServicesGrouped() {
 
   const getStatusBadge = (status: keyof typeof statusConfig) => {
     const config = statusConfig[status];
+    // Fallback for unknown statuses
+    if (!config) {
+      return (
+        <Badge className="bg-gray-50 text-gray-700 border-0">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          {status}
+        </Badge>
+      );
+    }
     const IconComponent = config.icon;
     return (
       <Badge className={`${config.bgColor} ${config.textColor} border-0`}>
@@ -309,43 +324,47 @@ export default function TechnicianServicesGrouped() {
     );
   };
 
-  const renderService = (service: Service) => (
-    <Card key={service.id} className="hover:shadow-md transition-shadow mb-3">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{service.client.fullName}</CardTitle>
-          <div className="flex gap-2">
-            {getStatusBadge(service.status)}
-            {getPriorityBadge(service.priority)}
+  const renderService = (service: Service) => {
+    // Backend returns flattened data: clientName, clientCity, clientAddress, etc.
+    const serviceData = service as any;
+    
+    return (
+      <Card key={service.id} className="hover:shadow-md transition-shadow mb-3">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">{serviceData.clientName || 'Nepoznat klijent'}</CardTitle>
+            <div className="flex gap-2">
+              {getStatusBadge(service.status)}
+              {getPriorityBadge(service.priority)}
+            </div>
           </div>
-        </div>
-        <div className="text-sm text-gray-600">
-          {service.appliance.category.name} - {service.appliance.model || 'Model nepoznat'}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <p className="text-sm">{service.description}</p>
-        
-        <div className="flex items-center gap-4 text-xs text-gray-500">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            {formatDate(service.createdAt)}
+          <div className="text-sm text-gray-600">
+            {serviceData.categoryName || 'Nepoznata kategorija'} - {serviceData.applianceName || 'Model nepoznat'}
           </div>
-        </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm">{service.description}</p>
+          
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {formatDate(service.createdAt)}
+            </div>
+          </div>
 
-        {service.client.address && (
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <MapPin className="h-3 w-3" />
-            {service.client.address}
-          </div>
-        )}
+          {serviceData.clientAddress && (
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <MapPin className="h-3 w-3" />
+              {serviceData.clientAddress}
+            </div>
+          )}
 
-        {service.client.phone && (
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <Phone className="h-3 w-3" />
-            {service.client.phone}
-          </div>
-        )}
+          {serviceData.clientPhone && (
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <Phone className="h-3 w-3" />
+              {serviceData.clientPhone}
+            </div>
+          )}
 
         <div className="flex gap-2 pt-2">
           <Button 
@@ -391,7 +410,8 @@ export default function TechnicianServicesGrouped() {
         </div>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -568,45 +588,51 @@ export default function TechnicianServicesGrouped() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Detalji servisa #{selectedService?.id}</DialogTitle>
+              <DialogDescription>
+                Pregled kompletnih informacija o servisu
+              </DialogDescription>
             </DialogHeader>
-            {selectedService && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Klijent</Label>
-                    <p className="font-medium">{selectedService.client.fullName}</p>
+            {selectedService && (() => {
+              const serviceData = selectedService as any;
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Klijent</Label>
+                      <p className="font-medium">{serviceData.clientName || 'Nepoznat klijent'}</p>
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <div className="mt-1">{getStatusBadge(selectedService.status)}</div>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Status</Label>
-                    <div className="mt-1">{getStatusBadge(selectedService.status)}</div>
-                  </div>
-                </div>
 
-                <div>
-                  <Label>Opis problema</Label>
-                  <p className="mt-1 text-sm">{selectedService.description}</p>
-                </div>
+                  <div>
+                    <Label>Opis problema</Label>
+                    <p className="mt-1 text-sm">{selectedService.description}</p>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Uređaj</Label>
-                    <p className="text-sm">{selectedService.appliance.category.name}</p>
-                    <p className="text-sm text-gray-600">{selectedService.appliance.model}</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Uređaj</Label>
+                      <p className="text-sm">{serviceData.categoryName || 'Nepoznata kategorija'}</p>
+                      <p className="text-sm text-gray-600">{serviceData.applianceName || 'Model nepoznat'}</p>
+                    </div>
+                    <div>
+                      <Label>Prioritet</Label>
+                      <div className="mt-1">{getPriorityBadge(selectedService.priority)}</div>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Prioritet</Label>
-                    <div className="mt-1">{getPriorityBadge(selectedService.priority)}</div>
-                  </div>
-                </div>
 
-                {selectedService.technicianNotes && (
-                  <div>
-                    <Label>Napomene servisera</Label>
-                    <p className="mt-1 text-sm bg-gray-50 p-2 rounded">{selectedService.technicianNotes}</p>
-                  </div>
-                )}
-              </div>
-            )}
+                  {selectedService.technicianNotes && (
+                    <div>
+                      <Label>Napomene servisera</Label>
+                      <p className="mt-1 text-sm bg-gray-50 p-2 rounded">{selectedService.technicianNotes}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </DialogContent>
         </Dialog>
 
@@ -658,7 +684,7 @@ export default function TechnicianServicesGrouped() {
           <DevicePickupDialog
             isOpen={isPickupDialogOpen}
             onClose={() => setIsPickupDialogOpen(false)}
-            serviceId={selectedService.id}
+            service={selectedService}
             onSuccess={() => {
               queryClient.invalidateQueries({ queryKey: ["/api/services/technician/grouped-by-city"] });
               refetch();
