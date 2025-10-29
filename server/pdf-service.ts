@@ -223,7 +223,7 @@ export class PDFService {
             </div>
             <div class="info-item">
               <span class="info-label">Status garancije:</span>
-              <span class="info-value"><strong>${service.warrantyStatus === 'in_warranty' ? 'U GARANCIJI' : 'VAN GARANCIJE'}</strong></span>
+              <span class="info-value"><strong>${service.warrantyStatus === 'u garanciji' ? 'U GARANCIJI' : service.warrantyStatus === 'van garancije' ? 'VAN GARANCIJE' : 'NEPOZNATO'}</strong></span>
             </div>
           </div>
           <div>
