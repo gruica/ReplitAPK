@@ -51,7 +51,7 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Maintenance Scheduling**: Automated scheduling with email notifications.
 - **Business Partner Integration**: Dedicated portal for partners to submit service requests, view completion details, and edit client information with integrated warranty status selection.
 - **Spare Parts Management**: Comprehensive system for tracking, ordering, and managing spare parts.
-- **Notifications**: In-app, SMS, and email notifications for all key events, with role-specific templates.
+- **Notifications**: In-app, SMS, and email notifications for all key events, with role-specific templates. Admin notifications sent only to jelena@frigosistemtodosijevic.com.
 - **Data Export**: CSV export functionality for various database tables.
 - **Billing Management**: Supports warranty (ComPlus, Beko) and out-of-warranty billing with admin override capabilities, documentation, and service exclusion, including PDF generation for reports.
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
