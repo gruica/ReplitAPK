@@ -36,11 +36,10 @@ export class BekoCronService {
         console.log('[BEKO CRON] 🕙 Pokretanje automatskog dnevnog Beko izveštaja...');
         try {
           // NOTE: Production email adrese - konfigurisati preko .env ako treba promeniti
-          // BEKO_SERVICE_EMAIL i BEKO_BILLING_EMAIL
+          // BEKO_SERVICE_EMAIL
           const bekoReportEmails = [
             'gruica@frigosistemtodosijevic.com',
-            process.env.BEKO_SERVICE_EMAIL || 'servis@bekoserbija.com',
-            process.env.BEKO_BILLING_EMAIL || 'fakturisanje@bekoserbija.com'
+            process.env.BEKO_SERVICE_EMAIL || 'mp4@eurotehnikamn.me'
           ];
           
           // Šalje izveštaj svim odgovornim osobama
@@ -63,7 +62,7 @@ export class BekoCronService {
       this.isRunning = true;
       console.log('[BEKO CRON] ✅ Beko cron job-ovi pokrenuti');
       console.log('[BEKO CRON] 📅 Dnevni izveštaj: svaki dan u 22:30 (Belgrade vreme)');
-      console.log('[BEKO CRON] 📧 Email adrese: gruica@frigosistemtodosijevic.com, servis@bekoserbija.com, fakturisanje@bekoserbija.com');
+      console.log('[BEKO CRON] 📧 Email adrese: gruica@frigosistemtodosijevic.com, mp4@eurotehnikamn.me');
     
     } catch (error) {
       console.error('[BEKO CRON] ❌ Greška pri pokretanju Beko cron job-ova:', error);
