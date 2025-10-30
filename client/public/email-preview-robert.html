@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Dnevni Izveštaj Servisa - 30. 10. 2025.</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 20px auto; background: #e9ecef; padding: 20px; }
+    .email-container { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white; padding: 30px 20px; text-align: center; }
+    .header h1 { margin: 0 0 10px 0; font-size: 1.8em; }
+    .header h2 { margin: 0 0 5px 0; font-size: 1.3em; font-weight: normal; }
+    .header h3 { margin: 0; font-size: 1.1em; font-weight: normal; opacity: 0.9; }
+    .content { padding: 30px 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 25px 0; }
+    .stat-card { background: #f8f9fa; border-left: 4px solid #6f42c1; padding: 20px; text-align: center; border-radius: 4px; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-number { font-size: 2.5em; font-weight: bold; color: #6f42c1; margin-bottom: 5px; }
+    .stat-label { font-size: 0.9em; color: #666; }
+    h3 { color: #6f42c1; margin-top: 30px; border-bottom: 2px solid #e83e8c; padding-bottom: 10px; }
+    .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .table th, .table td { border: 1px solid #ddd; padding: 12px 8px; text-align: left; font-size: 0.9em; }
+    .table th { background-color: #f2f2f2; font-weight: 600; }
+    .table tr:hover { background-color: #f8f9fa; }
+    .status-new { color: #28a745; font-weight: bold; background: #d4edda; padding: 4px 8px; border-radius: 4px; }
+    .status-completed { color: #007bff; font-weight: bold; }
+    .status-progress { color: #ffc107; font-weight: bold; }
+    .footer { background: #f8f9fa; padding: 25px 20px; text-align: center; border-top: 3px solid #6f42c1; }
+    .footer p { margin: 5px 0; color: #666; }
+    small { color: #666; }
+    .no-data { text-align: center; padding: 40px; color: #999; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>📊 Dnevni Izveštaj Servisa</h1>
+      <h2>Robert Ivezić</h2>
+      <h3>30. 10. 2025.</h3>
+    </div>
+    
+    <div class="content">
+      <!-- Statistike -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">3</div>
+          <div class="stat-label">Novi Servisi</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">0</div>
+          <div class="stat-label">Završeni Servisi</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">0</div>
+          <div class="stat-label">Servisi u Toku</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">0</div>
+          <div class="stat-label">Zakazani Servisi</div>
+        </div>
+      </div>
+
+      <!-- Novi Servisi -->
+      <h3>✅ Novi Servisi Danas</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Klijent</th>
+            <th>Uređaj</th>
+            <th>Problem</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>#530</strong></td>
+            <td>N/A<br><small></small></td>
+            <td>N/A </td>
+            <td>Test servis za dnevni izvještaj poslovnom partneru</td>
+            <td class="status-new">PENDING</td>
+          </tr>
+          <tr>
+            <td><strong>#531</strong></td>
+            <td>Pogrebno Budva<br><small>+38267477341</small></td>
+            <td>Beko Dispanzer</td>
+            <td>Test servis za dnevni izvještaj - VALIDNI PODACI</td>
+            <td class="status-new">PENDING</td>
+          </tr>
+          <tr>
+            <td><strong>#532</strong></td>
+            <td>Pogrebno Budva<br><small>+38267477341</small></td>
+            <td>Beko Dispanzer</td>
+            <td>E2E TEST: Dnevni izvještaj za poslovnog partnera - VALIDNI PODACI</td>
+            <td class="status-new">PENDING</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Poruka ako nema završenih servisa -->
+      <h3>📋 Završeni Servisi Danas</h3>
+      <div class="no-data">
+        <p>Nema završenih servisa danas.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>Frigo Sistem Todosijević</strong> - Business Partner Portal</p>
+      <p>Automatski dnevni izveštaj - 30. 10. 2025.</p>
+      <p style="font-size: 0.85em; margin-top: 15px;">
+        📧 Email: robert.ivezic@tehnoplus.me
+      </p>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; padding: 20px; background: white; border-radius: 8px;">
+    <p style="color: #666; font-size: 0.9em;">
+      ℹ️ <strong>Napomena:</strong> Ovo je preview email-a sa novim izmjenama<br>
+      ✅ LEFT JOIN omogućava prikaz servisa čak i kada nisu svi podaci popunjeni (vidi servis #530)<br>
+      ✅ Datum format ispravljен - koristi se YYYY-MM-DD format umjesto ISO stringa<br>
+      ✅ Email se šalje automatski svaki dan u 22:00
+    </p>
+  </div>
+</body>
+</html>
