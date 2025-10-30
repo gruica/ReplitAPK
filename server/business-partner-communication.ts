@@ -223,6 +223,9 @@ export class BusinessPartnerCommunicationService {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
+      // Format date as YYYY-MM-DD to match database format
+      const dateString = date.toISOString().split('T')[0];
+
       // Dohvati partner podatke
       const partnerData = await db
         .select({
@@ -264,22 +267,18 @@ export class BusinessPartnerCommunicationService {
           cost: services.cost
         })
         .from(services)
-        .innerJoin(appliances, eq(services.applianceId, appliances.id))
-        .innerJoin(clients, eq(appliances.clientId, clients.id))
-        .innerJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
-        .innerJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
+        .leftJoin(appliances, eq(services.applianceId, appliances.id))
+        .leftJoin(clients, eq(appliances.clientId, clients.id))
+        .leftJoin(manufacturers, eq(appliances.manufacturerId, manufacturers.id))
+        .leftJoin(applianceCategories, eq(appliances.categoryId, applianceCategories.id))
         .where(
           and(
             eq(services.businessPartnerId, partnerId),
             or(
-              and(
-                gte(services.createdAt, startOfDay.toISOString()),
-                lte(services.createdAt, endOfDay.toISOString())
-              ),
+              eq(services.createdAt, dateString),
               and(
                 isNotNull(services.completedDate),
-                sql`${services.completedDate} >= ${startOfDay.toISOString()}`,
-                sql`${services.completedDate} <= ${endOfDay.toISOString()}`
+                eq(services.completedDate, dateString)
               )
             )
           )
@@ -287,8 +286,8 @@ export class BusinessPartnerCommunicationService {
         .orderBy(desc(services.createdAt));
 
       // Kategorisanje servisa po statusu
-      const newServices = partnerServices.filter(s => s.createdAt >= startOfDay.toISOString() && s.createdAt <= endOfDay.toISOString());
-      const completedServices = partnerServices.filter(s => s.completedDate && s.completedDate >= startOfDay.toISOString() && s.completedDate <= endOfDay.toISOString());
+      const newServices = partnerServices.filter(s => s.createdAt === dateString);
+      const completedServices = partnerServices.filter(s => s.completedDate === dateString);
       const scheduledServices = partnerServices.filter(s => s.status === 'scheduled');
       const inProgressServices = partnerServices.filter(s => s.status === 'in_progress');
 
