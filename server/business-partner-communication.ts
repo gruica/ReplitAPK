@@ -194,7 +194,12 @@ export class BusinessPartnerCommunicationService {
       `;
 
       // Pošalji email
-      const emailService = new EmailService();
+      if (!service.partnerEmail) {
+        console.warn(`[BP COMM] Partner ${partnerId} nema email adresu`);
+        return false;
+      }
+
+      const emailService = EmailService.getInstance();
       const result = await emailService.sendEmail({
         to: service.partnerEmail,
         subject,
@@ -388,7 +393,7 @@ export class BusinessPartnerCommunicationService {
                       <td>${service.clientName}</td>
                       <td>${service.applianceBrand} ${service.applianceType}</td>
                       <td>${service.cost || 'N/A'}</td>
-                      <td class="status-completed">${new Date(service.completedDate).toLocaleTimeString('sr-RS')}</td>
+                      <td class="status-completed">${service.completedDate ? new Date(service.completedDate).toLocaleTimeString('sr-RS') : 'N/A'}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -405,7 +410,12 @@ export class BusinessPartnerCommunicationService {
       `;
 
       // Pošalji email
-      const emailService = new EmailService();
+      if (!partner.partnerEmail) {
+        console.warn(`[BP COMM] Partner ${partnerId} nema email adresu`);
+        return false;
+      }
+
+      const emailService = EmailService.getInstance();
       const result = await emailService.sendEmail({
         to: partner.partnerEmail,
         subject,
