@@ -142,7 +142,14 @@ export function registerAdminRoutes(app: Express) {
       }
 
       const userId = parseInt(req.params.id);
-      await storage.deleteUser(userId);
+      const success = await storage.deleteUser(userId);
+      
+      if (!success) {
+        return res.status(409).json({
+          error: "Korisnik ne može biti obrisan jer ima povezane podatke (servise, notifikacije, itd.)"
+        });
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting user:", error);
