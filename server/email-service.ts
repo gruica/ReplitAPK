@@ -52,10 +52,7 @@ export class EmailService {
   private transporter: Transporter;
   private configCache: SmtpConfig | null = null;
   private adminEmails: string[] = [
-    'admin@frigosistemtodosijevic.com',
-    'jelena@frigosistemtodosijevic.com',
-    'jelena@frigosistemtodosijevic.me',
-    'vladimir.jela.84@gmail.com' // Dodali smo još jedan admin email za testiranje
+    'jelena@frigosistemtodosijevic.com'
   ];
 
   private constructor() {
