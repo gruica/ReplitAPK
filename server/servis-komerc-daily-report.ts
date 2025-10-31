@@ -118,13 +118,12 @@ export class ServisKomercDailyReportService {
         completedServices.map(async (service) => {
           const parts = await db
             .select({
-              partName: sparePartsCatalog.name,
-              partCode: sparePartsCatalog.partCode,
+              partName: sparePartOrders.partName,
+              partNumber: sparePartOrders.partNumber,
               quantity: sparePartOrders.quantity,
               price: sparePartOrders.estimatedCost
             })
             .from(sparePartOrders)
-            .innerJoin(sparePartsCatalog, eq(sparePartOrders.sparePartId, sparePartsCatalog.id))
             .where(eq(sparePartOrders.serviceId, service.serviceId));
 
           return {
@@ -142,7 +141,7 @@ export class ServisKomercDailyReportService {
             cost: service.cost || '0',
             partsUsed: parts.map(part => ({
               partName: part.partName,
-              partCode: part.partCode || 'N/A',
+              partCode: part.partNumber || 'N/A',
               quantity: part.quantity,
               price: parseFloat(part.price || '0')
             }))
