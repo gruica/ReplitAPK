@@ -107,7 +107,7 @@ export class BekoDailyReportService {
       console.log(`[BEKO REPORT] Pronađeno ${completedServices.length} završenih Beko garantnih servisa`);
 
       // 2. Rezervni delovi korišćeni u tim servisima
-      const usedParts = completedServices.length > 0 ? await db
+      const usedPartsRaw = completedServices.length > 0 ? await db
         .select({
           partName: sparePartOrders.partName,
           quantity: sparePartOrders.quantity,
@@ -123,11 +123,22 @@ export class BekoDailyReportService {
             // Samo delovi iz završenih servisa
             eq(services.status, 'completed'),
             isNotNull(services.completedDate),
+            isNotNull(sparePartOrders.serviceId),
             gte(services.completedDate, startOfDay.toISOString()),
             lte(services.completedDate, endOfDay.toISOString()),
             eq(services.warrantyStatus, 'u garanciji') // Samo garantni servisi
           )
         ) : [];
+      
+      // Filter out any parts with null serviceId (type safety)
+      const usedParts = usedPartsRaw
+        .filter(part => part.serviceId !== null)
+        .map(part => ({
+          partName: part.partName,
+          quantity: part.quantity,
+          serviceId: part.serviceId!,
+          clientName: part.clientName
+        }));
 
       // 3. Ukupan broj korišćenih delova
       const totalUsedParts = usedParts.reduce((sum, part) => sum + part.quantity, 0);
