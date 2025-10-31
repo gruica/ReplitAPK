@@ -91,8 +91,8 @@ export class BekoDailyReportService {
           and(
             eq(services.status, 'completed'),
             isNotNull(services.completedDate),
-            gte(services.completedDate, startOfDay),
-            lte(services.completedDate, endOfDay),
+            gte(services.completedDate, startOfDay.toISOString()),
+            lte(services.completedDate, endOfDay.toISOString()),
             // KLJUČNO: Filtriraraj samo Beko brendove
             or(
               like(manufacturers.name, '%Beko%'),
@@ -123,9 +123,9 @@ export class BekoDailyReportService {
             // Samo delovi iz završenih servisa
             eq(services.status, 'completed'),
             isNotNull(services.completedDate),
-            gte(services.completedDate, startOfDay),
-            lte(services.completedDate, endOfDay),
-            eq(services.isWarrantyService, true) // Samo garantni servisi
+            gte(services.completedDate, startOfDay.toISOString()),
+            lte(services.completedDate, endOfDay.toISOString()),
+            eq(services.warrantyStatus, 'u garanciji') // Samo garantni servisi
           )
         ) : [];
 
@@ -165,9 +165,9 @@ export class BekoDailyReportService {
           applianceModel: service.applianceModel || 'Nepoznat model',
           description: service.description || 'Nema opisa',
           workPerformed: service.workPerformed || 'Nema beleški',
-          completedAt: service.completedAt,
+          completedAt: service.completedAt ? new Date(service.completedAt) : new Date(),
           status: service.status,
-          cost: service.cost
+          cost: service.cost ? parseFloat(service.cost) : null
         })),
         usedParts
       };
@@ -445,7 +445,7 @@ export class BekoDailyReportService {
         html: htmlContent
       });
 
-      if (result.success) {
+      if (result) {
         console.log(`[BEKO REPORT] ✅ Uspešno poslat profesionalni izveštaj na ${recipientEmail}`);
         return true;
       } else {
