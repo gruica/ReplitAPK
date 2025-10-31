@@ -1762,5 +1762,81 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // ========== DAILY REPORTS TESTING ==========
+  
+  /**
+   * Test endpoint za dnevne izvještaje poslovnih partnera
+   * Omogućava administratorima da ručno pokrenu test izvještaje
+   */
+  app.post("/api/admin/test-daily-reports", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const { reportType, targetDate, email } = req.body;
+      
+      // Validacija
+      if (!reportType || !['complus', 'beko', 'servis-komerc'].includes(reportType)) {
+        return res.status(400).json({
+          success: false,
+          error: "Morate specifikovati validan tip izvještaja: 'complus', 'beko', ili 'servis-komerc'"
+        });
+      }
+
+      // Datum za koji se generiše izvještaj (default: danas)
+      const reportDate = targetDate ? new Date(targetDate) : new Date();
+      const recipientEmail = email || 'gruica@frigosistemtodosijevic.com';
+
+      console.log(`[TEST DAILY REPORTS] Ručno pokretanje ${reportType} izvještaja za ${reportDate.toLocaleDateString('sr-ME')}`);
+
+      let result = false;
+      let reportData: any = null;
+
+      // Importuj i pokreni odgovarajući servis
+      if (reportType === 'complus') {
+        const { ComplusCronService } = await import('../complus-cron-service.js');
+        const cronService = ComplusCronService.getInstance();
+        await cronService.testProfessionalReport(recipientEmail, targetDate);
+        result = true;
+      } else if (reportType === 'beko') {
+        const { BekoDailyReportService } = await import('../beko-daily-report.js');
+        const reportService = new BekoDailyReportService();
+        result = await reportService.sendProfessionalDailyReport(reportDate, recipientEmail);
+      } else if (reportType === 'servis-komerc') {
+        const { ServisKomercCronService } = await import('../servis-komerc-cron-service.js');
+        const cronService = new ServisKomercCronService();
+        result = await cronService.manualDailyReport(reportDate, recipientEmail);
+      }
+
+      if (result) {
+        res.json({
+          success: true,
+          message: `${reportType.toUpperCase()} izvještaj uspješno poslat na ${recipientEmail}`,
+          details: {
+            reportType,
+            date: reportDate.toLocaleDateString('sr-ME'),
+            recipientEmail,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: `Greška pri slanju ${reportType} izvještaja`,
+          details: {
+            reportType,
+            date: reportDate.toLocaleDateString('sr-ME'),
+            recipientEmail
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error('[TEST DAILY REPORTS] Greška:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Nepoznata greška pri slanju izvještaja',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
+  });
+
   console.log("✅ Admin routes registered");
 }
