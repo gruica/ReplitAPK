@@ -134,12 +134,16 @@ function checkQRRateLimit(ip: string): boolean {
 async function checkServicePhotoAccess(userId: number, userRole: string, serviceId: number) {
   try {
     const service = await storage.getService(serviceId);
+    console.log(`🔒 [PHOTO ACCESS] userId=${userId}, userRole=${userRole}, serviceId=${serviceId}, service=${!!service}`);
+    
     if (!service) {
+      console.log(`🔒 [PHOTO ACCESS] Service not found`);
       return { hasAccess: false };
     }
 
     // Admin has full access
     if (userRole === 'admin') {
+      console.log(`🔒 [PHOTO ACCESS] Admin access granted`);
       return { hasAccess: true, service };
     }
 
