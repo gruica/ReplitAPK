@@ -131,10 +131,10 @@ function checkQRRateLimit(ip: string): boolean {
 }
 
 // Service photo access check helper
-async function checkServicePhotoAccess(userId: number, userRole: string, serviceId: number) {
+async function checkServicePhotoAccess(userId: number, userRole: string, serviceId: number, technicianId?: number | null) {
   try {
     const service = await storage.getService(serviceId);
-    console.log(`🔒 [PHOTO ACCESS] userId=${userId}, userRole=${userRole}, serviceId=${serviceId}, service=${!!service}`);
+    console.log(`🔒 [PHOTO ACCESS] userId=${userId}, userRole=${userRole}, technicianId=${technicianId}, serviceId=${serviceId}, service=${!!service}`);
     
     if (!service) {
       console.log(`🔒 [PHOTO ACCESS] Service not found`);
@@ -148,7 +148,8 @@ async function checkServicePhotoAccess(userId: number, userRole: string, service
     }
 
     // Assigned technician has access
-    if (userRole === 'technician' && service.technicianId === userId) {
+    if (userRole === 'technician' && technicianId && service.technicianId === technicianId) {
+      console.log(`🔒 [PHOTO ACCESS] Technician access granted (technicianId=${technicianId})`);
       return { hasAccess: true, service };
     }
 
@@ -162,6 +163,7 @@ async function checkServicePhotoAccess(userId: number, userRole: string, service
       return { hasAccess: true, service };
     }
 
+    console.log(`🔒 [PHOTO ACCESS] Access denied`);
     return { hasAccess: false, service };
   } catch (error) {
     console.error("Error checking service photo access:", error);
@@ -497,7 +499,7 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Check authorization
-      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, serviceId);
+      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, serviceId, req.user.technicianId);
       if (!accessCheck.hasAccess) {
         return res.status(403).json({ error: "Nemate dozvolu za pristup fotografijama ovog servisa" });
       }
@@ -537,7 +539,7 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Check authorization
-      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, parseInt(serviceId));
+      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, parseInt(serviceId), req.user.technicianId);
       if (!accessCheck.hasAccess) {
         return res.status(403).json({ error: "Nemate dozvolu za dodavanje fotografija ovom servisu" });
       }
@@ -600,7 +602,7 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Check authorization
-      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, photo.serviceId);
+      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, photo.serviceId, req.user.technicianId);
       if (!accessCheck.hasAccess) {
         return res.status(403).json({ error: "Nemate dozvolu za brisanje ove fotografije" });
       }
@@ -645,7 +647,7 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Check authorization
-      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, serviceId);
+      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, serviceId, req.user.technicianId);
       if (!accessCheck.hasAccess) {
         return res.status(403).json({ error: "Nemate dozvolu za pristup fotografijama ovog servisa" });
       }
@@ -671,7 +673,7 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Check authorization
-      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, photo.serviceId);
+      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, photo.serviceId, req.user.technicianId);
       if (!accessCheck.hasAccess) {
         return res.status(403).json({ error: "Nemate dozvolu za pristup ovoj fotografiji" });
       }
@@ -944,7 +946,7 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
       }
 
       // Check authorization
-      const accessCheck = await checkServicePhotoAccess(req.user!.id, req.user!.role, serviceId);
+      const accessCheck = await checkServicePhotoAccess(req.user!.id, req.user!.role, serviceId, req.user!.technicianId);
       if (!accessCheck.hasAccess) {
         return res.status(403).json({ error: "Nemate dozvolu za dodavanje fotografija ovom servisu" });
       }
