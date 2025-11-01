@@ -528,6 +528,8 @@ export function registerMiscRoutes(app: Express) {
       delete mappedBody.photoUrl;
       delete mappedBody.photoCategory;
 
+      console.log(`📸 [PHOTO UPLOAD] Original photoPath: ${mappedBody.photoPath}`);
+
       // Validate service ID first
       const serviceId = mappedBody.serviceId;
       if (!serviceId || isNaN(parseInt(serviceId))) {
@@ -540,27 +542,39 @@ export function registerMiscRoutes(app: Express) {
         return res.status(403).json({ error: "Nemate dozvolu za dodavanje fotografija ovom servisu" });
       }
 
+      // 🔧 FIX: Normalizuj photoPath PRE nego što se sačuva u bazu
+      if (mappedBody.photoPath && mappedBody.photoPath.startsWith("https://storage.googleapis.com/")) {
+        const objectStorageService = new ObjectStorageService();
+        const normalizedPath = objectStorageService.normalizeObjectEntityPath(mappedBody.photoPath);
+        console.log(`📸 [PHOTO UPLOAD] Normalized photoPath: ${normalizedPath}`);
+        
+        // Postavi ACL policy za fotografiju
+        try {
+          await objectStorageService.trySetObjectEntityAclPolicy(
+            mappedBody.photoPath,
+            {
+              owner: req.user.id.toString(),
+              visibility: "private", // Privatne fotografije servisa
+            },
+          );
+          console.log(`📸 [PHOTO UPLOAD] ACL policy set successfully`);
+        } catch (aclError) {
+          console.error("Error setting ACL policy:", aclError);
+          // Nastavi sa normalizovanom putanjom čak i ako ACL postavljanje ne uspe
+        }
+        
+        // Zameni punu URL sa normalizovanom putanjom
+        mappedBody.photoPath = normalizedPath;
+      }
+
       const validatedData = insertServicePhotoSchema.parse(mappedBody);
 
-      // Kreiranje fotografije u bazi
+      console.log(`📸 [PHOTO UPLOAD] Saving to database with photoPath: ${validatedData.photoPath}`);
+
+      // Kreiranje fotografije u bazi sa već normalizovanom putanjom
       const newPhoto = await storage.createServicePhoto(validatedData);
 
-      // Postavljanje ACL policy-a za fotografiju
-      if (validatedData.photoPath.startsWith("https://storage.googleapis.com/")) {
-        const objectStorageService = new ObjectStorageService();
-        const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-          validatedData.photoPath,
-          {
-            owner: req.user.id.toString(),
-            visibility: "private", // Privatne fotografije servisa
-          },
-        );
-        
-        // Ažuriranje putanje u bazi sa normalizovanom putanjom
-        if (newPhoto.id) {
-          await storage.updateServicePhoto?.(newPhoto.id, { photoPath: objectPath });
-        }
-      }
+      console.log(`📸 [PHOTO UPLOAD] Photo saved successfully with ID: ${newPhoto.id}, photoPath: ${newPhoto.photoPath}`);
 
       res.status(201).json(newPhoto);
     } catch (error: any) {
