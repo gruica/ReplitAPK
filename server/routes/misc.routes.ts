@@ -924,7 +924,7 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
       }
 
       // Check authorization
-      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, serviceId);
+      const accessCheck = await checkServicePhotoAccess(req.user!.id, req.user!.role, serviceId);
       if (!accessCheck.hasAccess) {
         return res.status(403).json({ error: "Nemate dozvolu za dodavanje fotografija ovom servisu" });
       }
@@ -962,7 +962,7 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
         photoPath: objectPath,
         category: req.body.photoCategory || 'other',
         description: req.body.description || `Uploaded: ${req.file.originalname}`,
-        uploadedBy: req.user.id,
+        uploadedBy: req.user!.id,
       };
 
       const validatedData = insertServicePhotoSchema.parse(photoData);
