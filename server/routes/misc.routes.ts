@@ -7,6 +7,7 @@ import path from "path";
 import { db } from "../db";
 import { desc, eq } from "drizzle-orm";
 import { emailService } from "../email-service";
+import multer from "multer";
 
 // Production logger for clean deployment
 class ProductionLogger {
@@ -853,6 +854,101 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
         error: 'Test WhatsApp poziv nije uspeo',
         details: error.message
       });
+    }
+  });
+
+  // ===== NEW ENDPOINT: SERVICE PHOTOS UPLOAD =====
+  // Multer configuration for memory storage
+  const photoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Samo slike su dozvoljene'));
+      }
+    }
+  });
+
+  app.post("/api/service-photos/upload", jwtAuth, photoUpload.single('photo'), async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("../objectStorage");
+      const { insertServicePhotoSchema } = await import("@shared/schema");
+
+      if (!req.file) {
+        return res.status(400).json({ error: "Fajl nije pronađen" });
+      }
+
+      const serviceId = parseInt(req.body.serviceId);
+      if (!serviceId || isNaN(serviceId)) {
+        return res.status(400).json({ error: "Valjan serviceId je potreban" });
+      }
+
+      // Check authorization
+      const accessCheck = await checkServicePhotoAccess(req.user.id, req.user.role, serviceId);
+      if (!accessCheck.hasAccess) {
+        return res.status(403).json({ error: "Nemate dozvolu za dodavanje fotografija ovom servisu" });
+      }
+
+      logger.info(`📸 [UPLOAD] Uploading photo for service ${serviceId}`);
+
+      // Upload to Object Storage
+      const objectStorageService = new ObjectStorageService();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+      
+      logger.info(`📸 [UPLOAD] Got signed URL from Object Storage`);
+
+      // Upload file to signed URL
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: req.file.buffer,
+        headers: {
+          'Content-Type': req.file.mimetype,
+        }
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Object Storage upload failed: ${uploadResponse.status}`);
+      }
+
+      // Extract object path from signed URL
+      const urlParts = new URL(uploadUrl);
+      const objectPath = `/objects${urlParts.pathname}`;
+
+      logger.info(`📸 [UPLOAD] File uploaded successfully to ${objectPath}`);
+
+      // Create database record
+      const photoData = {
+        serviceId,
+        photoPath: objectPath,
+        category: req.body.photoCategory || 'other',
+        description: req.body.description || `Uploaded: ${req.file.originalname}`,
+        uploadedBy: req.user.id,
+      };
+
+      const validatedData = insertServicePhotoSchema.parse(photoData);
+      const newPhoto = await storage.createServicePhoto(validatedData);
+
+      logger.info(`📸 [UPLOAD] Photo record created in database with ID ${newPhoto.id}`);
+
+      res.status(201).json({
+        success: true,
+        photo: newPhoto,
+        message: 'Fotografija uspešno uploadovana'
+      });
+
+    } catch (error: any) {
+      logger.error('Error uploading service photo:', error);
+      if (error.name === 'MulterError') {
+        return res.status(400).json({ error: `Greška pri upload-u: ${error.message}` });
+      }
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: "Neispravni podaci", details: error.errors });
+      }
+      res.status(500).json({ error: "Neuspešno upload-ovanje fotografije" });
     }
   });
 
