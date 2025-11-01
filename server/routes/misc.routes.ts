@@ -939,7 +939,7 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
       const objectStorageService = new ObjectStorageService();
       const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
       
-      logger.info(`📸 [UPLOAD] Got signed URL from Object Storage`);
+      logger.info(`📸 [UPLOAD] Got signed URL: ${uploadUrl}`);
 
       // Upload file to signed URL
       const uploadResponse = await fetch(uploadUrl, {
@@ -954,9 +954,32 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
         throw new Error(`Object Storage upload failed: ${uploadResponse.status}`);
       }
 
-      // Extract object path from signed URL
+      // Extract relative object path from signed URL
       const urlParts = new URL(uploadUrl);
-      const objectPath = `/objects${urlParts.pathname}`;
+      const fullPathname = urlParts.pathname;
+      
+      // Get PRIVATE_OBJECT_DIR to extract relative path
+      const privateDir = objectStorageService.getPrivateObjectDir();
+      
+      logger.info(`📸 [PATH DEBUG] fullPathname: ${fullPathname}`);
+      logger.info(`📸 [PATH DEBUG] privateDir: ${privateDir}`);
+      
+      // Remove leading slash and extract entity ID relative to PRIVATE_OBJECT_DIR
+      // Example: /bucket/.private/uploads/UUID -> uploads/UUID
+      let relativePath = fullPathname.slice(1); // Remove leading /
+      logger.info(`📸 [PATH DEBUG] relativePath after removing slash: ${relativePath}`);
+      
+      if (relativePath.startsWith(privateDir)) {
+        relativePath = relativePath.slice(privateDir.length);
+        logger.info(`📸 [PATH DEBUG] relativePath after removing privateDir: ${relativePath}`);
+        if (relativePath.startsWith('/')) {
+          relativePath = relativePath.slice(1);
+          logger.info(`📸 [PATH DEBUG] relativePath after removing leading slash: ${relativePath}`);
+        }
+      }
+      
+      // Store as /objects/uploads/UUID (without bucket/.private prefix)
+      const objectPath = `/objects/${relativePath}`;
 
       logger.info(`📸 [UPLOAD] File uploaded successfully to ${objectPath}`);
 
