@@ -50,12 +50,9 @@ export class ServisKomercDailyReportService {
   async collectDailyData(date: Date = new Date()): Promise<ServisKomercReportData> {
     console.log(`[SERVIS KOMERC REPORT] Prikupljam podatke za datum: ${date.toLocaleDateString('sr-ME')}`);
 
-    // Početak i kraj dana
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // KRITIČNO: completed_date u bazi je samo datum '2025-10-31', ne datum+vrijeme
+    const dateOnly = date.toISOString().split('T')[0];
+    console.log(`[SERVIS KOMERC REPORT] Tražim servise za datum: ${dateOnly}`);
 
     try {
       console.log('[SERVIS KOMERC REPORT] Prikupljam stvarne podatke iz baze podataka...');
@@ -94,9 +91,8 @@ export class ServisKomercDailyReportService {
               like(manufacturers.name, '%beko%'),
               like(manufacturers.name, '%BEKO%')
             ),
-            // Filtriraj po datumu završetka servisa
-            gte(services.completedDate, startOfDay.toISOString()),
-            lte(services.completedDate, endOfDay.toISOString()),
+            // KRITIČNO: completed_date u bazi je '2025-10-31' format, ne ISO string
+            eq(services.completedDate, dateOnly),
             // Filtriraj servise kreirane od strane business partner-a (Servis Komerc)
             isNotNull(services.businessPartnerId)
           )
