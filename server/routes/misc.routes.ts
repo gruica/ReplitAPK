@@ -1018,4 +1018,5 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
   });
 
   console.log("✅ Misc routes registered");
+  console.log("🔥🔥🔥 SERVICE PHOTOS UPLOAD ENDPOINT REGISTERED AT: /api/service-photos/upload");
 }
