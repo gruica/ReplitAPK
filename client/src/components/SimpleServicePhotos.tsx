@@ -46,7 +46,7 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
 
   // Use the actual JWT-protected endpoint  
   const { data: photos = [], isLoading, error, refetch } = useQuery<ServicePhoto[]>({
-    queryKey: [`/api/service-photos?serviceId=${serviceId}`],
+    queryKey: ['/api/service-photos', serviceId],
     enabled: !!serviceId && serviceId > 0
   });
 

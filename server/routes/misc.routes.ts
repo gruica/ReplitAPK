@@ -148,6 +148,10 @@ async function checkServicePhotoAccess(userId: number, userRole: string, service
     }
 
     // Assigned technician has access
+    console.log(`🔍 [DEBUG] Checking technician access: userRole=${userRole}, technicianId=${technicianId}, service.technicianId=${service.technicianId}`);
+    console.log(`🔍 [DEBUG] Type check: technicianId type=${typeof technicianId}, service.technicianId type=${typeof service.technicianId}`);
+    console.log(`🔍 [DEBUG] Equality check: ${technicianId} === ${service.technicianId} = ${service.technicianId === technicianId}`);
+    
     if (userRole === 'technician' && technicianId && service.technicianId === technicianId) {
       console.log(`🔒 [PHOTO ACCESS] Technician access granted (technicianId=${technicianId})`);
       return { hasAccess: true, service };
@@ -488,6 +492,56 @@ export function registerMiscRoutes(app: Express) {
     // Jednostavno prihvatamo podatke bez obrade/skladištenja za maksimalnu brzinu
     // U production okruženju ovi podaci bi se slali u analitički servis
     res.status(200).json({ success: true });
+  });
+
+  // ===== OBJECT STORAGE UPLOAD ENDPOINTS =====
+  
+  // Endpoint za dobijanje signed URL-a za upload fotografija
+  app.get("/api/object-storage/upload-url", jwtAuth, async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("../objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      
+      console.log(`📤 [OBJECT STORAGE] Generating signed upload URL for user ${req.user.id}`);
+      
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+      
+      console.log(`✅ [OBJECT STORAGE] Signed URL generated successfully`);
+      
+      res.json({ uploadUrl });
+    } catch (error) {
+      console.error("❌ [OBJECT STORAGE] Error generating upload URL:", error);
+      res.status(500).json({ 
+        error: "Neuspešno generisanje upload URL-a",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Frontend endpoint za iniciranje upload procesa (vraća signed URL)
+  app.post("/api/objects/upload", jwtAuth, async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("../objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      
+      console.log(`📤 [OBJECTS UPLOAD] Initiating upload for user ${req.user.id}`);
+      
+      // Generiši signed URL za direktan upload na Object Storage
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+      
+      console.log(`✅ [OBJECTS UPLOAD] Upload URL generated: ${uploadUrl.substring(0, 80)}...`);
+      
+      res.json({ 
+        uploadUrl,
+        message: "Upload URL generated successfully"
+      });
+    } catch (error) {
+      console.error("❌ [OBJECTS UPLOAD] Error:", error);
+      res.status(500).json({ 
+        error: "Neuspešno kreiranje upload URL-a",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   });
 
   // ===== SERVICE PHOTOS ENDPOINTS =====
