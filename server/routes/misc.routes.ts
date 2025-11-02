@@ -148,10 +148,6 @@ async function checkServicePhotoAccess(userId: number, userRole: string, service
     }
 
     // Assigned technician has access
-    console.log(`🔍 [DEBUG] Checking technician access: userRole=${userRole}, technicianId=${technicianId}, service.technicianId=${service.technicianId}`);
-    console.log(`🔍 [DEBUG] Type check: technicianId type=${typeof technicianId}, service.technicianId type=${typeof service.technicianId}`);
-    console.log(`🔍 [DEBUG] Equality check: ${technicianId} === ${service.technicianId} = ${service.technicianId === technicianId}`);
-    
     if (userRole === 'technician' && technicianId && service.technicianId === technicianId) {
       console.log(`🔒 [PHOTO ACCESS] Technician access granted (technicianId=${technicianId})`);
       return { hasAccess: true, service };
