@@ -114,6 +114,19 @@ export function registerApiV1Routes(app: Express) {
         ...(user.technicianId ? { technicianId: user.technicianId } : {})
       });
       
+      // 🍪 SET JWT TOKEN AS COOKIE - enables IMG tags to authenticate
+      const isProduction = process.env.REPLIT_ENVIRONMENT === 'production' || 
+                           !!process.env.REPLIT_DEV_DOMAIN || 
+                           process.env.NODE_ENV === 'production';
+      
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'strict' : 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/'
+      });
+      
       res.json({
         user: {
           id: user.id,

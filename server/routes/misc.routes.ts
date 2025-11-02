@@ -728,15 +728,15 @@ export function registerMiscRoutes(app: Express) {
         return res.status(403).json({ error: "Nemate dozvolu za pristup ovoj fotografiji" });
       }
 
-      logger.info(`📸 [PROXY] Serving photo ${photoId} with path: ${photo.photoPath}`);
+      logger.info(`📸 [PROXY] Serving photo ${photoId} with path: ${photo.photoUrl}`);
 
       // Handle Object Storage paths (/objects/...)
-      if (photo.photoPath.startsWith('/objects/')) {
+      if (photo.photoUrl.startsWith('/objects/')) {
         try {
           const { ObjectStorageService } = await import("../objectStorage");
           const objectStorageService = new ObjectStorageService();
           
-          const file = await objectStorageService.getObjectEntityFile(photo.photoPath);
+          const file = await objectStorageService.getObjectEntityFile(photo.photoUrl);
           await objectStorageService.downloadObject(file, res);
           
           logger.info(`📸 [PROXY] Successfully streamed photo ${photoId}`);
@@ -748,8 +748,8 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Legacy paths (/uploads/...) - these files no longer exist
-      if (photo.photoPath.startsWith('/uploads/')) {
-        logger.warn(`📸 [PROXY] Legacy upload path detected for photo ${photoId}: ${photo.photoPath}`);
+      if (photo.photoUrl.startsWith('/uploads/')) {
+        logger.warn(`📸 [PROXY] Legacy upload path detected for photo ${photoId}: ${photo.photoUrl}`);
         return res.status(404).json({ 
           error: "Fotografija više nije dostupna (legacy format)",
           message: "Ova fotografija je sačuvana sa starim sistemom i nije dostupna. Molimo ponovo uploadujte."
@@ -757,13 +757,13 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Google Storage URLs - redirect to signed URL
-      if (photo.photoPath.startsWith('https://storage.googleapis.com/')) {
+      if (photo.photoUrl.startsWith('https://storage.googleapis.com/')) {
         logger.info(`📸 [PROXY] Redirecting to Google Storage URL for photo ${photoId}`);
-        return res.redirect(photo.photoPath);
+        return res.redirect(photo.photoUrl);
       }
 
       // Unknown format
-      logger.warn(`📸 [PROXY] Unknown photo path format for photo ${photoId}: ${photo.photoPath}`);
+      logger.warn(`📸 [PROXY] Unknown photo path format for photo ${photoId}: ${photo.photoUrl}`);
       return res.status(404).json({ error: "Nepoznat format fotografije" });
 
     } catch (error) {
