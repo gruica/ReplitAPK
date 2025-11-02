@@ -47,12 +47,20 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   // Use the actual JWT-protected endpoint  
   const { data, isLoading, error, refetch } = useQuery<ServicePhoto[]>({
     queryKey: ['/api/service-photos', serviceId],
-    queryFn: () => apiRequest(`/api/service-photos?serviceId=${serviceId}`),
+    queryFn: async () => {
+      const res = await apiRequest(`/api/service-photos?serviceId=${serviceId}`);
+      return res.json();
+    },
     enabled: !!serviceId && serviceId > 0
   });
   
   // Ensure photos is always an array
   const photos = Array.isArray(data) ? data : [];
+  
+  // Debug logging
+  useEffect(() => {
+    logger.log('📸 API Response Data:', data, 'Photos count:', photos.length, 'isLoading:', isLoading, 'error:', error);
+  }, [data, photos, isLoading, error]);
 
   // Upload photos
   const uploadPhotosMutation = useMutation({
@@ -121,13 +129,14 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   // Handle upload
   const handleGetUploadParameters = async () => {
     logger.log('📸 Getting upload parameters...');
-    const response = await apiRequest('/api/objects/upload', {
+    const res = await apiRequest('/api/objects/upload', {
       method: 'POST'
     });
+    const response = await res.json();
     logger.log('📸 Upload parameters:', response);
     return {
       method: 'PUT' as const,
-      url: (response as any).uploadURL,
+      url: response.uploadURL,
     };
   };
 
