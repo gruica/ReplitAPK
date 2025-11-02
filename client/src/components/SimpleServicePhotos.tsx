@@ -45,10 +45,14 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   // SimpleServicePhotos component rendered - debug and test functions removed for production
 
   // Use the actual JWT-protected endpoint  
-  const { data: photos = [], isLoading, error, refetch } = useQuery<ServicePhoto[]>({
+  const { data, isLoading, error, refetch } = useQuery<ServicePhoto[]>({
     queryKey: ['/api/service-photos', serviceId],
+    queryFn: () => apiRequest(`/api/service-photos?serviceId=${serviceId}`),
     enabled: !!serviceId && serviceId > 0
   });
+  
+  // Ensure photos is always an array
+  const photos = Array.isArray(data) ? data : [];
 
   // Upload photos
   const uploadPhotosMutation = useMutation({
