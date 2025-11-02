@@ -184,6 +184,22 @@ export function registerAuthRoutes(app: Express) {
       // 🔒 SECURITY: Logujemo samo ulogu, ne i username
       logger.info(`JWT Login successful: role=${user.role}, ip=${req.ip}`);
       
+      // 🍪 SET JWT TOKEN AS COOKIE - enables IMG tags to authenticate
+      // This allows <img> tags to send the JWT token automatically
+      const isProduction = process.env.REPLIT_ENVIRONMENT === 'production' || 
+                           !!process.env.REPLIT_DEV_DOMAIN || 
+                           process.env.NODE_ENV === 'production';
+      
+      res.cookie('auth_token', token, {
+        httpOnly: true, // Prevent XSS attacks
+        secure: isProduction, // HTTPS only in production
+        sameSite: isProduction ? 'strict' : 'lax', // CSRF protection
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days (same as JWT expiry)
+        path: '/'
+      });
+      
+      console.log(`🍪 [JWT COOKIE] Set auth_token cookie for user ${user.username}`);
+      
       // Return token and user info
       res.json({
         user: {

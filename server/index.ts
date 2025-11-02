@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import NodeCache from "node-cache";
 import { registerAllRoutes } from "./routes/index";
 
@@ -96,6 +97,9 @@ app.use((req, res, next) => {
 // PRVO postavi JSON body parser middleware sa povećanim limitom za Base64 fotografije
 app.use(express.json({ limit: '10mb' })); // Povećano sa default 1mb na 10mb za Base64 fotografije
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// 🍪 COOKIE PARSER - enables reading JWT tokens from cookies for IMG tag authentication
+app.use(cookieParser());
 
 // SECURITY: Input validation i sanitization middleware
 app.use((req, res, next) => {
