@@ -2214,15 +2214,21 @@ export class DatabaseStorage implements IStorage {
         .where(eq(servicePhotos.serviceId, serviceId))
         .orderBy(desc(servicePhotos.uploadedAt));
       
-      // MAPIRANJE BACKEND → FRONTEND
+      // EKSPLICITNO MAPIRANJE BACKEND → FRONTEND
+      // Frontend očekuje: photoUrl i photoCategory (NE photoPath i category)
       const mappedPhotos = photos.map(photo => ({
-        ...photo,
-        photoUrl: photo.photoPath, // KLJUČNO MAPIRANJE za frontend
-        photoCategory: photo.category
+        id: photo.id,
+        serviceId: photo.serviceId,
+        photoUrl: photo.photoPath,        // MAPIRANJE: photoPath → photoUrl
+        photoCategory: photo.category,     // MAPIRANJE: category → photoCategory
+        description: photo.description || undefined,
+        uploadedBy: photo.uploadedBy,
+        uploadedAt: photo.uploadedAt,
+        isBeforeRepair: photo.isBeforeRepair
       }));
       
       console.log(`📸 Pronađeno ${photos.length} fotografija za servis ${serviceId}`);
-      return mappedPhotos;
+      return mappedPhotos as any; // Cast jer TypeScript tip ne uključuje mapirana polja
     } catch (error) {
       console.error('❌ Greška pri dohvatanju fotografija servisa:', error);
       throw new Error('Neuspešno dohvatanje fotografija servisa');
@@ -2244,15 +2250,20 @@ export class DatabaseStorage implements IStorage {
         return null;
       }
       
-      // MAPIRANJE BACKEND → FRONTEND
+      // EKSPLICITNO MAPIRANJE BACKEND → FRONTEND
       const mappedPhoto = {
-        ...photo,
-        photoUrl: photo.photoPath, // KLJUČNO MAPIRANJE za frontend
-        photoCategory: photo.category
+        id: photo.id,
+        serviceId: photo.serviceId,
+        photoUrl: photo.photoPath,        // MAPIRANJE: photoPath → photoUrl
+        photoCategory: photo.category,     // MAPIRANJE: category → photoCategory
+        description: photo.description || undefined,
+        uploadedBy: photo.uploadedBy,
+        uploadedAt: photo.uploadedAt,
+        isBeforeRepair: photo.isBeforeRepair
       };
       
       console.log(`📸 Pronađena fotografija sa ID ${id} za servis ${photo.serviceId}`);
-      return mappedPhoto;
+      return mappedPhoto as any; // Cast jer TypeScript tip ne uključuje mapirana polja
     } catch (error) {
       console.error('❌ Greška pri dohvatanju fotografije:', error);
       throw new Error('Neuspešno dohvatanje fotografije');
@@ -2324,8 +2335,20 @@ export class DatabaseStorage implements IStorage {
         )
         .orderBy(desc(servicePhotos.uploadedAt));
       
+      // EKSPLICITNO MAPIRANJE BACKEND → FRONTEND
+      const mappedPhotos = photos.map(photo => ({
+        id: photo.id,
+        serviceId: photo.serviceId,
+        photoUrl: photo.photoPath,        // MAPIRANJE: photoPath → photoUrl
+        photoCategory: photo.category,     // MAPIRANJE: category → photoCategory
+        description: photo.description || undefined,
+        uploadedBy: photo.uploadedBy,
+        uploadedAt: photo.uploadedAt,
+        isBeforeRepair: photo.isBeforeRepair
+      }));
+      
       console.log(`📸 Pronađeno ${photos.length} fotografija kategorije "${category}" za servis ${serviceId}`);
-      return photos;
+      return mappedPhotos as any;
     } catch (error) {
       console.error('❌ Greška pri dohvatanju fotografija servisa po kategoriji:', error);
       throw new Error('Neuspešno dohvatanje fotografija servisa po kategoriji');
@@ -2343,8 +2366,20 @@ export class DatabaseStorage implements IStorage {
         .where(eq(servicePhotos.category, category))
         .orderBy(desc(servicePhotos.uploadedAt));
       
+      // EKSPLICITNO MAPIRANJE BACKEND → FRONTEND
+      const mappedPhotos = photos.map(photo => ({
+        id: photo.id,
+        serviceId: photo.serviceId,
+        photoUrl: photo.photoPath,        // MAPIRANJE: photoPath → photoUrl
+        photoCategory: photo.category,     // MAPIRANJE: category → photoCategory
+        description: photo.description || undefined,
+        uploadedBy: photo.uploadedBy,
+        uploadedAt: photo.uploadedAt,
+        isBeforeRepair: photo.isBeforeRepair
+      }));
+      
       console.log(`📸 Pronađeno ${photos.length} fotografija kategorije "${category}"`);
-      return photos;
+      return mappedPhotos as any;
     } catch (error) {
       console.error('❌ Greška pri dohvatanju fotografija po kategoriji:', error);
       throw new Error('Neuspešno dohvatanje fotografija po kategoriji');
