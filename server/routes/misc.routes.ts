@@ -528,7 +528,7 @@ export function registerMiscRoutes(app: Express) {
       console.log(`✅ [OBJECTS UPLOAD] Upload URL generated: ${uploadUrl.substring(0, 80)}...`);
       
       res.json({ 
-        uploadUrl,
+        uploadURL: uploadUrl,
         message: "Upload URL generated successfully"
       });
     } catch (error) {
@@ -759,6 +759,12 @@ export function registerMiscRoutes(app: Express) {
       // Google Storage URLs - redirect to signed URL
       if (photo.photoUrl.startsWith('https://storage.googleapis.com/')) {
         logger.info(`📸 [PROXY] Redirecting to Google Storage URL for photo ${photoId}`);
+        return res.redirect(photo.photoUrl);
+      }
+
+      // ANY external HTTPS URL (placehold.co, imgur, etc.) - redirect
+      if (photo.photoUrl.startsWith('https://') || photo.photoUrl.startsWith('http://')) {
+        logger.info(`📸 [PROXY] Redirecting to external URL for photo ${photoId}: ${photo.photoUrl}`);
         return res.redirect(photo.photoUrl);
       }
 
