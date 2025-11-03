@@ -107,14 +107,21 @@ export class ServiceStorage {
   }
 
   async getService(id: number): Promise<Service | undefined> {
-    console.log(`🔍 [SERVICE STORAGE] Getting service with ID: ${id}`);
-    const result = await db.select()
-      .from(services)
-      .where(eq(services.id, id));
-    
-    console.log(`🔍 [SERVICE STORAGE] Query result:`, result.length > 0 ? 'FOUND' : 'NOT FOUND', result[0] ? `Service ID: ${result[0].id}` : 'No data');
-    
-    return result[0];
+    console.log(`🔍 [SERVICE STORAGE] Getting service with ID: ${id}, type: ${typeof id}`);
+    try {
+      const result = await db.select()
+        .from(services)
+        .where(eq(services.id, id));
+      
+      console.log(`🔍 [SERVICE STORAGE] Raw result:`, JSON.stringify(result).slice(0, 200));
+      console.log(`🔍 [SERVICE STORAGE] Result array length:`, result.length);
+      console.log(`🔍 [SERVICE STORAGE] Query result:`, result.length > 0 ? 'FOUND' : 'NOT FOUND', result[0] ? `Service ID: ${result[0].id}` : 'No data');
+      
+      return result[0];
+    } catch (error) {
+      console.error(`🔍 [SERVICE STORAGE] ERROR in getService:`, error);
+      return undefined;
+    }
   }
 
   async getServicesByClient(clientId: number): Promise<Service[]> {

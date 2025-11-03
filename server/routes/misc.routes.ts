@@ -147,9 +147,9 @@ async function checkServicePhotoAccess(userId: number, userRole: string, service
       return { hasAccess: true, service };
     }
 
-    // Assigned technician has access
-    if (userRole === 'technician' && technicianId && service.technicianId === technicianId) {
-      console.log(`🔒 [PHOTO ACCESS] Technician access granted (technicianId=${technicianId})`);
+    // Technicians have full access (like admin) - can upload photos to all services
+    if (userRole === 'technician') {
+      console.log(`🔒 [PHOTO ACCESS] Technician access granted (full access)`);
       return { hasAccess: true, service };
     }
 
