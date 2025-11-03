@@ -25,6 +25,12 @@ Adapt new code to existing structures, not the other way around.
 Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
+## Recent Changes
+- **2025-11-03**: Fixed critical database selection bug in production - serviser photo uploads now work correctly
+  - Problem: Production was incorrectly using `development_db` instead of `neondb`, causing data loss
+  - Solution: Updated `server/db.ts` to ALWAYS use `DATABASE_URL` (neondb) when `REPLIT_DEPLOYMENT=true`
+  - Impact: Serviser can now upload photos to services in production environment
+
 ## System Architecture
 
 ### UI/UX Decisions
@@ -35,6 +41,8 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 **Core Architectural Patterns:**
 - **Modular Architecture**: Server routes, database schema, and storage layers are highly modularized for maintainability and scalability.
 - **Database**: PostgreSQL with Drizzle ORM, utilizing Neon serverless PostgreSQL for production.
+  - **CRITICAL**: Production (REPLIT_DEPLOYMENT=true) MUST use DATABASE_URL (neondb) - DEV_DATABASE_URL is ignored in production
+  - Development uses DEV_DATABASE_URL (development_db) for safe testing
 - **Authentication**: Hybrid system supporting Passport.js session-based and JWT token authentication with Scrypt for password hashing and PostgreSQL for session storage.
 - **API Design**: RESTful API with role-based access control and comprehensive Swagger/OpenAPI documentation. Versioning is structured with `/api/v1/*` endpoints.
 - **Error Handling**: A robust global error handler provides structured JSON responses and detailed logging.
