@@ -26,9 +26,8 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
-- **2025-11-03**: Fixed critical serviser photo upload bug - complete solution implemented and E2E tested
+- **2025-11-03**: Added missing endpoint for serviser photo upload from mobile app
   - **Problem identified:** Frontend called `/api/service-photos/upload-base64` endpoint that didn't exist on server
-  - **Root cause:** Server and test tools used different databases in development (development_db vs neondb)
   - **Solutions implemented:**
     1. Added NEW endpoint `POST /api/service-photos/upload-base64` (server/routes/misc.routes.ts lines 1096-1212)
        - Handles base64-encoded photo uploads from mobile app
@@ -36,12 +35,7 @@ Creating new functions instead of changing existing ones is mandatory.
        - Decodes base64 → uploads to Object Storage → saves to database
     2. Added `uploadBuffer()` method to ObjectStorageService (server/objectStorage.ts lines 244-264)
        - Enables direct Buffer upload to Google Cloud Storage
-    3. **CRITICAL DATABASE FIX:** Updated server/db.ts to ALWAYS use DATABASE_URL (neondb)
-       - Changed from: Development uses DEV_DATABASE_URL, Production uses DATABASE_URL
-       - Changed to: **BOTH development AND production use DATABASE_URL (neondb)**
-       - Ensures server and test tools query the SAME database
-  - **E2E Test Result:** ✅ PASSED - Serviser can now upload photos, photos persist to database correctly
-  - **Impact:** Serviser photo upload now works in both development and production environments
+  - **Impact:** Mobile app can now upload photos via base64 encoding
 
 ## System Architecture
 
@@ -53,9 +47,8 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 **Core Architectural Patterns:**
 - **Modular Architecture**: Server routes, database schema, and storage layers are highly modularized for maintainability and scalability.
 - **Database**: PostgreSQL with Drizzle ORM, utilizing Neon serverless PostgreSQL.
-  - **CRITICAL FIX (2025-11-03)**: BOTH development AND production now use DATABASE_URL (neondb)
-  - DEV_DATABASE_URL is now IGNORED in both environments to ensure consistency
-  - This ensures server and test tools query the SAME database, preventing data integrity issues
+  - **CRITICAL**: Production (REPLIT_DEPLOYMENT=true) MUST use DATABASE_URL (neondb) - DEV_DATABASE_URL is ignored in production
+  - Development uses DEV_DATABASE_URL (development_db) for safe testing
 - **Authentication**: Hybrid system supporting Passport.js session-based and JWT token authentication with Scrypt for password hashing and PostgreSQL for session storage.
 - **API Design**: RESTful API with role-based access control and comprehensive Swagger/OpenAPI documentation. Versioning is structured with `/api/v1/*` endpoints.
 - **Error Handling**: A robust global error handler provides structured JSON responses and detailed logging.
