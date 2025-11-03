@@ -237,6 +237,28 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+
+  // 🆕 NEW METHOD: Upload buffer to Object Storage
+  async uploadBuffer(buffer: Buffer, relativePath: string, contentType: string = 'application/octet-stream'): Promise<void> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    if (!privateObjectDir) {
+      throw new Error("PRIVATE_OBJECT_DIR not set");
+    }
+
+    // Construct full path: <bucket>/.private/<relativePath>
+    const fullPath = `${privateObjectDir}/${relativePath}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+
+    // Upload buffer to Google Cloud Storage
+    await file.save(buffer, {
+      metadata: {
+        contentType,
+      },
+    });
+  }
 }
 
 function parseObjectPath(path: string): {
