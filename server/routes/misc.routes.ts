@@ -1089,6 +1089,126 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
     }
   });
 
+  // 🆕 NEW ENDPOINT: Base64 photo upload (for mobile app)
+  app.post("/api/service-photos/upload-base64", jwtAuth, async (req, res) => {
+    console.log('🔥 [BASE64 ENDPOINT] /api/service-photos/upload-base64 called!');
+    console.log('🔥 [BASE64 ENDPOINT] Request body:', JSON.stringify(req.body).substring(0, 200));
+    
+    try {
+      const { ObjectStorageService } = await import("../objectStorage");
+      const { insertServicePhotoSchema } = await import("@shared/schema");
+
+      // Validate request body
+      const { base64Data, serviceId, photoCategory, description, filename } = req.body;
+      
+      if (!base64Data || !serviceId) {
+        console.log('❌ [BASE64 ENDPOINT] Missing base64Data or serviceId');
+        return res.status(400).json({ error: "base64Data i serviceId su obavezni" });
+      }
+
+      const parsedServiceId = parseInt(serviceId);
+      if (isNaN(parsedServiceId)) {
+        console.log('❌ [BASE64 ENDPOINT] Invalid serviceId:', serviceId);
+        return res.status(400).json({ error: "serviceId mora biti broj" });
+      }
+
+      // Check authorization - Admin and technicians have full access
+      if (!req.user) {
+        return res.status(401).json({ error: "Potrebna je prijava" });
+      }
+
+      const userRole = req.user.role;
+      const userId = req.user.id;
+      const technicianId = req.user.technicianId;
+
+      console.log(`🔒 [BASE64 AUTH] User ID: ${userId}, Role: ${userRole}, TechnicianId: ${technicianId}`);
+
+      // Admin and technicians have full access to all services
+      const hasAccess = userRole === "admin" || userRole === "technician";
+      
+      if (!hasAccess) {
+        console.log(`❌ [BASE64 AUTH] Access denied for role: ${userRole}`);
+        return res.status(403).json({ error: "Nemate dozvolu za dodavanje fotografija ovom servisu" });
+      }
+
+      console.log(`✅ [BASE64 AUTH] Access granted for ${userRole}`);
+
+      // Decode base64 data
+      // Format: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+      const matches = base64Data.match(/^data:(.+);base64,(.+)$/);
+      if (!matches) {
+        console.log('❌ [BASE64 ENDPOINT] Invalid base64 format');
+        return res.status(400).json({ error: "Neispravan base64 format" });
+      }
+
+      const mimeType = matches[1];
+      const base64Content = matches[2];
+      const buffer = Buffer.from(base64Content, 'base64');
+
+      console.log(`📸 [BASE64 DECODE] MIME: ${mimeType}, Size: ${buffer.length} bytes`);
+
+      // Determine file extension from MIME type
+      const mimeToExt: { [key: string]: string } = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif'
+      };
+
+      const ext = mimeToExt[mimeType] || 'jpg';
+      const generatedFilename = filename || `photo-${Date.now()}.${ext}`;
+
+      console.log(`📁 [BASE64 FILE] Filename: ${generatedFilename}, Extension: ${ext}`);
+
+      // Upload to Object Storage
+      const objectStorage = new ObjectStorageService();
+      const relativePath = `uploads/service-${parsedServiceId}-${Date.now()}-${generatedFilename}`;
+      
+      console.log(`☁️ [BASE64 UPLOAD] Uploading to Object Storage: ${relativePath}`);
+      
+      await objectStorage.uploadBuffer(buffer, relativePath, mimeType);
+      
+      // Object path format: /objects/uploads/...
+      const objectPath = `/objects/${relativePath}`;
+
+      console.log(`✅ [BASE64 UPLOAD] File uploaded successfully to ${objectPath}`);
+
+      // Create database record
+      const photoData = {
+        serviceId: parsedServiceId,
+        photoPath: objectPath,
+        category: photoCategory || 'other',
+        description: description || `Mobilna fotografija: ${generatedFilename}`,
+        uploadedBy: userId,
+      };
+
+      console.log(`💾 [BASE64 DB] Creating database record:`, photoData);
+
+      const validatedData = insertServicePhotoSchema.parse(photoData);
+      const newPhoto = await storage.createServicePhoto(validatedData);
+
+      console.log(`✅ [BASE64 DB] Photo record created with ID: ${newPhoto.id}`);
+      console.log(`✅ [BASE64 SUCCESS] Upload complete for service ${parsedServiceId} by user ${userId}`);
+
+      res.status(201).json({
+        success: true,
+        photo: newPhoto,
+        message: 'Fotografija uspešno uploadovana'
+      });
+
+    } catch (error: any) {
+      console.error('❌ [BASE64 ERROR] Upload failed:', error);
+      console.error('❌ [BASE64 ERROR] Error stack:', error.stack);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: "Neispravni podaci", details: error.errors });
+      }
+      res.status(500).json({ error: "Neuspešno upload-ovanje fotografije", details: error.message });
+    }
+  });
+
   console.log("✅ Misc routes registered");
   console.log("🔥🔥🔥 SERVICE PHOTOS UPLOAD ENDPOINT REGISTERED AT: /api/service-photos/upload");
+  console.log("🔥🔥🔥 SERVICE PHOTOS BASE64 UPLOAD ENDPOINT REGISTERED AT: /api/service-photos/upload-base64");
 }

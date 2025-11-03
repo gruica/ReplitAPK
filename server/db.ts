@@ -18,21 +18,15 @@ const isDevelopment = !isProduction;
 let databaseUrl: string | undefined;
 let databaseName: string;
 
-// 🔒 CRITICAL FIX: PRODUCTION must ALWAYS use DATABASE_URL (neondb), NEVER DEV_DATABASE_URL
-if (isProduction) {
-  // PRODUCTION: SAMO DATABASE_URL - ignorišemo DEV_DATABASE_URL čak i ako postoji!
-  databaseUrl = process.env.DATABASE_URL;
-  databaseName = 'PRODUCTION (neondb)';
-  
-  // SECURITY CHECK: Upozori ako DEV_DATABASE_URL postoji u production-u
-  if (process.env.DEV_DATABASE_URL) {
-    console.warn('⚠️ [DATABASE WARNING]: DEV_DATABASE_URL is set in production but will be IGNORED');
-    console.warn('⚠️ [DATABASE WARNING]: Production MUST use DATABASE_URL (neondb) for data integrity');
-  }
-} else {
-  // DEVELOPMENT: Koristi development test bazu ili fallback na production
-  databaseUrl = process.env.DEV_DATABASE_URL || process.env.DATABASE_URL;
-  databaseName = process.env.DEV_DATABASE_URL ? 'DEVELOPMENT (development_db)' : 'PRODUCTION (fallback)';
+// 🔒 CRITICAL FIX: ALWAYS use DATABASE_URL (neondb) in BOTH production AND development
+// This ensures server and test tools query the SAME database
+databaseUrl = process.env.DATABASE_URL;
+databaseName = isProduction ? 'PRODUCTION (neondb)' : 'DEVELOPMENT (neondb)';
+
+// WARN if DEV_DATABASE_URL is set but ignored
+if (process.env.DEV_DATABASE_URL) {
+  console.warn('⚠️ [DATABASE]: DEV_DATABASE_URL is set but IGNORED - using DATABASE_URL for consistency');
+  console.warn('⚠️ [DATABASE]: This ensures server and test tools use the SAME database');
 }
 
 if (!databaseUrl) {
