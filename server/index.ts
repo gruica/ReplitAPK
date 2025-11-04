@@ -290,35 +290,6 @@ app.use((req, res, next) => {
 (async () => {
   // Mobile SMS Service has been completely removed
   
-  // Auto-wake Neon database if suspended (5min inactivity auto-suspends)
-  const { wakeNeonDatabase } = await import('./db.js');
-  await wakeNeonDatabase();
-  
-  // Auto-verify test users ONLY in development mode
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      const testUsernames = ['test_admin', 'test_supplier', 'test_technician', 'test_business'];
-      for (const username of testUsernames) {
-        const user = await storage.getUserByUsername(username);
-        if (user && !user.isVerified) {
-          await storage.verifyUser(user.id, 1); // Auto-verify with system admin ID
-          console.log(`✅ [DEV ONLY] Auto-verified test user: ${username}`);
-        }
-        
-        // Special handling for test_technician - assign first available technicianId
-        if (username === 'test_technician' && user && !user.technicianId) {
-          const technicians = await storage.getAllTechnicians();
-          if (technicians && technicians.length > 0) {
-            await storage.updateUser(user.id, { technicianId: technicians[0].id });
-            console.log(`✅ [DEV ONLY] Assigned technicianId ${technicians[0].id} to test_technician`);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('[DEV ONLY] ⚠️ Failed to auto-verify test users:', error);
-    }
-  }
-  
   // Register all modular routes
   registerAllRoutes(app);
   
@@ -375,6 +346,42 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on ${host}:${port} (env: ${app.get("env")})`);
+    
+    // 🚀 LAZY INITIALIZATION: Background tasks start AFTER server is ready
+    // This ensures Cloud Run health checks pass immediately
+    (async () => {
+      try {
+        // Auto-wake Neon database if suspended (5min inactivity auto-suspends)
+        const { wakeNeonDatabase } = await import('./db.js');
+        await wakeNeonDatabase();
+        
+        // Auto-verify test users ONLY in development mode
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            const testUsernames = ['test_admin', 'test_supplier', 'test_technician', 'test_business'];
+            for (const username of testUsernames) {
+              const user = await storage.getUserByUsername(username);
+              if (user && !user.isVerified) {
+                await storage.verifyUser(user.id, 1);
+                console.log(`✅ [DEV ONLY] Auto-verified test user: ${username}`);
+              }
+              
+              if (username === 'test_technician' && user && !user.technicianId) {
+                const technicians = await storage.getAllTechnicians();
+                if (technicians && technicians.length > 0) {
+                  await storage.updateUser(user.id, { technicianId: technicians[0].id });
+                  console.log(`✅ [DEV ONLY] Assigned technicianId ${technicians[0].id} to test_technician`);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('[DEV ONLY] ⚠️ Failed to auto-verify test users:', error);
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ Background initialization error:', error);
+      }
+    })();
     
     // Pokreni servis za automatsko održavanje sa error handling-om
     try {
