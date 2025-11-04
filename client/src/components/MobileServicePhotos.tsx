@@ -431,7 +431,7 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
                           onClick={() => setSelectedPhoto(photo)}
                         >
                           <img 
-                            src={photo.photoUrl} 
+                            src={`/api/service-photo-proxy/${photo.id}`}
                             alt={photo.description || 'Service photo'}
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -502,7 +502,7 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
 
               <div className="w-full bg-gray-50 rounded-lg overflow-hidden">
                 <img 
-                  src={selectedPhoto.photoUrl} 
+                  src={`/api/service-photo-proxy/${selectedPhoto.id}`}
                   alt={selectedPhoto.description || 'Service photo'}
                   className="w-full h-auto max-h-[70vh] object-contain"
                   onError={(e) => {
