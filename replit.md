@@ -26,13 +26,21 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
+- **2025-11-04**: Fixed photo display bug in production for mobile serviser interface
+  - **Problem:** Photos showed "Slika nedostupna" (image unavailable) in production deployment
+  - **Root cause:** Server returned `photoPath` from database, but frontend expected `photoUrl`
+  - **Solution:** Added field mapping in GET endpoints (server/routes/misc.routes.ts lines 562-569, 718-725)
+    - Maps `photoPath` → `photoUrl` before sending to frontend
+    - Maps `category` → `photoCategory` for consistency
+  - **Impact:** Photos now display correctly in production mobile interface
+
 - **2025-11-04**: Fixed Cloud Run deployment startup optimization
   - **Problem:** Server performed slow startup operations (database wake-up, test user verification) BEFORE listening on port, causing Cloud Run health checks to fail
   - **Solution:** Implemented lazy initialization pattern in server/index.ts
     - Server now immediately listens on port 5000 (health checks pass instantly)
     - Database wake-up and test user verification moved to background async task AFTER server is ready
     - All cron jobs start after server is listening
-  - **Impact:** Deployment should now pass Cloud Run health checks and start successfully
+  - **Impact:** Deployment now passes Cloud Run health checks and starts successfully
 
 - **2025-11-03**: Added missing endpoint for serviser photo upload from mobile app
   - **Problem identified:** Frontend called `/api/service-photos/upload-base64` endpoint that didn't exist on server
