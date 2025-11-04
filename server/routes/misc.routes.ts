@@ -1051,20 +1051,14 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
       // Get PRIVATE_OBJECT_DIR to extract relative path
       const privateDir = objectStorageService.getPrivateObjectDir();
       
-      console.log(`📸 [PATH DEBUG] fullPathname: ${fullPathname}`);
-      console.log(`📸 [PATH DEBUG] privateDir: ${privateDir}`);
-      
       // Remove leading slash and extract entity ID relative to PRIVATE_OBJECT_DIR
       // Example: /bucket/.private/uploads/UUID -> uploads/UUID
       let relativePath = fullPathname.slice(1); // Remove leading /
-      console.log(`📸 [PATH DEBUG] relativePath after removing slash: ${relativePath}`);
       
       if (relativePath.startsWith(privateDir)) {
         relativePath = relativePath.slice(privateDir.length);
-        console.log(`📸 [PATH DEBUG] relativePath after removing privateDir: ${relativePath}`);
         if (relativePath.startsWith('/')) {
           relativePath = relativePath.slice(1);
-          console.log(`📸 [PATH DEBUG] relativePath after removing leading slash: ${relativePath}`);
         }
       }
       
