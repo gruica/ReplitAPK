@@ -452,13 +452,6 @@ export class PDFService {
       }
 
       console.log(`📊 ✅ Servis sa detaljima dohvaćen: ${service.id}`);
-      console.log(`📊 DEBUG - Client:`, service.client ? 'OK' : 'NULL');
-      console.log(`📊 DEBUG - Appliance:`, service.appliance ? 'OK' : 'NULL');
-      console.log(`📊 DEBUG - Appliance.category:`, service.appliance?.category ? service.appliance.category.name : 'NULL');
-      console.log(`📊 DEBUG - Appliance.manufacturer:`, service.appliance?.manufacturer ? service.appliance.manufacturer.name : 'NULL');
-      console.log(`📊 DEBUG - Appliance.purchaseDate:`, service.appliance?.purchaseDate || 'NULL');
-      console.log(`📊 DEBUG - Warranty status:`, service.warrantyStatus);
-      console.log(`📊 DEBUG - Technician:`, service.technician ? 'OK' : 'NULL');
       
       return {
         service,
