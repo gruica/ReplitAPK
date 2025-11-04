@@ -144,8 +144,6 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ error: "[USER_NOT_FOUND] Neispravno korisničko ime ili lozinka" });
       }
       
-      console.log(`🔍 [JWT LOGIN DEBUG] User from storage:`, JSON.stringify(user, null, 2));
-      
       // Check password
       const isPasswordValid = await comparePassword(password, user.password);
       if (!isPasswordValid) {
