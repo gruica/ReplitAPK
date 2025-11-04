@@ -666,7 +666,7 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Delete from object storage if it's a cloud URL
-      if (photo.photoPath.startsWith("https://storage.googleapis.com/")) {
+      if (photo.photoPath && photo.photoPath.startsWith("https://storage.googleapis.com/")) {
         try {
           const { ObjectStorageService } = await import("../objectStorage");
           const objectStorageService = new ObjectStorageService();
