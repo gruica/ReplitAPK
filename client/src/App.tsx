@@ -48,6 +48,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import { RoleProtectedRoute } from "./lib/role-protected-route";
 import { initializeCapacitor, isNativeMobile } from "./capacitor";
 import { NotificationProvider } from "@/contexts/notification-context";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // PERFORMANCE BOOST: Lazy load customer pages
 const CustomerServiceRequest = lazy(() => import("@/pages/customer"));
@@ -299,9 +300,11 @@ function App() {
   }, []);
 
   return (
-    <NotificationProvider>
-      <Router />
-    </NotificationProvider>
+    <ErrorBoundary>
+      <NotificationProvider>
+        <Router />
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 }
 
