@@ -555,7 +555,15 @@ export function registerMiscRoutes(app: Express) {
       }
 
       const photos = await storage.getServicePhotos(serviceId);
-      res.json(photos);
+      
+      // Map photoPath → photoUrl and category → photoCategory for frontend compatibility
+      const mappedPhotos = photos.map(photo => ({
+        ...photo,
+        photoUrl: photo.photoPath,
+        photoCategory: photo.category
+      }));
+      
+      res.json(mappedPhotos);
     } catch (error) {
       console.error("Error fetching service photos:", error);
       res.status(500).json({ error: "Neuspešno dohvatanje fotografija servisa" });
@@ -703,7 +711,15 @@ export function registerMiscRoutes(app: Express) {
       }
 
       const photos = await storage.getServicePhotosByCategory(serviceId, category);
-      res.json(photos);
+      
+      // Map photoPath → photoUrl and category → photoCategory for frontend compatibility
+      const mappedPhotos = photos.map(photo => ({
+        ...photo,
+        photoUrl: photo.photoPath,
+        photoCategory: photo.category
+      }));
+      
+      res.json(mappedPhotos);
     } catch (error) {
       console.error("Error fetching service photos by category:", error);
       res.status(500).json({ error: "Neuspešno dohvatanje fotografija po kategoriji" });
