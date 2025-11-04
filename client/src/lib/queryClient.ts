@@ -119,11 +119,13 @@ export const queryClient = new QueryClient({
       refetchOnMount: false,
       staleTime: 5 * 60 * 1000, // 5 minuta umesto 30s - PERFORMANCE BOOST
       gcTime: 10 * 60 * 1000, // 10 minuta cache - corrected property name
-      retry: false,
+      retry: 2, // Pokušaj 2 puta ako query ne uspe (zaštita od privremenih problema)
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff: 1s, 2s, 4s, max 10s
       networkMode: 'online', // PERFORMANCE: Ne izvršavaj query-e offline
     },
     mutations: {
-      retry: false,
+      retry: 1, // Pokušaj 1 put za mutacije (POST/PUT/DELETE) - manje agresivno od queries
+      retryDelay: 1000, // Čekaj 1s pre retry-a
     },
   },
 });
