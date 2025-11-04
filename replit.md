@@ -26,13 +26,18 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
-- **2025-11-04**: Fixed photo display bug in production for mobile serviser interface
-  - **Problem:** Photos showed "Slika nedostupna" (image unavailable) in production deployment
-  - **Root cause:** Server returned `photoPath` from database, but frontend expected `photoUrl`
-  - **Solution:** Added field mapping in GET endpoints (server/routes/misc.routes.ts lines 562-569, 718-725)
+- **2025-11-04**: Fixed photo viewing for serviser role (production issue)
+  - **Problem:** Serviser could upload photos but couldn't see them (showed "Slika nedostupna"), while Admin could view the same photos perfectly
+  - **Root cause:** Frontend used direct Object Storage paths `/objects/uploads/...` instead of proxy endpoint
+    - Direct paths bypass authorization and Object Storage access controls
+    - Only worked for Admin due to different browser/session state
+  - **Solution:** Updated MobileServicePhotos.tsx to use proxy endpoint
+    - Changed `photo.photoUrl` → `/api/service-photo-proxy/${photo.id}` (lines 437, 508)
+    - Proxy endpoint handles authorization via `checkServicePhotoAccess` and serves images through ObjectStorageService
+  - **Secondary fix:** Added field mapping in GET endpoints (server/routes/misc.routes.ts lines 562-569, 718-725)
     - Maps `photoPath` → `photoUrl` before sending to frontend
     - Maps `category` → `photoCategory` for consistency
-  - **Impact:** Photos now display correctly in production mobile interface
+  - **Impact:** All authorized users (admin, technicians, business partners) can now view photos correctly
 
 - **2025-11-04**: Fixed Cloud Run deployment startup optimization
   - **Problem:** Server performed slow startup operations (database wake-up, test user verification) BEFORE listening on port, causing Cloud Run health checks to fail
