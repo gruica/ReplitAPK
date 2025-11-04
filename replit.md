@@ -26,6 +26,14 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
+- **2025-11-04**: Fixed Cloud Run deployment startup optimization
+  - **Problem:** Server performed slow startup operations (database wake-up, test user verification) BEFORE listening on port, causing Cloud Run health checks to fail
+  - **Solution:** Implemented lazy initialization pattern in server/index.ts
+    - Server now immediately listens on port 5000 (health checks pass instantly)
+    - Database wake-up and test user verification moved to background async task AFTER server is ready
+    - All cron jobs start after server is listening
+  - **Impact:** Deployment should now pass Cloud Run health checks and start successfully
+
 - **2025-11-03**: Added missing endpoint for serviser photo upload from mobile app
   - **Problem identified:** Frontend called `/api/service-photos/upload-base64` endpoint that didn't exist on server
   - **Solutions implemented:**
