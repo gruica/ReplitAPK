@@ -56,7 +56,7 @@ jobs:
 
     - name: Decode keystore from base64
       run: |
-        echo -n "${{ secrets.KEYSTORE_FILE }}" | base64 -d > android/app/servis-todosijevic-release.keystore
+        echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > android/app/servis-todosijevic-release.keystore
         echo "✅ Keystore dekodovan uspešno"
         ls -lh android/app/servis-todosijevic-release.keystore
 
