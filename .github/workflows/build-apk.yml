@@ -1,14 +1,17 @@
-name: Build Android APK
+name: Build Signed Android APK
 
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build Signed APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -21,12 +24,21 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: 'gradle'
 
-    - name: Set up Node.js
+    - name: Set up Node.js 20
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
+
+    - name: Cache npm dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-
 
     - name: Install dependencies with retry
       run: |
@@ -36,59 +48,81 @@ jobs:
 
     - name: Build web application
       run: npm run build
+      env:
+        NODE_ENV: production
 
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Decode and setup keystore
+    - name: Decode keystore from base64
       run: |
         echo -n "${{ secrets.KEYSTORE_FILE }}" | base64 -d > android/app/servis-todosijevic-release.keystore
+        echo "✅ Keystore dekodovan uspešno"
         ls -lh android/app/servis-todosijevic-release.keystore
 
     - name: Make gradlew executable
       run: chmod +x android/gradlew
 
-    - name: Sync Capacitor
+    - name: Sync Capacitor with Android
       run: npx cap sync android
 
-    - name: Build Release APK
+    - name: Build and Sign Release APK
       env:
         KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       run: |
         cd android
+        echo "🏗️ Kompajliranje i potpisivanje APK-a..."
         for i in 1 2 3; do
           ./gradlew assembleRelease --no-daemon --stacktrace && break || sleep 15
         done
+        echo "✅ APK uspešno napravljen i potpisan!"
 
-    - name: Upload APK
+    - name: Verify APK signature
+      run: |
+        echo "🔍 Provera potpisa APK-a..."
+        jarsigner -verify -verbose -certs android/app/build/outputs/apk/release/app-release.apk
+
+    - name: Upload Signed APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: servis-todosijevic-release-apk
+        name: servis-todosijevic-signed-apk-v${{ github.run_number }}
         path: android/app/build/outputs/apk/release/app-release.apk
-        retention-days: 30
+        retention-days: 90
 
-    - name: Create Release
-      if: github.ref == 'refs/heads/main'
+    - name: Create GitHub Release
+      if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ github.run_number }}
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', github.run_number) }}
         name: Servis Todosijević v${{ github.run_number }}
         body: |
-          📱 **Servis Todosijević Android APK**
+          📱 **Servis Todosijević - Zvanična Android Aplikacija**
           
           **Verzija:** v${{ github.run_number }}
-          **Datum:** ${{ github.event.head_commit.timestamp }}
+          **Build datum:** ${{ github.event.head_commit.timestamp }}
+          **Git commit:** ${{ github.sha }}
           
           ## 📥 Instalacija
-          1. Preuzmite APK fajl
-          2. Omogućite "Nepoznati izvori" u podešavanjima
-          3. Instalirajte APK
+          1. Preuzmite `app-release.apk` fajl ispod
+          2. Na Android telefonu omogućite **"Instalacija aplikacija iz nepoznatih izvora"**:
+             - Podešavanja → Bezbednost → Nepoznati izvori
+          3. Otvorite preuzeti APK fajl i instalirajte
           
           ## 🔧 Funkcionalnosti
-          - Kompletna administracija servisa
-          - Offline rad
-          - Profesionalni mobilni interfejs
+          - ✅ Kompletna administracija servisa
+          - ✅ Offline rad mobilne aplikacije
+          - ✅ Profesionalni mobilni interfejs
+          - ✅ Potpisana i sigurna APK
+          - ✅ Automatsko ažuriranje podataka
+          
+          ## 🔐 Sigurnost
+          - APK je digitalno potpisan sa zvaničnim keystore-om
+          - Sigurna HTTPS komunikacija sa serverom
+          - Enkripcija podataka
+          
+          ## 📞 Podrška
+          Za pitanja i pomoć: jelena@frigosistemtodosijevic.com
         files: android/app/build/outputs/apk/release/app-release.apk
         draft: false
         prerelease: false

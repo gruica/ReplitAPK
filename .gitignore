@@ -16,6 +16,13 @@ session-data/
 *.pem
 credentials.json
 
+# Android signing keystores (KRITIČNO - NIKAD NE COMMITOVATI)
+*.keystore
+*.jks
+android/app/*.keystore
+android/app/*.jks
+keystore-base64.txt
+
 # User uploads and media (dynamic content - NOT for git)
 attached_assets/
 uploads/
