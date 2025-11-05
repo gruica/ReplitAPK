@@ -26,6 +26,20 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
+- **2025-11-05**: Fixed spare parts supplier workflow bugs and endpoint corrections
+  - **Problem 1:** Frontend called non-existent endpoint `/api/admin/spare-parts/all-requests`
+  - **Problem 2:** Date strings not converted to Date objects causing 500 errors in supplier assignment
+  - **Solutions implemented:**
+    1. Fixed endpoint mismatch: Corrected `/api/admin/spare-parts/all-requests` → `/api/admin/spare-parts` across 6 frontend files (SparePartsManagement.tsx, SparePartsOrderForm.tsx, DirectSparePartsOrderForm.tsx, AdminSparePartsOrdering.tsx, available-parts.tsx, sidebar.tsx)
+    2. Fixed date conversion in `POST /api/admin/spare-parts/:orderId/assign-supplier` (server/routes/admin.routes.ts lines 1406-1407)
+       - Changed `orderDate: new Date().toISOString()` → `orderDate: new Date()`
+       - Changed `expectedDelivery: estimatedDelivery || undefined` → `expectedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined`
+    3. Fixed date conversion in `PUT /api/admin/spare-parts/:id` (server/routes/spare-parts.routes.ts lines 587-603)
+       - Added automatic conversion for date string fields: expectedDelivery, receivedDate, orderDate, deliveryConfirmedAt, removedFromOrderingAt
+  - **Impact:** Admin can now successfully assign spare part orders to suppliers without 500 errors; supplier portal workflow fully functional
+  - **Workflow verified:** Admin assigns pending order to supplier → system creates supplier_order and updates spare_part_order status → supplier can view assigned task in portal at /supplier → supplier can update status to 'separated', 'sent', 'delivered'
+  - **UI location:** Admin panel → /admin/spare-parts → Tab "Trenutne porudžbine" → Click "Dodeli dobavljaču" button (only visible for status='pending' orders)
+
 - **2025-11-04**: Fixed photo viewing for serviser role (production issue)
   - **Problem:** Serviser could upload photos but couldn't see them (showed "Slika nedostupna"), while Admin could view the same photos perfectly
   - **Root cause:** Frontend used direct Object Storage paths `/objects/uploads/...` instead of proxy endpoint

@@ -580,6 +580,24 @@ export function registerSparePartsRoutes(app: Express) {
 
       // Ažuriraj order sa prosleđenim podacima
       const updates = req.body;
+      
+      // Convert date strings to Date objects for Drizzle ORM
+      if (updates.expectedDelivery && typeof updates.expectedDelivery === 'string') {
+        updates.expectedDelivery = new Date(updates.expectedDelivery);
+      }
+      if (updates.receivedDate && typeof updates.receivedDate === 'string') {
+        updates.receivedDate = new Date(updates.receivedDate);
+      }
+      if (updates.orderDate && typeof updates.orderDate === 'string') {
+        updates.orderDate = new Date(updates.orderDate);
+      }
+      if (updates.deliveryConfirmedAt && typeof updates.deliveryConfirmedAt === 'string') {
+        updates.deliveryConfirmedAt = new Date(updates.deliveryConfirmedAt);
+      }
+      if (updates.removedFromOrderingAt && typeof updates.removedFromOrderingAt === 'string') {
+        updates.removedFromOrderingAt = new Date(updates.removedFromOrderingAt);
+      }
+      
       const updatedOrder = await storage.updateSparePartOrderStatus(orderId, updates);
       
       res.json({ 
