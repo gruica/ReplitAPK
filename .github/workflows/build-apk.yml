@@ -56,9 +56,9 @@ jobs:
 
     - name: Decode keystore from base64
       run: |
-        echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > android/app/servis-todosijevic-release.keystore
+        echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > android/app/android-release.keystore
         echo "✅ Keystore dekodovan uspešno"
-        ls -lh android/app/servis-todosijevic-release.keystore
+        ls -lh android/app/android-release.keystore
 
     - name: Make gradlew executable
       run: chmod +x android/gradlew
