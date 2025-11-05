@@ -44,8 +44,8 @@ const newServiceSchema = z.object({
   clientFullName: z.string().min(1, "Ime i prezime klijenta je obavezno"),
   clientPhone: z.string().min(1, "Telefon klijenta je obavezan"),
   clientEmail: z.string().optional().or(z.literal("")),
-  clientAddress: z.string().optional().or(z.literal("")),
-  clientCity: z.string().optional().or(z.literal("")),
+  clientAddress: z.string().min(3, "Adresa klijenta je obavezna"),
+  clientCity: z.string().min(2, "Grad klijenta je obavezan"),
   
   // Podaci o uređaju - pojednostavljeno
   categoryId: z.string().min(1, "Izaberite kategoriju uređaja"),
@@ -383,7 +383,7 @@ export default function NewBusinessServiceRequest() {
                           <Input placeholder="npr. Ulica Slobode 25" {...field} />
                         </FormControl>
                         <FormDescription>
-                          Obavezno polje - unesite punu adresu (min. 5 karaktera)
+                          Obavezno polje - unesite punu adresu (min. 3 karaktera)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
