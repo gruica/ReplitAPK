@@ -1400,8 +1400,8 @@ export function registerAdminRoutes(app: Express) {
       await storage.updateSparePartOrder(orderId, {
         status: 'ordered',
         supplierName: supplier.name,
-        orderDate: new Date().toISOString(),
-        expectedDelivery: estimatedDelivery || undefined,
+        orderDate: new Date(),
+        expectedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
       });
       
       console.log(`[SUPPLIER ASSIGNMENT] ✅ Created supplier order ${supplierOrder.id} for supplier ${supplier.name}`);
