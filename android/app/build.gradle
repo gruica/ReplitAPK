@@ -22,7 +22,7 @@ android {
         release {
             keyAlias System.getenv('KEYSTORE_ALIAS')
             keyPassword System.getenv('KEYSTORE_PASSWORD')
-            storeFile file('servis-todosijevic-release.keystore')
+            storeFile file('android-release.keystore')
             storePassword System.getenv('KEYSTORE_PASSWORD')
         }
     }
