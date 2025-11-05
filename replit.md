@@ -26,6 +26,27 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
+- **2025-11-05**: Added production database security protection
+  - **Critical Issue:** Agent accidentally deleted 4 production services (IDs: 518, 734, 854, 856) using execute_sql_tool
+  - **Root Cause:** Development environment had access to both DATABASE_URL (production) and DEV_DATABASE_URL (development)
+  - **Security Fix:** Added code protection in server/db.ts (lines 47-60)
+    - Blocks development environment from accessing production database (neondb)
+    - Throws security error if development tries to connect to /neondb
+    - Forces development to use only DEV_DATABASE_URL
+  - **Additional Protection:** User should remove DATABASE_URL secret from Replit Editor (keep only in Deployment)
+  - **Impact:** Prevents future accidental production database modifications from development environment
+  
+- **2025-11-05**: Enhanced business partner validation - Address and City now mandatory
+  - **Problem:** Business partners could create services without client address/city, causing data integrity issues
+  - **Frontend Fix:** client/src/pages/business/services/new.tsx
+    - Address: minimum 3 characters (required)
+    - City: minimum 2 characters (required)
+  - **Backend Fix:** server/business-partner-routes.ts (lines 130-142)
+    - Validates address (min 3 chars) before creating client
+    - Validates city (min 2 chars) before creating client
+    - Returns 400 error if validation fails
+  - **Impact:** All new business partner service requests must include valid address and city
+  
 - **2025-11-05**: Fixed spare parts supplier workflow bugs and endpoint corrections
   - **Problem 1:** Frontend called non-existent endpoint `/api/admin/spare-parts/all-requests`
   - **Problem 2:** Date strings not converted to Date objects causing 500 errors in supplier assignment

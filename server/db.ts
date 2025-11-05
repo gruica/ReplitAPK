@@ -41,6 +41,21 @@ if (!databaseUrl) {
   );
 }
 
+// 🔒 SECURITY: Sprečava pristup produkcijskoj bazi iz development okruženja
+if (isDevelopment && databaseUrl.includes('/neondb')) {
+  console.error('');
+  console.error('🚨🚨🚨 SECURITY BLOCK 🚨🚨🚨');
+  console.error('❌ DEVELOPMENT environment CANNOT access PRODUCTION database!');
+  console.error('❌ Database URL points to: neondb (PRODUCTION)');
+  console.error('✅ Solution: Remove DATABASE_URL from development secrets');
+  console.error('✅ Use only DEV_DATABASE_URL in development environment');
+  console.error('');
+  throw new Error(
+    '🔒 SECURITY: Development environment blocked from accessing production database (neondb). ' +
+    'Remove DATABASE_URL from development secrets and use only DEV_DATABASE_URL.'
+  );
+}
+
 console.log(`🔗 [DATABASE]: Connected to ${databaseName}`);
 console.log(`🌍 [ENVIRONMENT]: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
 console.log(`🔑 [DATABASE]: Using connection string ending in: ...${databaseUrl.split('/').pop()?.split('?')[0]}`);
