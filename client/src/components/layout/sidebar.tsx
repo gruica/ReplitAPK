@@ -44,7 +44,7 @@ export const Sidebar = memo(function Sidebar({ isMobileOpen, closeMobileMenu }: 
 
   // Fetch pending spare parts orders count for admin users
   const { data: pendingSparePartsCount = 0 } = useQuery({
-    queryKey: ['/api/admin/spare-parts/all-requests'],
+    queryKey: ['/api/admin/spare-parts'],
     enabled: user?.role === 'admin',
     refetchInterval: 30000, // Refresh every 30 seconds
     retry: 1,

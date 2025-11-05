@@ -74,7 +74,7 @@ export default function AvailableParts() {
 
   // Query za sve zahteve (pending + requested) spare parts orders  
   const { data: pendingOrders = [], isLoading: loadingOrders } = useQuery<PendingSparePartOrder[]>({
-    queryKey: ["/api/admin/spare-parts/all-requests"],
+    queryKey: ["/api/admin/spare-parts"],
   });
 
   // Query za servisere
@@ -96,7 +96,7 @@ export default function AvailableParts() {
         description: "Rezervni deo je uspešno označen kao primljen i dodatan u skladište",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/available-parts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/spare-parts/all-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/spare-parts"] });
       setMarkReceivedDialog({ open: false });
       setActualCost("");
       setLocation("");
