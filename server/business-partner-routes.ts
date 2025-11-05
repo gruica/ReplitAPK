@@ -123,13 +123,28 @@ export function registerBusinessPartnerRoutes(app: Express) {
       
       
       if (!finalClientId && clientFullName && clientPhone) {
+        // VALIDACIJA: Adresa i grad su obavezni za poslovne partnere
+        if (!clientAddress || clientAddress.trim().length < 3) {
+          return res.status(400).json({
+            error: "Nedostaje adresa klijenta",
+            message: "Adresa klijenta je obavezna i mora imati najmanje 3 karaktera."
+          });
+        }
+        
+        if (!clientCity || clientCity.trim().length < 2) {
+          return res.status(400).json({
+            error: "Nedostaje grad klijenta",
+            message: "Grad klijenta je obavezan i mora imati najmanje 2 karaktera."
+          });
+        }
+        
         // Kreiramo novog klijenta
         const newClient = await storage.createClient({
           fullName: clientFullName.trim(),
           phone: clientPhone.trim(),
           email: clientEmail?.trim() || null,
-          address: clientAddress?.trim() || null,
-          city: clientCity?.trim() || null
+          address: clientAddress.trim(),
+          city: clientCity.trim()
         });
         
         finalClientId = newClient.id;
@@ -138,7 +153,7 @@ export function registerBusinessPartnerRoutes(app: Express) {
       if (!finalClientId) {
         return res.status(400).json({
           error: "Nedostaje ID klijenta",
-          message: "Morate odabrati postojećeg klijenta ili uneti podatke za novog (ime i telefon su obavezni)."
+          message: "Morate odabrati postojećeg klijenta ili uneti podatke za novog (ime, telefon, adresa i grad su obavezni)."
         });
       }
 
