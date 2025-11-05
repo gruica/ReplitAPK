@@ -26,6 +26,29 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
+- **2025-11-05**: GitHub Actions APK Build Ready for Deployment
+  - **Achievement:** Complete GitHub Actions workflow for automated Android APK builds
+  - **Workflow Configuration:** `.github/workflows/build-apk.yml` optimized with:
+    - Java 17 + Node.js 20 setup
+    - Gradle and npm dependency caching for faster builds
+    - Base64 keystore decoding from GitHub secrets
+    - Automatic APK signing with release keystore
+    - APK signature verification step
+    - Artifact upload (90-day retention)
+    - Automatic GitHub Release creation with Serbian documentation
+  - **Signing Configuration:** `android/app/build.gradle` configured to:
+    - Read keystore from environment variables (KEYSTORE_ALIAS, KEYSTORE_PASSWORD)
+    - Sign release builds automatically
+    - Use `servis-todosijevic-release.keystore` file
+  - **Security:** `.gitignore` updated to prevent keystore commits (*.keystore, *.jks, keystore-base64.txt)
+  - **Documentation:** 
+    - `GITHUB-APK-DEPLOYMENT.md` - Complete 6-step guide with troubleshooting
+    - `GITHUB-APK-QUICK-START.md` - 5-minute quick start for first APK
+  - **Required GitHub Secrets:** KEYSTORE_FILE (base64), KEYSTORE_ALIAS, KEYSTORE_PASSWORD
+  - **Build Triggers:** Push to main, PR to main, manual workflow_dispatch, git tags
+  - **Output:** Signed APK at `android/app/build/outputs/apk/release/app-release.apk`
+  - **Impact:** Fully automated Android app deployment - zero manual intervention needed
+  
 - **2025-11-05**: Added production database security protection
   - **Critical Issue:** Agent accidentally deleted 4 production services (IDs: 518, 734, 854, 856) using execute_sql_tool
   - **Root Cause:** Development environment had access to both DATABASE_URL (production) and DEV_DATABASE_URL (development)
