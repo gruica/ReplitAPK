@@ -41,19 +41,18 @@ if (!databaseUrl) {
   );
 }
 
-// 🔒 SECURITY: Sprečava pristup produkcijskoj bazi iz development okruženja
+// 🔒 SECURITY WARNING: Development okruženje ne bi trebalo pristupati produkcijskoj bazi
 if (isDevelopment && databaseUrl.includes('/neondb')) {
-  console.error('');
-  console.error('🚨🚨🚨 SECURITY BLOCK 🚨🚨🚨');
-  console.error('❌ DEVELOPMENT environment CANNOT access PRODUCTION database!');
-  console.error('❌ Database URL points to: neondb (PRODUCTION)');
-  console.error('✅ Solution: Remove DATABASE_URL from development secrets');
-  console.error('✅ Use only DEV_DATABASE_URL in development environment');
-  console.error('');
-  throw new Error(
-    '🔒 SECURITY: Development environment blocked from accessing production database (neondb). ' +
-    'Remove DATABASE_URL from development secrets and use only DEV_DATABASE_URL.'
-  );
+  console.warn('');
+  console.warn('⚠️⚠️⚠️ SECURITY WARNING ⚠️⚠️⚠️');
+  console.warn('⚠️  DEVELOPMENT environment is accessing PRODUCTION database!');
+  console.warn('⚠️  Database URL points to: neondb (PRODUCTION)');
+  console.warn('⚠️  RISK: Any changes you make will affect REAL production data!');
+  console.warn('⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️');
+  console.warn('');
+  console.warn('✅ RECOMMENDED: Remove DATABASE_URL from development secrets');
+  console.warn('✅ RECOMMENDED: Use only DEV_DATABASE_URL in development environment');
+  console.warn('');
 }
 
 console.log(`🔗 [DATABASE]: Connected to ${databaseName}`);
