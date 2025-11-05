@@ -57,12 +57,12 @@ export function SparePartsManagement() {
 
   // Fetch all spare part orders with enriched data
   const { data: orders = [], isLoading, error } = useQuery({
-    queryKey: ['/api/admin/spare-parts/all-requests'],
+    queryKey: ['/api/admin/spare-parts'],
   });
 
   // Fetch pending orders count for notification
   const { data: pendingOrders = [] } = useQuery({
-    queryKey: ['/api/admin/spare-parts/all-requests'],
+    queryKey: ['/api/admin/spare-parts'],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -77,7 +77,7 @@ export function SparePartsManagement() {
         title: 'Uspešno',
         description: 'Porudžbina je ažurirana',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts/all-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
       setShowUpdateDialog(false);
       setSelectedOrder(null);
     },
@@ -101,7 +101,7 @@ export function SparePartsManagement() {
         title: 'Uspešno',
         description: 'Porudžbina je obrisana',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts/all-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
     },
     onError: (error) => {
       toast({
@@ -193,7 +193,7 @@ export function SparePartsManagement() {
         <SimpleSparePartsDialog 
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts/all-requests'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
           }}
         />
       </div>
