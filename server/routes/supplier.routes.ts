@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
-import { storage } from "../storage";
-import { jwtAuthMiddleware, requireRole } from "../jwt-auth";
+import { storage } from "../storage.js";
+import { jwtAuthMiddleware, requireRole } from "../jwt-auth.js";
+import { supplierAssignmentService } from "../supplier-assignment-service.js";
 
 /**
  * Supplier Routes Module
@@ -16,7 +17,7 @@ import { jwtAuthMiddleware, requireRole } from "../jwt-auth";
 
 export function registerSupplierRoutes(app: Express) {
   
-  // GET /api/supplier/tasks - Get supplier's assigned tasks
+  // GET /api/supplier/tasks - Get supplier's assigned tasks with spare part order details
   app.get('/api/supplier/tasks', jwtAuthMiddleware, requireRole(['supplier']), async (req: Request, res: Response) => {
     try {
       const supplierId = req.user!.supplierId;
@@ -31,8 +32,37 @@ export function registerSupplierRoutes(app: Express) {
       const tasks = await storage.getSupplierTasks(supplierId);
       
       console.log(`[SUPPLIER] Found ${tasks.length} tasks for supplier ${supplierId}`);
+
+      // 🔄 ENRICH with spare_part_order details
+      const enrichedTasks = await Promise.all(
+        tasks.map(async (task) => {
+          try {
+            // Get spare part order details
+            const sparePartOrder = await storage.getSparePartOrder(task.sparePartOrderId);
+            
+            // Get service details if available
+            let serviceDetails = null;
+            if (sparePartOrder?.serviceId) {
+              try {
+                serviceDetails = await storage.getAdminServiceById(sparePartOrder.serviceId);
+              } catch (err) {
+                console.warn(`[SUPPLIER] Could not fetch service for task ${task.id}:`, err);
+              }
+            }
+
+            return {
+              ...task,
+              sparePartOrder,
+              serviceDetails
+            };
+          } catch (error) {
+            console.error(`[SUPPLIER] Error enriching task ${task.id}:`, error);
+            return task; // Return original task if enrichment fails
+          }
+        })
+      );
       
-      res.json(tasks);
+      res.json(enrichedTasks);
     } catch (error) {
       console.error('[SUPPLIER] Error fetching tasks:', error);
       res.status(500).json({ error: 'Greška pri dohvatanju zadataka' });
@@ -65,6 +95,15 @@ export function registerSupplierRoutes(app: Express) {
       const updatedTask = await storage.updateSupplierTaskStatus(taskId, 'separated');
       
       console.log(`[SUPPLIER] ✅ Task ${taskId} marked as separated`);
+
+      // 🔄 SYNCHRONIZE with spare_part_order
+      try {
+        await supplierAssignmentService.synchronizeStatus(taskId, 'separated');
+        console.log(`[SUPPLIER] ✅ Synchronized status to spare_part_order`);
+      } catch (syncError) {
+        console.error(`[SUPPLIER] ⚠️ Status sync failed:`, syncError);
+        // Don't fail the request if sync fails
+      }
       
       res.json(updatedTask);
     } catch (error) {
@@ -99,6 +138,15 @@ export function registerSupplierRoutes(app: Express) {
       const updatedTask = await storage.updateSupplierTaskStatus(taskId, 'sent');
       
       console.log(`[SUPPLIER] ✅ Task ${taskId} marked as sent`);
+
+      // 🔄 SYNCHRONIZE with spare_part_order
+      try {
+        await supplierAssignmentService.synchronizeStatus(taskId, 'sent');
+        console.log(`[SUPPLIER] ✅ Synchronized status to spare_part_order`);
+      } catch (syncError) {
+        console.error(`[SUPPLIER] ⚠️ Status sync failed:`, syncError);
+        // Don't fail the request if sync fails
+      }
       
       res.json(updatedTask);
     } catch (error) {

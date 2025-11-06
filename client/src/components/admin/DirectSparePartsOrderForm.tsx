@@ -60,6 +60,9 @@ export default function DirectSparePartsOrderForm({ serviceId, orderId, prefille
 
   const mutation = useMutation({
     mutationFn: async (data: FormData & { serviceId?: number | null }) => {
+      // Mapiranje brenda na puni naziv
+      const brandName = data.selectedBrand === 'beko' ? 'Beko' : 'ComPlus';
+      
       // Ako imamo orderId, ažuriramo postojeću porudžbinu
       if (orderId) {
         const response = await apiRequest(`/api/admin/spare-parts/${orderId}/order`, {
@@ -72,10 +75,20 @@ export default function DirectSparePartsOrderForm({ serviceId, orderId, prefille
         });
         return response.json();
       } else {
-        // Inače kreiramo novu porudžbinu
-        const response = await apiRequest('/api/spare-parts/order', {
+        // Kreiramo novu porudžbinu sa automatskim dodjeljivanjem dobavljača
+        const response = await apiRequest('/api/admin/spare-parts/order-with-supplier', {
           method: 'POST',
-          body: JSON.stringify(data)
+          body: JSON.stringify({
+            brandName,
+            partName: data.partName,
+            partNumber: data.productCode || '',
+            quantity: data.quantity.toString(),
+            description: data.description,
+            urgency: data.urgency,
+            warrantyStatus: data.warrantyStatus,
+            deviceModel: data.deviceModel,
+            serviceId: data.serviceId || null
+          })
         });
         return response.json();
       }
@@ -85,11 +98,13 @@ export default function DirectSparePartsOrderForm({ serviceId, orderId, prefille
         title: "Rezervni deo uspešno poručen",
         description: orderId 
           ? "Status porudžbine je automatski ažuriran na 'Poručeno' i poslat je email dobavljaču."
-          : "Email je poslat dobavljaču sa detaljima o rezervnom delu.",
+          : result?.supplierAssigned 
+            ? `Automatski dodeljen dobavljaču: ${result.assignedSupplier?.name || 'N/A'}. Email je poslat dobavljaču.`
+            : "Porudžbina je kreirana. Nijedan dobavljač nije automatski dodeljen.",
       });
       // Ažuriranje cache-a
       queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/supplier/orders'] });
       onSuccess?.();
     },
     onError: (error: any) => {
@@ -124,9 +139,7 @@ export default function DirectSparePartsOrderForm({ serviceId, orderId, prefille
     
     mutation.mutate({ 
       ...formData, 
-      serviceId,
-      brand: formData.selectedBrand,
-      emailTarget: formData.selectedBrand === 'beko' ? 'servis@eurotehnikamn.me' : 'servis@complus.me'
+      serviceId
     });
   };
 

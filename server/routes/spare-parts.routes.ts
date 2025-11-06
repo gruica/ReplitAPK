@@ -1,7 +1,8 @@
 import type { Express } from "express";
-import { storage } from "../storage";
-import { jwtAuth, requireRole } from "../jwt-auth";
-import { emailService } from "../email-service";
+import { storage } from "../storage.js";
+import { jwtAuth, requireRole } from "../jwt-auth.js";
+import { emailService } from "../email-service.js";
+import { supplierAssignmentService } from "../supplier-assignment-service.js";
 
 // Production logger for clean deployment
 class ProductionLogger {
@@ -299,7 +300,7 @@ export function registerSparePartsRoutes(app: Express) {
             existingOrder.partName,
             existingOrder.partNumber || 'N/A',
             urgency,
-            existingOrder.description
+            existingOrder.description || undefined
           );
 
           if (complusEmailSent) {
@@ -322,7 +323,7 @@ export function registerSparePartsRoutes(app: Express) {
         const protocolSMS = createProtocolSMSService({
           apiKey: settingsMap.sms_mobile_api_key,
           baseUrl: settingsMap.sms_mobile_base_url || 'https://api.smsmobileapi.com',
-          senderId: settingsMap.sms_mobile_sender_id || null,
+          senderId: settingsMap.sms_mobile_sender_id || undefined,
           enabled: settingsMap.sms_mobile_enabled === 'true'
         }, storage);
 
@@ -451,13 +452,15 @@ export function registerSparePartsRoutes(app: Express) {
       }
 
       // AUTOMATSKI EMAIL/SMS SISTEM (kopiran iz order endpoint-a)
+      let serviceData: any = null;
+      let clientData: any = null;
+      let applianceData: any = null;
+      let technicianData: any = null;
+      let manufacturerData: any = null;
+      let categoryData: any = null;
+      let manufacturerName = '';
+
       try {
-        let serviceData = null;
-        let clientData = null;
-        let applianceData = null;
-        let technicianData = null;
-        let manufacturerData = null;
-        let categoryData = null;
 
         if (existingOrder.serviceId) {
           serviceData = await storage.getService(existingOrder.serviceId);
@@ -480,7 +483,7 @@ export function registerSparePartsRoutes(app: Express) {
           }
         }
 
-        const manufacturerName = manufacturerData?.name || '';
+        manufacturerName = manufacturerData?.name || '';
         const isComPlus = isComplusBrand(manufacturerName);
 
         // 🎯 COMPLUS BREND - Automatski email na servis@complus.me
@@ -495,7 +498,7 @@ export function registerSparePartsRoutes(app: Express) {
             existingOrder.partName,
             existingOrder.partNumber || 'N/A',
             'normal',
-            existingOrder.description
+            existingOrder.description || undefined
           );
 
           if (complusEmailSent) {
@@ -516,7 +519,7 @@ export function registerSparePartsRoutes(app: Express) {
         const protocolSMS = createProtocolSMSService({
           apiKey: settingsMap.sms_mobile_api_key,
           baseUrl: settingsMap.sms_mobile_base_url || 'https://api.smsmobileapi.com',
-          senderId: settingsMap.sms_mobile_sender_id || null,
+          senderId: settingsMap.sms_mobile_sender_id || undefined,
           enabled: settingsMap.sms_mobile_enabled === 'true'
         }, storage);
 
@@ -703,5 +706,131 @@ export function registerSparePartsRoutes(app: Express) {
     }
   });
 
-  console.log("✅ Spare Parts routes registered");
+  // ===== NEW INTEGRATED ADMIN ORDERING WITH SUPPLIER ASSIGNMENT =====
+
+  /**
+   * Admin kreira porudžbinu sa automatskim dodeljivanjem suplajera
+   * Ovo je novi sistem koji povezuje admin ordering sa supplier portalom
+   */
+  app.post("/api/admin/spare-parts/order-with-supplier", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const {
+        serviceId,
+        partName,
+        partNumber,
+        quantity,
+        description,
+        urgency,
+        warrantyStatus,
+        brand,
+        deviceModel,
+        applianceCategory
+      } = req.body;
+
+      logger.info("[ADMIN ORDER] Creating spare part order with automatic supplier assignment");
+
+      // 1. Kreiraj spare_part_order
+      const sparePartOrderData = {
+        serviceId: serviceId || null,
+        partName,
+        partNumber: partNumber || null,
+        quantity: quantity || 1,
+        description: description || null,
+        urgency: urgency || 'normal',
+        warrantyStatus: warrantyStatus || 'van garancije',
+        status: 'ordered',
+        requesterType: 'admin',
+        requesterUserId: req.user!.id,
+        requesterName: req.user!.fullName || req.user!.username,
+        orderDate: new Date()
+      };
+
+      const sparePartOrder = await storage.createSparePartOrder(sparePartOrderData);
+      logger.info(`[ADMIN ORDER] Created spare_part_order #${sparePartOrder.id}`);
+
+      // 2. Automatski dodeli suplajera
+      const assignmentResult = await supplierAssignmentService.assignSupplierToOrder({
+        sparePartOrderId: sparePartOrder.id,
+        brandName: brand,
+        manufacturerName: brand,
+        partName,
+        partNumber,
+        quantity: quantity || 1,
+        urgency: urgency || 'normal',
+        warrantyStatus: warrantyStatus || 'van garancije',
+        description,
+        serviceId: serviceId || undefined
+      });
+
+      if (!assignmentResult.success) {
+        logger.warn(`[ADMIN ORDER] Supplier assignment failed: ${assignmentResult.message}`);
+        // Nastavi dalje bez suplajera - admin može kasnije ručno dodeliti
+      } else {
+        logger.info(`[ADMIN ORDER] Assigned to supplier: ${assignmentResult.supplier?.name}`);
+        
+        // 3. Ažuriraj spare_part_order sa supplier informacijama
+        await supplierAssignmentService.updateSparePartOrderWithSupplier(
+          sparePartOrder.id,
+          assignmentResult.supplier!.name
+        );
+      }
+
+      res.json({
+        success: true,
+        message: assignmentResult.success 
+          ? `Porudžbina kreirana i dodeljena dobavljaču ${assignmentResult.supplier?.name}`
+          : 'Porudžbina kreirana, ali dobavljač nije automatski dodeljen',
+        sparePartOrder,
+        supplierOrder: assignmentResult.supplierOrder,
+        supplier: assignmentResult.supplier
+      });
+
+    } catch (error) {
+      logger.error("[ADMIN ORDER] Error creating order with supplier:", error);
+      res.status(500).json({ 
+        error: "Greška pri kreiranju porudžbine", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  /**
+   * GET endpoint za dohvatanje enriched spare part orders sa supplier informacijama
+   */
+  app.get("/api/admin/spare-parts-with-suppliers", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      // Dohvati sve spare part orders
+      const sparePartOrders = await storage.getAllSparePartOrders();
+      
+      // Enrichuj sa supplier informacijama
+      const enrichedOrders = await Promise.all(
+        sparePartOrders.map(async (order) => {
+          // Dohvati supplier orders za ovaj spare part order
+          const supplierOrders = await storage.getSupplierOrdersBySparePartOrder(order.id);
+          
+          // Dohvati supplier detalje ako postoji supplier order
+          let supplierDetails = null;
+          if (supplierOrders.length > 0) {
+            const latestSupplierOrder = supplierOrders[0];
+            supplierDetails = await storage.getSupplier(latestSupplierOrder.supplierId);
+          }
+
+          return {
+            ...order,
+            supplierOrders,
+            supplierDetails,
+            hasSupplierAssigned: supplierOrders.length > 0,
+            latestSupplierStatus: supplierOrders.length > 0 ? supplierOrders[0].status : null
+          };
+        })
+      );
+
+      res.json(enrichedOrders);
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching spare parts with suppliers:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju porudžbina" });
+    }
+  });
+
+  console.log("✅ Spare Parts routes registered (with supplier integration)");
 }
