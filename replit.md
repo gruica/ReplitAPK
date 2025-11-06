@@ -25,6 +25,28 @@ Adapt new code to existing structures, not the other way around.
 Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
+## Recent Changes
+- **2025-11-06**: Added email blocking for supplier servis@eurotehnikamn.me (Beko Servis)
+  - **Reason:** Supplier requested no email notifications for spare parts orders
+  - **Implementation:** Email blocking added to 3 service locations:
+    - email-service.ts - sendSparePartOrderToSupplier method
+    - supplier-assignment-service.ts - sendSupplierNotification method
+    - supplier-integration-service.ts - sendEmailOrder method
+  - **Behavior:** 
+    - When supplier email is servis@eurotehnikamn.me, email sending is blocked
+    - Process continues normally - supplier orders still created and visible in portal
+    - Logged: "🚫 Email blokiran za servis@eurotehnikamn.me - dobavljač ne želi da prima email notifikacije za rezervne delove"
+  - **Testing:** Verified with Order #118 (Beko appliance) - email blocked successfully
+  - **Impact:** Supplier no longer receives email notifications, only sees orders in portal
+
+- **2025-11-06**: Implemented automatic supplier assignment for spare parts orders
+  - **Feature:** Auto-assign supplier based on appliance brand matching
+  - **Backend:** POST /api/admin/spare-parts/:orderId/auto-assign-supplier endpoint
+  - **Frontend:** "Automatski dodeli" button (emerald/green with Zap icon) for pending orders with serviceId
+  - **Workflow:** Extracts brand from service → appliance → manufacturer, matches to supplier supportedBrands
+  - **Testing:** E2E test verified Order #117 (Candy) auto-assigned to ComPlus supplier
+  - **Impact:** Reduces admin manual work, ensures correct supplier selection
+
 ## System Architecture
 
 ### UI/UX Decisions
