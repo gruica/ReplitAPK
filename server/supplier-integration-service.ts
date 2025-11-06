@@ -195,6 +195,17 @@ export class SupplierIntegrationService {
    */
   private async sendEmailOrder(supplier: any, orderRequest: SupplierOrderRequest, supplierOrderId: number): Promise<SupplierOrderResult> {
     try {
+      // Blokiraj slanje email-a za servis@eurotehnikamn.me
+      if (supplier.email === 'servis@eurotehnikamn.me') {
+        const orderNumber = `AUTO-${Date.now()}-${supplierOrderId}`;
+        console.log(`[EMAIL ORDER] 🚫 Email blokiran za ${supplier.email} - dobavljač ne želi da prima email notifikacije za rezervne delove`);
+        return {
+          success: true,
+          message: `Porudžbina kreirana za ${supplier.name} (email blokiran po zahtevu dobavljača)`,
+          orderNumber
+        };
+      }
+
       console.log(`[EMAIL ORDER] Slanje email porudžbine dobavljaču ${supplier.name} (${supplier.email})`);
 
       const emailSubject = `Porudžbina rezervnog dela - ${orderRequest.partName}`;

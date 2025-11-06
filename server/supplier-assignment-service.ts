@@ -272,6 +272,12 @@ Automatska notifikacija
 Frigo Sistem Todosijević
       `.trim();
 
+      // Blokiraj slanje email-a za servis@eurotehnikamn.me
+      if (supplier.email === 'servis@eurotehnikamn.me') {
+        console.log(`[SUPPLIER ASSIGNMENT] 🚫 Email blokiran za ${supplier.email} - dobavljač ne želi da prima email notifikacije za rezervne delove`);
+        return; // Prekini slanje bez greške
+      }
+
       await emailService.sendEmail({
         to: supplier.email,
         subject,
