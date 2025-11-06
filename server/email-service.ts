@@ -2819,6 +2819,12 @@ ${currentDate} ${currentTime}
     adminNotes?: string;
   }): Promise<boolean> {
     try {
+      // Blokiraj slanje email-a za servis@eurotehnikamn.me
+      if (supplierData.email === 'servis@eurotehnikamn.me') {
+        console.log(`[EMAIL] 🚫 Email blokiran za ${supplierData.email} - dobavljač ne želi da prima email notifikacije za rezervne delove`);
+        return true; // Vraćamo true da ne blokiramo ostatak procesa
+      }
+
       console.log(`[EMAIL] Šaljem automatsku porudžbinu rezervnog dela dobavljaču: ${supplierData.name} (${supplierData.email})`);
       
       const subject = `🔧 PORUDŽBINA REZERVNOG DELA - ${orderData.partName}${orderData.urgency === 'urgent' ? ' [HITNO]' : ''}`;
