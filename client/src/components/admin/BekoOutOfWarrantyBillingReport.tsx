@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, apiRequestWithAuth, queryClient } from '@/lib/queryClient';
 
 interface BekoOutOfWarrantyService {
   id: number;
@@ -143,10 +143,7 @@ export default function BekoOutOfWarrantyBillingReport() {
 
   const excludeFromBillingMutation = useMutation({
     mutationFn: async ({ serviceId, exclude }: { serviceId: number; exclude: boolean }) => {
-      return apiRequest(`/api/admin/services/${serviceId}/exclude-from-billing`, {
-        method: 'PATCH',
-        body: JSON.stringify({ exclude })
-      });
+      return apiRequestWithAuth('PATCH', `/api/admin/services/${serviceId}/exclude`, { exclude });
     },
     onSuccess: (_, variables) => {
       toast({
