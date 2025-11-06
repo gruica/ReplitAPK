@@ -228,8 +228,8 @@ export default function UniversalBillingReport({
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ 
-        queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint],
-        exact: false
+        queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint, selectedMonth, selectedYear, enhancedMode],
+        exact: true
       });
       await refetchBillingData();
       toast({
@@ -253,8 +253,8 @@ export default function UniversalBillingReport({
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ 
-        queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint],
-        exact: false
+        queryKey: [enhancedMode ? `${apiEndpoint}/enhanced` : apiEndpoint, selectedMonth, selectedYear, enhancedMode],
+        exact: true
       });
       await refetchBillingData();
       toast({
