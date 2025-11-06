@@ -1466,10 +1466,9 @@ export function registerAdminRoutes(app: Express) {
         partName: sparePartOrder.partName,
         partNumber: sparePartOrder.partNumber || undefined,
         quantity: sparePartOrder.quantity,
-        description: sparePartOrder.description || undefined,
+        description: deviceModel ? `${deviceModel} - ${sparePartOrder.description || ''}` : sparePartOrder.description || undefined,
         urgency: sparePartOrder.urgency as 'normal' | 'high' | 'urgent',
         warrantyStatus: (sparePartOrder as any).warrantyStatus || 'van garancije',
-        deviceModel: deviceModel,
         serviceId: sparePartOrder.serviceId || undefined,
         sparePartOrderId: orderId,
       });

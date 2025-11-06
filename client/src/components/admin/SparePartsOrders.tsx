@@ -33,7 +33,8 @@ import {
   Settings,
   Trash2,
   ShoppingCart,
-  Share2
+  Share2,
+  Zap
 } from 'lucide-react';
 import { shareSparePartOrder } from '@/utils/shareUtils';
 import { logger } from '@/utils/logger';
@@ -275,6 +276,30 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
     }
   });
 
+  // Auto-assign supplier mutation (based on brand matching)
+  const autoAssignSupplierMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const response = await apiRequest(`/api/admin/spare-parts/${orderId}/auto-assign-supplier`, {
+        method: 'POST'
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Automatski dodeljeno",
+        description: `Porudžbina je automatski dodeljena dobavljaču: ${data.supplier?.name || 'Nepoznat'}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Greška pri automatskoj dodeli",
+        description: error.message || "Nije moguće automatski dodeliti dobavljača. Proverite da li servis ima brend aparata.",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Confirm delivery mutation (NOVA FUNKCIONALNOST)
   const confirmDeliveryMutation = useMutation({
     mutationFn: async (orderId: number) => {
@@ -436,6 +461,18 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
       notes: ''
     });
     setIsAssignSupplierOpen(true);
+  };
+
+  const handleAutoAssignSupplier = (order: SparePartOrder) => {
+    if (!order.serviceId) {
+      toast({
+        title: "Nema povezanog servisa",
+        description: "Ova porudžbina nema povezan servis, ne može se automatski dodeliti dobavljač.",
+        variant: "destructive"
+      });
+      return;
+    }
+    autoAssignSupplierMutation.mutate(order.id);
   };
 
   const handleAssignSupplierSubmit = (e: React.FormEvent) => {
@@ -762,6 +799,19 @@ const SparePartsOrders = memo(function SparePartsOrders({ highlightedPartId }: S
                               <User className="h-4 w-4 mr-1" />
                               Dodeli dobavljaču
                             </Button>
+                            {order.serviceId && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAutoAssignSupplier(order)}
+                                className="bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700"
+                                disabled={autoAssignSupplierMutation.isPending}
+                                data-testid="button-auto-assign-supplier"
+                              >
+                                <Zap className="h-4 w-4 mr-1" />
+                                {autoAssignSupplierMutation.isPending ? 'Dodeljuje se...' : 'Automatski dodeli'}
+                              </Button>
+                            )}
                           </>
                         )}
                         {(order.status === 'pending' || order.status === 'ordered') && (
