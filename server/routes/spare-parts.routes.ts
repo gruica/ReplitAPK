@@ -723,9 +723,13 @@ export function registerSparePartsRoutes(app: Express) {
         urgency,
         warrantyStatus,
         brand,
+        brandName, // Podržava i brandName (frontend šalje brandName)
         deviceModel,
         applianceCategory
       } = req.body;
+      
+      // Koristi brandName ako je poslat, inače brand (backward compatibility)
+      const effectiveBrand = brandName || brand;
 
       logger.info("[ADMIN ORDER] Creating spare part order with automatic supplier assignment");
 
@@ -751,8 +755,8 @@ export function registerSparePartsRoutes(app: Express) {
       // 2. Automatski dodeli suplajera
       const assignmentResult = await supplierAssignmentService.assignSupplierToOrder({
         sparePartOrderId: sparePartOrder.id,
-        brandName: brand,
-        manufacturerName: brand,
+        brandName: effectiveBrand,
+        manufacturerName: effectiveBrand,
         partName,
         partNumber,
         quantity: quantity || 1,
