@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, FileText, Download, Euro, User, Phone, MapPin, Wrench, Package, Clock, Edit, Trash2, ShieldOff } from 'lucide-react';
+import { Calendar, FileText, Download, Euro, User, Phone, MapPin, Wrench, Package, Clock, Edit, Trash2, ShieldOff, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,8 @@ export default function BekoOutOfWarrantyBillingReport() {
   
   const [excludeDialogOpen, setExcludeDialogOpen] = useState(false);
   const [excludingService, setExcludingService] = useState<BekoOutOfWarrantyService | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState<string>('');
   
   const { toast } = useToast();
 
@@ -287,6 +289,23 @@ export default function BekoOutOfWarrantyBillingReport() {
   const totalAmount = billingData?.totalAmount || 0;
   const totalServices = billingData?.totalServices || 0;
 
+  const filteredServices = billingData?.services.filter((service: BekoOutOfWarrantyService) => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      service.clientName?.toLowerCase().includes(searchLower) ||
+      service.clientPhone?.toLowerCase().includes(searchLower) ||
+      service.clientAddress?.toLowerCase().includes(searchLower) ||
+      service.clientCity?.toLowerCase().includes(searchLower) ||
+      service.serviceNumber?.toLowerCase().includes(searchLower) ||
+      service.applianceModel?.toLowerCase().includes(searchLower) ||
+      service.serialNumber?.toLowerCase().includes(searchLower) ||
+      service.manufacturerName?.toLowerCase().includes(searchLower) ||
+      service.technicianName?.toLowerCase().includes(searchLower)
+    );
+  }) || [];
+
   return (
     <div className="space-y-6">
       <Card>
@@ -338,6 +357,41 @@ export default function BekoOutOfWarrantyBillingReport() {
             </div>
           </div>
 
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+              <Input
+                type="text"
+                placeholder="Pretraži servise (ime, telefon, adresa, grad, broj servisa, model, serijski broj, brend, serviser...)"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`pl-10 pr-10 h-12 border-2 text-base ${searchTerm ? 'border-red-300 bg-red-50/30' : 'border-gray-200'} focus:border-red-500 transition-all`}
+                data-testid="input-search-billing"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-red-100 rounded-full transition-colors"
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              )}
+            </div>
+            {searchTerm && (
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant="secondary" className="bg-red-100 text-red-700">
+                  {filteredServices.length} {filteredServices.length === 1 ? 'rezultat' : filteredServices.length < 5 ? 'rezultata' : 'rezultata'}
+                </Badge>
+                {filteredServices.length === 0 && (
+                  <span className="text-sm text-gray-600">
+                    Nema servisa koji odgovaraju pretrazi "{searchTerm}"
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           <Alert>
             <AlertDescription className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
@@ -368,15 +422,17 @@ export default function BekoOutOfWarrantyBillingReport() {
             </Card>
           </div>
 
-          {services.length === 0 ? (
+          {filteredServices.length === 0 ? (
             <Alert>
               <AlertDescription>
-                Nema van garancije servisa za odabrani period
+                {searchTerm 
+                  ? `Nema servisa koji odgovaraju pretrazi "${searchTerm}"`
+                  : 'Nema van garancije servisa za odabrani period'}
               </AlertDescription>
             </Alert>
           ) : (
             <div className="space-y-4">
-              {services.map((service: BekoOutOfWarrantyService) => (
+              {filteredServices.map((service: BekoOutOfWarrantyService) => (
                 <Card key={service.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
