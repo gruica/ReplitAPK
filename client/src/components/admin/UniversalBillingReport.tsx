@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, FileText, Download, Euro, CheckCircle, User, Phone, MapPin, Package, Clock, Printer, Zap, AlertCircle, Edit, Trash2, TrendingUp, Building2 } from 'lucide-react';
+import { Calendar, FileText, Download, Euro, CheckCircle, User, Phone, MapPin, Package, Clock, Printer, Zap, AlertCircle, Edit, Trash2, TrendingUp, Building2, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -157,6 +157,8 @@ export default function UniversalBillingReport({
   
   const [excludeDialogOpen, setExcludeDialogOpen] = useState(false);
   const [excludingService, setExcludingService] = useState<BillingService | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState<string>('');
   
   const { toast } = useToast();
 
@@ -322,7 +324,7 @@ export default function UniversalBillingReport({
 
     const csvHeaders = 'Broj servisa;Klijent;Telefon;Adresa;Grad;Uređaj;Brend;Model;Serijski broj;Serviser;Datum završetka;Cena;Opis problema;Izvršeni rad;Utrošeni rezervni dijelovi\n';
     
-    const csvData = billingData.services.map((service: BillingService) => {
+    const csvData = filteredServices.map((service: BillingService) => {
       const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
         ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} (${p.partNumber}) x${p.quantity}`).join(', ')
         : (service.usedParts || 'Nema');
@@ -503,7 +505,7 @@ export default function UniversalBillingReport({
               </tr>
             </thead>
             <tbody>
-              ${billingData.services.map((service: BillingService) => {
+              ${filteredServices.map((service: BillingService) => {
                 const partsText = service.usedPartsDetails && service.usedPartsDetails.length > 0
                   ? service.usedPartsDetails.map((p: UsedPartDetail) => `${p.partName} x${p.quantity}`).join(', ')
                   : (service.usedParts || '-');
@@ -542,6 +544,24 @@ export default function UniversalBillingReport({
   };
 
   const brandColors = ['600', '500', '500', '500', '500'];
+
+  // Filter servisi na osnovu search term-a
+  const filteredServices = billingData?.services.filter((service: BillingService) => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      service.clientName?.toLowerCase().includes(searchLower) ||
+      service.clientPhone?.toLowerCase().includes(searchLower) ||
+      service.clientAddress?.toLowerCase().includes(searchLower) ||
+      service.clientCity?.toLowerCase().includes(searchLower) ||
+      service.serviceNumber?.toLowerCase().includes(searchLower) ||
+      service.applianceModel?.toLowerCase().includes(searchLower) ||
+      service.serialNumber?.toLowerCase().includes(searchLower) ||
+      service.manufacturerName?.toLowerCase().includes(searchLower) ||
+      service.technicianName?.toLowerCase().includes(searchLower)
+    );
+  }) || [];
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${colors.bgGradient} p-6 space-y-6`}>
@@ -586,6 +606,42 @@ export default function UniversalBillingReport({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
+          {/* Search Input */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-${theme}-500`} />
+              <Input
+                type="text"
+                placeholder="Pretraži klijente u billing izvještaju (ime, telefon, adresa, grad, broj servisa, model...)"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`pl-10 pr-10 h-12 border-2 text-base ${searchTerm ? `border-${theme}-300 bg-${theme}-50/30` : 'border-slate-200'} focus:border-${theme}-500 transition-all`}
+                data-testid="input-search-billing"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-${theme}-100 rounded-full transition-colors`}
+                  data-testid="button-clear-search"
+                >
+                  <X className={`h-4 w-4 text-${theme}-600`} />
+                </button>
+              )}
+            </div>
+            {searchTerm && (
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant="secondary" className={`bg-${theme}-100 text-${theme}-700`}>
+                  {filteredServices.length} {filteredServices.length === 1 ? 'rezultat' : filteredServices.length < 5 ? 'rezultata' : 'rezultata'}
+                </Badge>
+                {filteredServices.length === 0 && (
+                  <span className="text-sm text-slate-600">
+                    Nema klijenata koji odgovaraju pretrazi "{searchTerm}"
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -807,7 +863,7 @@ export default function UniversalBillingReport({
                 <FileText className={`h-5 w-5 text-${theme}-600`} />
               </div>
               Detaljni pregled servisa
-              <Badge className={`ml-auto bg-${theme}-600 text-white`}>{billingData.services.length}</Badge>
+              <Badge className={`ml-auto bg-${theme}-600 text-white`}>{filteredServices.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -828,7 +884,7 @@ export default function UniversalBillingReport({
                   </tr>
                 </thead>
                 <tbody>
-                  {billingData.services.map((service: BillingService, idx: number) => (
+                  {filteredServices.map((service: BillingService, idx: number) => (
                     <tr key={service.id} className={`border-b hover:bg-${theme}-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
                       <td className="p-4">
                         <div>
