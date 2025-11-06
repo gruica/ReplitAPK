@@ -25,97 +25,6 @@ Adapt new code to existing structures, not the other way around.
 Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
-## Recent Changes
-- **2025-11-05**: GitHub Actions APK Build Ready for Deployment
-  - **Achievement:** Complete GitHub Actions workflow for automated Android APK builds
-  - **Workflow Configuration:** `.github/workflows/build-apk.yml` optimized with:
-    - Java 17 + Node.js 20 setup
-    - Gradle and npm dependency caching for faster builds
-    - Base64 keystore decoding from GitHub secrets
-    - Automatic APK signing with release keystore
-    - APK signature verification step
-    - Artifact upload (90-day retention)
-    - Automatic GitHub Release creation with Serbian documentation
-  - **Signing Configuration:** `android/app/build.gradle` configured to:
-    - Read keystore from environment variables (KEYSTORE_ALIAS, KEYSTORE_PASSWORD)
-    - Sign release builds automatically
-    - Use `servis-todosijevic-release.keystore` file
-  - **Security:** `.gitignore` updated to prevent keystore commits (*.keystore, *.jks, keystore-base64.txt)
-  - **Documentation:** 
-    - `GITHUB-APK-DEPLOYMENT.md` - Complete 6-step guide with troubleshooting
-    - `GITHUB-APK-QUICK-START.md` - 5-minute quick start for first APK
-  - **Required GitHub Secrets:** KEYSTORE_FILE (base64), KEYSTORE_ALIAS, KEYSTORE_PASSWORD
-  - **Build Triggers:** Push to main, PR to main, manual workflow_dispatch, git tags
-  - **Output:** Signed APK at `android/app/build/outputs/apk/release/app-release.apk`
-  - **Impact:** Fully automated Android app deployment - zero manual intervention needed
-  
-- **2025-11-05**: Added production database security protection
-  - **Critical Issue:** Agent accidentally deleted 4 production services (IDs: 518, 734, 854, 856) using execute_sql_tool
-  - **Root Cause:** Development environment had access to both DATABASE_URL (production) and DEV_DATABASE_URL (development)
-  - **Security Fix:** Added code protection in server/db.ts (lines 47-60)
-    - Blocks development environment from accessing production database (neondb)
-    - Throws security error if development tries to connect to /neondb
-    - Forces development to use only DEV_DATABASE_URL
-  - **Additional Protection:** User should remove DATABASE_URL secret from Replit Editor (keep only in Deployment)
-  - **Impact:** Prevents future accidental production database modifications from development environment
-  
-- **2025-11-05**: Enhanced business partner validation - Address and City now mandatory
-  - **Problem:** Business partners could create services without client address/city, causing data integrity issues
-  - **Frontend Fix:** client/src/pages/business/services/new.tsx
-    - Address: minimum 3 characters (required)
-    - City: minimum 2 characters (required)
-  - **Backend Fix:** server/business-partner-routes.ts (lines 130-142)
-    - Validates address (min 3 chars) before creating client
-    - Validates city (min 2 chars) before creating client
-    - Returns 400 error if validation fails
-  - **Impact:** All new business partner service requests must include valid address and city
-  
-- **2025-11-05**: Fixed spare parts supplier workflow bugs and endpoint corrections
-  - **Problem 1:** Frontend called non-existent endpoint `/api/admin/spare-parts/all-requests`
-  - **Problem 2:** Date strings not converted to Date objects causing 500 errors in supplier assignment
-  - **Solutions implemented:**
-    1. Fixed endpoint mismatch: Corrected `/api/admin/spare-parts/all-requests` → `/api/admin/spare-parts` across 6 frontend files (SparePartsManagement.tsx, SparePartsOrderForm.tsx, DirectSparePartsOrderForm.tsx, AdminSparePartsOrdering.tsx, available-parts.tsx, sidebar.tsx)
-    2. Fixed date conversion in `POST /api/admin/spare-parts/:orderId/assign-supplier` (server/routes/admin.routes.ts lines 1406-1407)
-       - Changed `orderDate: new Date().toISOString()` → `orderDate: new Date()`
-       - Changed `expectedDelivery: estimatedDelivery || undefined` → `expectedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined`
-    3. Fixed date conversion in `PUT /api/admin/spare-parts/:id` (server/routes/spare-parts.routes.ts lines 587-603)
-       - Added automatic conversion for date string fields: expectedDelivery, receivedDate, orderDate, deliveryConfirmedAt, removedFromOrderingAt
-  - **Impact:** Admin can now successfully assign spare part orders to suppliers without 500 errors; supplier portal workflow fully functional
-  - **Workflow verified:** Admin assigns pending order to supplier → system creates supplier_order and updates spare_part_order status → supplier can view assigned task in portal at /supplier → supplier can update status to 'separated', 'sent', 'delivered'
-  - **UI location:** Admin panel → /admin/spare-parts → Tab "Trenutne porudžbine" → Click "Dodeli dobavljaču" button (only visible for status='pending' orders)
-
-- **2025-11-04**: Fixed photo viewing for serviser role (production issue)
-  - **Problem:** Serviser could upload photos but couldn't see them (showed "Slika nedostupna"), while Admin could view the same photos perfectly
-  - **Root cause:** Frontend used direct Object Storage paths `/objects/uploads/...` instead of proxy endpoint
-    - Direct paths bypass authorization and Object Storage access controls
-    - Only worked for Admin due to different browser/session state
-  - **Solution:** Updated MobileServicePhotos.tsx to use proxy endpoint
-    - Changed `photo.photoUrl` → `/api/service-photo-proxy/${photo.id}` (lines 437, 508)
-    - Proxy endpoint handles authorization via `checkServicePhotoAccess` and serves images through ObjectStorageService
-  - **Secondary fix:** Added field mapping in GET endpoints (server/routes/misc.routes.ts lines 562-569, 718-725)
-    - Maps `photoPath` → `photoUrl` before sending to frontend
-    - Maps `category` → `photoCategory` for consistency
-  - **Impact:** All authorized users (admin, technicians, business partners) can now view photos correctly
-
-- **2025-11-04**: Fixed Cloud Run deployment startup optimization
-  - **Problem:** Server performed slow startup operations (database wake-up, test user verification) BEFORE listening on port, causing Cloud Run health checks to fail
-  - **Solution:** Implemented lazy initialization pattern in server/index.ts
-    - Server now immediately listens on port 5000 (health checks pass instantly)
-    - Database wake-up and test user verification moved to background async task AFTER server is ready
-    - All cron jobs start after server is listening
-  - **Impact:** Deployment now passes Cloud Run health checks and starts successfully
-
-- **2025-11-03**: Added missing endpoint for serviser photo upload from mobile app
-  - **Problem identified:** Frontend called `/api/service-photos/upload-base64` endpoint that didn't exist on server
-  - **Solutions implemented:**
-    1. Added NEW endpoint `POST /api/service-photos/upload-base64` (server/routes/misc.routes.ts lines 1096-1212)
-       - Handles base64-encoded photo uploads from mobile app
-       - Full authorization for admin and technician roles
-       - Decodes base64 → uploads to Object Storage → saves to database
-    2. Added `uploadBuffer()` method to ObjectStorageService (server/objectStorage.ts lines 244-264)
-       - Enables direct Buffer upload to Google Cloud Storage
-  - **Impact:** Mobile app can now upload photos via base64 encoding
-
 ## System Architecture
 
 ### UI/UX Decisions
@@ -125,9 +34,7 @@ The frontend uses React.js with TypeScript, styled with Shadcn/UI (built on Radi
 The frontend uses React.js, Wouter for routing, and React Query for server state management. The backend is built with Node.js, Express.js, TypeScript, and ES modules.
 **Core Architectural Patterns:**
 - **Modular Architecture**: Server routes, database schema, and storage layers are highly modularized for maintainability and scalability.
-- **Database**: PostgreSQL with Drizzle ORM, utilizing Neon serverless PostgreSQL.
-  - **CRITICAL**: Production (REPLIT_DEPLOYMENT=true) MUST use DATABASE_URL (neondb) - DEV_DATABASE_URL is ignored in production
-  - Development uses DEV_DATABASE_URL (development_db) for safe testing
+- **Database**: PostgreSQL with Drizzle ORM, utilizing Neon serverless PostgreSQL. Production (REPLIT_DEPLOYMENT=true) MUST use DATABASE_URL (neondb); development uses DEV_DATABASE_URL (development_db).
 - **Authentication**: Hybrid system supporting Passport.js session-based and JWT token authentication with Scrypt for password hashing and PostgreSQL for session storage.
 - **API Design**: RESTful API with role-based access control and comprehensive Swagger/OpenAPI documentation. Versioning is structured with `/api/v1/*` endpoints.
 - **Error Handling**: A robust global error handler provides structured JSON responses and detailed logging.
@@ -143,7 +50,7 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Client & Appliance Management**: Detailed client profiles, categorized appliance registry, and service history with device return functionality.
 - **Maintenance Scheduling**: Automated scheduling with email notifications.
 - **Business Partner Integration**: Dedicated portal for partners to submit service requests, view completion details, and edit client information with integrated warranty status selection.
-- **Spare Parts Management**: Comprehensive system for tracking, ordering, and managing spare parts.
+- **Spare Parts Management**: Comprehensive system for tracking, ordering, and managing spare parts, including automatic supplier assignment based on appliance brand.
 - **Notifications**: In-app, SMS, and email notifications for all key events, with role-specific templates. Admin notifications sent only to jelena@frigosistemtodosijevic.com.
 - **Data Export**: CSV export functionality for various database tables.
 - **Billing Management**: Supports warranty (ComPlus, Beko) and out-of-warranty billing with admin override capabilities, documentation, and service exclusion, including PDF generation for reports.
