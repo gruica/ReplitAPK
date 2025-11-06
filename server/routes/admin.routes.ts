@@ -748,7 +748,7 @@ export function registerAdminRoutes(app: Express) {
         });
       }
       
-      const service = await storage.getServiceById(serviceId);
+      const service = await storage.getService(serviceId);
       if (!service) {
         return res.status(404).json({ error: "Servis nije pronađen" });
       }
@@ -849,20 +849,16 @@ export function registerAdminRoutes(app: Express) {
         });
       }
 
-      const success = await storage.deleteClient(clientId);
+      await storage.deleteClient(clientId);
       
-      if (success) {
-        res.json({ 
-          success: true, 
-          message: `Klijent "${trimmedClientName}" je uspešno obrisan`,
-          deletedClient: {
-            id: clientId,
-            fullName: trimmedClientName
-          }
-        });
-      } else {
-        res.status(500).json({ error: "Greška pri brisanju klijenta" });
-      }
+      res.json({ 
+        success: true, 
+        message: `Klijent "${trimmedClientName}" je uspešno obrisan`,
+        deletedClient: {
+          id: clientId,
+          fullName: trimmedClientName
+        }
+      });
       
     } catch (error) {
       console.error("🛡️ [SAFE DELETE CLIENT] ❌ Greška:", error);
@@ -1019,8 +1015,9 @@ export function registerAdminRoutes(app: Express) {
       const deleteSessionsQuery = 'DELETE FROM user_sessions';
       
       try {
-        const result = await storage.db.query(deleteSessionsQuery);
-        const deletedSessionsCount = result.rowCount || 0;
+        const sql = neon(process.env.DATABASE_URL!);
+        const result = await sql(deleteSessionsQuery);
+        const deletedSessionsCount = result.length || 0;
         console.log(`🗑️ [ADMIN RESET] Obrisano ${deletedSessionsCount} sesija iz baze podataka`);
         
         const resetStats = {
@@ -1390,7 +1387,7 @@ export function registerAdminRoutes(app: Express) {
         sparePartOrderId: orderId,
         orderNumber: orderNumber || undefined,
         status: 'pending',
-        totalCost: totalCost ? parseFloat(totalCost) : undefined,
+        totalCost: totalCost ? String(parseFloat(totalCost)) : undefined,
         currency: currency || 'EUR',
         estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
         emailContent: notes || undefined,
