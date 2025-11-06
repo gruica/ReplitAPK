@@ -62,6 +62,17 @@ Creating new functions instead of changing existing ones is mandatory.
   - **Testing:** E2E test verified Order #117 (Candy) auto-assigned to ComPlus supplier
   - **Impact:** Reduces admin manual work, ensures correct supplier selection
 
+- **2025-11-06**: Added search functionality to all billing reports
+  - **Feature:** Real-time client-side search filtering across all billing components
+  - **Components:** UniversalBillingReport.tsx, BekoOutOfWarrantyBillingReport.tsx, ComplusOutOfWarrantyBillingReport.tsx
+  - **Search Fields:** Filters by client name, phone, address, city, service number, appliance model, serial number, manufacturer, technician name
+  - **UI Elements:**
+    - Search input with Search icon and placeholder "Pretraži po klijentu, telefonu, adresi, servisnom broju..."
+    - Clear button (X icon) visible when search term active
+    - Badge displaying filtered result count (updates dynamically)
+  - **Implementation:** Client-side filtering using filteredServices computed from billingData.services
+  - **Impact:** Admins can quickly find specific services within monthly billing reports without backend queries
+
 ## System Architecture
 
 ### UI/UX Decisions
