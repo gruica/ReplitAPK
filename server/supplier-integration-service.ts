@@ -100,8 +100,7 @@ export class SupplierIntegrationService {
         supplierId: bestSupplier.id,
         sparePartOrderId: sparePartOrderId,
         status: 'pending',
-        currency: 'EUR',
-        autoRetryCount: 0
+        currency: 'EUR'
       });
 
       // Pošalji porudžbinu na osnovu metode integracije
@@ -212,12 +211,12 @@ export class SupplierIntegrationService {
       const emailBody = this.generateOrderEmailContent(supplier, orderRequest, supplierOrderId);
 
       // Pošalji email koristeći postojeći email servis
-      const emailSent = await this.emailService.sendRawEmail(
-        supplier.email,
-        emailSubject,
-        emailBody,
-        emailBody // HTML i text identični za sada
-      );
+      const emailSent = await this.emailService.sendEmail({
+        to: supplier.email,
+        subject: emailSubject,
+        text: emailBody,
+        html: emailBody
+      });
 
       if (emailSent) {
         const orderNumber = `AUTO-${Date.now()}-${supplierOrderId}`;

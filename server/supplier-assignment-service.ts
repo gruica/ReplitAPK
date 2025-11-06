@@ -281,8 +281,8 @@ Frigo Sistem Todosijević
       await emailService.sendEmail({
         to: supplier.email,
         subject,
-        textContent: body,
-        htmlContent: body
+        text: body,
+        html: body
       });
 
       console.log(`[SUPPLIER ASSIGNMENT] Email sent to ${supplier.email}`);
