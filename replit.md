@@ -26,6 +26,16 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
+- **2025-11-06**: Fixed critical billing report bug - price changes and service deletions not persisting
+  - **Problem:** Admin could edit billing prices and exclude services, but changes reverted after page refresh
+  - **Root Cause:** React Query cache invalidation was incomplete - only invalidated endpoint, not full queryKey
+  - **Fix:** Updated queryKey invalidation to include all parameters: [apiEndpoint, selectedMonth, selectedYear, enhancedMode]
+  - **Changed:** exact flag from false to true for precise cache invalidation
+  - **Files:** client/src/components/admin/UniversalBillingReport.tsx (both updateBillingMutation and excludeFromBillingMutation)
+  - **Testing:** E2E test verified Service #53 price change persists after reload, exclusion persists after reload
+  - **Backend:** Confirmed PATCH endpoints work correctly - problem was solely frontend cache management
+  - **Impact:** Billing price changes and service exclusions now save correctly and persist across page refreshes
+
 - **2025-11-06**: Added email blocking for supplier servis@eurotehnikamn.me (Beko Servis)
   - **Reason:** Supplier requested no email notifications for spare parts orders
   - **Implementation:** Email blocking added to 3 service locations:
