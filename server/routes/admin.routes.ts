@@ -7,6 +7,7 @@ import { insertUserSchema } from "@shared/schema";
 import path from "path";
 import { promises as fs } from "fs";
 import { neon } from "@neondatabase/serverless";
+import { supplierAssignmentService } from "../supplier-assignment-service.js";
 
 // 🔒 SECURITY: User-Agent sanitization funkcija - uklanja potencijalno maliciozne karaktere
 function sanitizeUserAgent(userAgent: string | undefined): string {
@@ -1407,6 +1408,99 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("[SUPPLIER ASSIGNMENT] Error assigning order to supplier:", error);
       res.status(500).json({ error: "Greška pri dodeli porudžbine dobavljaču" });
+    }
+  });
+
+  // POST /api/admin/spare-parts/:orderId/auto-assign-supplier - Automatically assign supplier based on appliance brand
+  app.post('/api/admin/spare-parts/:orderId/auto-assign-supplier', jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      
+      console.log(`[AUTO SUPPLIER ASSIGNMENT] Starting automatic assignment for spare part order ${orderId}`);
+      
+      // Get spare part order
+      const sparePartOrder = await storage.getSparePartOrder(orderId);
+      if (!sparePartOrder) {
+        return res.status(404).json({ error: "Porudžbina rezervnog dela nije pronađena" });
+      }
+      
+      // Check if already assigned to supplier
+      if (sparePartOrder.status === 'ordered' && sparePartOrder.supplierName) {
+        return res.status(400).json({ 
+          error: "Porudžbina je već dodeljena dobavljaču", 
+          supplierName: sparePartOrder.supplierName 
+        });
+      }
+      
+      // Get brand from service -> appliance -> manufacturer
+      let brandName: string | undefined = undefined;
+      let deviceModel: string | undefined = sparePartOrder.description || undefined;
+      
+      if (sparePartOrder.serviceId) {
+        const service = await storage.getService(sparePartOrder.serviceId);
+        if (service && service.applianceId) {
+          const appliance = await storage.getAppliance(service.applianceId);
+          if (appliance) {
+            deviceModel = appliance.model || deviceModel;
+            if (appliance.manufacturerId) {
+              const manufacturer = await storage.getManufacturer(appliance.manufacturerId);
+              if (manufacturer) {
+                brandName = manufacturer.name;
+                console.log(`[AUTO SUPPLIER ASSIGNMENT] Found brand from service: ${brandName}`);
+              }
+            }
+          }
+        }
+      }
+      
+      // If no brand found from service, try to extract from part description or use generic
+      if (!brandName) {
+        console.log(`[AUTO SUPPLIER ASSIGNMENT] No brand found from service, using fallback`);
+        // Could try to extract brand from partName or description if needed
+        // For now, supplier assignment service will use fallback to highest priority supplier
+      }
+      
+      // Call automatic supplier assignment service
+      const assignmentResult = await supplierAssignmentService.assignSupplierToOrder({
+        brandName: brandName,
+        partName: sparePartOrder.partName,
+        partNumber: sparePartOrder.partNumber || undefined,
+        quantity: sparePartOrder.quantity,
+        description: sparePartOrder.description || undefined,
+        urgency: sparePartOrder.urgency as 'normal' | 'high' | 'urgent',
+        warrantyStatus: (sparePartOrder as any).warrantyStatus || 'van garancije',
+        deviceModel: deviceModel,
+        serviceId: sparePartOrder.serviceId || undefined,
+        sparePartOrderId: orderId,
+      });
+      
+      if (!assignmentResult.success) {
+        return res.status(400).json({ 
+          error: assignmentResult.message || "Greška pri automatskom dodeljivanju dobavljača",
+          errorCode: assignmentResult.errorCode
+        });
+      }
+      
+      // Update spare part order with supplier info
+      await storage.updateSparePartOrder(orderId, {
+        status: 'ordered',
+        supplierName: assignmentResult.supplier!.name,
+        orderDate: new Date(),
+      });
+      
+      console.log(`[AUTO SUPPLIER ASSIGNMENT] ✅ Successfully assigned to ${assignmentResult.supplier!.name}`);
+      
+      res.status(200).json({
+        success: true,
+        message: assignmentResult.message,
+        supplier: assignmentResult.supplier,
+        supplierOrder: assignmentResult.supplierOrder,
+        sparePartOrder: await storage.getSparePartOrder(orderId),
+      });
+      
+    } catch (error) {
+      console.error("[AUTO SUPPLIER ASSIGNMENT] Error:", error);
+      res.status(500).json({ error: "Greška pri automatskom dodeljivanju dobavljača" });
     }
   });
 
