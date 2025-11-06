@@ -31,6 +31,14 @@ interface SupplierTask {
   confirmedAt?: string;
   shippedAt?: string;
   deliveredAt?: string;
+  // Enriched data from spare_part_orders
+  partName?: string;
+  partNumber?: string;
+  quantity?: number;
+  description?: string;
+  urgency?: string;
+  warrantyStatus?: string;
+  deviceModel?: string;
 }
 
 export default function SupplierDashboard() {
@@ -245,24 +253,42 @@ export default function SupplierDashboard() {
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     {/* Task Info */}
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-3">
                         <h3 className="text-lg font-semibold">
-                          Zadatak #{task.id}
+                          {task.partName || `Zadatak #${task.id}`}
                         </h3>
                         <Badge className={statusConfig[task.status]?.color}>
                           <StatusIcon className="h-3 w-3 mr-1" />
                           {statusConfig[task.status]?.label}
                         </Badge>
+                        {task.urgency === 'urgent' && (
+                          <Badge variant="destructive">HITNO</Badge>
+                        )}
                       </div>
                       
-                      <div className="space-y-1 text-sm text-muted-foreground">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-sm text-muted-foreground">
+                        {task.partNumber && (
+                          <p>Kataloški br: <span className="font-medium">{task.partNumber}</span></p>
+                        )}
+                        {task.quantity && (
+                          <p>Količina: <span className="font-medium">{task.quantity}</span></p>
+                        )}
+                        {task.deviceModel && (
+                          <p>Model uređaja: <span className="font-medium">{task.deviceModel}</span></p>
+                        )}
+                        {task.warrantyStatus && (
+                          <p>Garancija: <span className="font-medium">{task.warrantyStatus}</span></p>
+                        )}
                         {task.orderNumber && (
                           <p>Broj porudžbine: <span className="font-medium">{task.orderNumber}</span></p>
                         )}
                         {task.totalCost && (
                           <p>Cijena: <span className="font-medium">{task.totalCost} {task.currency || 'EUR'}</span></p>
                         )}
-                        <p>Kreirano: {formatDate(task.createdAt)}</p>
+                        {task.description && (
+                          <p className="col-span-2">Opis: <span className="font-medium">{task.description}</span></p>
+                        )}
+                        <p className="col-span-2 mt-2 border-t pt-2">Kreirano: {formatDate(task.createdAt)}</p>
                         {task.confirmedAt && (
                           <p>Odvojeno: {formatDate(task.confirmedAt)}</p>
                         )}
