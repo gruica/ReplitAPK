@@ -1288,7 +1288,7 @@ const AdminServices = memo(function AdminServices() {
                     >
                       <div className="flex items-center justify-between">
                         {/* Kompaktni prikaz osnovnih informacija */}
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
                           {/* ID i Status */}
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs">#{service.id}</Badge>
@@ -1378,6 +1378,18 @@ const AdminServices = memo(function AdminServices() {
                             <p className="text-xs text-muted-foreground">
                               {formatDate(service.createdAt)}
                             </p>
+                          </div>
+                          
+                          {/* Cijena servisa */}
+                          <div className="min-w-0">
+                            {service.cost ? (
+                              <div className="flex items-center gap-1">
+                                <DollarSign className="h-4 w-4 text-green-600" />
+                                <p className="text-sm font-semibold text-green-600">{service.cost} €</p>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic">Bez cijene</p>
+                            )}
                           </div>
                         </div>
                         
