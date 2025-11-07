@@ -259,15 +259,71 @@ export class PDFService {
           <div>
             <div class="info-item">
               <span class="info-label">Potpuno ispravljeno:</span>
-              <span class="info-value">${service.isCompletelyFixed ? 'Da' : 'Ne'}</span>
+              <span class="info-value"><strong>${service.isCompletelyFixed ? 'DA' : 'NE'}</strong></span>
             </div>
             <div class="info-item">
-              <span class="info-label">Uređaj preuzet:</span>
-              <span class="info-value">${service.devicePickedUp ? 'Da' : 'Ne'}</span>
+              <span class="info-label">Garancijski servis:</span>
+              <span class="info-value"><strong>${service.isWarrantyService ? 'DA' : 'NE'}</strong></span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Isključen iz fakturisanja:</span>
+              <span class="info-value">${service.excludeFromBilling ? 'Da' : 'Ne'}</span>
             </div>
           </div>
         </div>
       </div>
+
+      ${service.partnerCompanyName || service.businessPartnerId ? `
+      <div class="section">
+        <div class="section-title">🏢 Poslovni partner</div>
+        <div class="info-grid">
+          <div>
+            ${service.partnerCompanyName ? `
+            <div class="info-item">
+              <span class="info-label">Naziv kompanije:</span>
+              <span class="info-value"><strong>${service.partnerCompanyName}</strong></span>
+            </div>
+            ` : ''}
+            ${service.businessPartnerId ? `
+            <div class="info-item">
+              <span class="info-label">ID partnera:</span>
+              <span class="info-value">${service.businessPartnerId}</span>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      ${service.devicePickedUp || service.pickupDate || service.pickupNotes ? `
+      <div class="section">
+        <div class="section-title">📦 Informacije o preuzimanju uređaja</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item">
+              <span class="info-label">Uređaj preuzet:</span>
+              <span class="info-value"><strong>${service.devicePickedUp ? 'DA' : 'NE'}</strong></span>
+            </div>
+            ${service.pickupDate ? `
+            <div class="info-item">
+              <span class="info-label">Datum preuzimanja:</span>
+              <span class="info-value">${new Date(service.pickupDate).toLocaleDateString('sr-RS')}</span>
+            </div>
+            ` : ''}
+          </div>
+          <div>
+            ${service.pickupNotes ? `
+            <div class="info-item">
+              <span class="info-label">Napomena o preuzimanju:</span>
+              <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; margin-top: 5px;">
+                ${service.pickupNotes}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="section">
         <div class="section-title">📝 Opis problema i rešenje</div>
@@ -285,7 +341,120 @@ export class PDFService {
           </div>
         </div>
         ` : ''}
+        ${service.machineNotes ? `
+        <div style="margin-bottom: 15px;">
+          <div class="info-label" style="display: block; margin-bottom: 5px;">Napomene o mašini / aparatu:</div>
+          <div style="background: #fef3c7; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b;">
+            ${service.machineNotes}
+          </div>
+        </div>
+        ` : ''}
       </div>
+
+      ${service.needsRescheduling || service.reschedulingNotes || service.clientUnavailableReason ? `
+      <div class="section">
+        <div class="section-title">📅 Informacije o zakazivanju i dostupnosti</div>
+        <div class="info-grid">
+          <div>
+            ${service.needsRescheduling !== null && service.needsRescheduling !== undefined ? `
+            <div class="info-item">
+              <span class="info-label">Potrebno ponovno zakazivanje:</span>
+              <span class="info-value"><strong style="color: ${service.needsRescheduling ? '#dc2626' : '#047857'};">${service.needsRescheduling ? 'DA' : 'NE'}</strong></span>
+            </div>
+            ` : ''}
+            ${service.clientUnavailableReason ? `
+            <div class="info-item">
+              <span class="info-label">Razlog nedostupnosti:</span>
+              <div style="background: #fee2e2; padding: 10px; border-radius: 6px; margin-top: 5px;">
+                ${service.clientUnavailableReason}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+          <div>
+            ${service.reschedulingNotes ? `
+            <div class="info-item">
+              <span class="info-label">Napomene o zakazivanju:</span>
+              <div style="background: #fef3c7; padding: 10px; border-radius: 6px; margin-top: 5px;">
+                ${service.reschedulingNotes}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      ${service.customerRefusesRepair || service.customerRefusalReason ? `
+      <div class="section" style="border-left: 4px solid #dc2626;">
+        <div class="section-title" style="color: #dc2626;">⚠️ Odbijanje popravke od strane kupca</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item">
+              <span class="info-label">Kupac odbija popravku:</span>
+              <span class="info-value"><strong style="color: #dc2626;">DA</strong></span>
+            </div>
+          </div>
+          <div>
+            ${service.customerRefusalReason ? `
+            <div class="info-item">
+              <span class="info-label">Razlog odbijanja:</span>
+              <div style="background: #fee2e2; padding: 10px; border-radius: 6px; margin-top: 5px; border-left: 3px solid #dc2626;">
+                ${service.customerRefusalReason}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      ${service.repairFailed || service.repairFailureReason ? `
+      <div class="section" style="border-left: 4px solid #dc2626;">
+        <div class="section-title" style="color: #dc2626;">❌ Neuspješna popravka</div>
+        <div class="info-grid">
+          <div>
+            <div class="info-item">
+              <span class="info-label">Popravka neuspješna:</span>
+              <span class="info-value"><strong style="color: #dc2626;">DA</strong></span>
+            </div>
+            ${service.repairFailureDate ? `
+            <div class="info-item">
+              <span class="info-label">Datum neuspjeha:</span>
+              <span class="info-value">${new Date(service.repairFailureDate).toLocaleDateString('sr-RS')}</span>
+            </div>
+            ` : ''}
+          </div>
+          <div>
+            ${service.repairFailureReason ? `
+            <div class="info-item">
+              <span class="info-label">Razlog neuspjeha:</span>
+              <div style="background: #fee2e2; padding: 10px; border-radius: 6px; margin-top: 5px; border-left: 3px solid #dc2626;">
+                ${service.repairFailureReason}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+        ${service.replacedPartsBeforeFailure ? `
+        <div style="margin-top: 15px;">
+          <div class="info-label" style="display: block; margin-bottom: 5px;">Zamijenjeni dijelovi prije neuspjeha:</div>
+          <div style="background: #fef3c7; padding: 10px; border-radius: 6px;">
+            ${service.replacedPartsBeforeFailure}
+          </div>
+        </div>
+        ` : ''}
+      </div>
+      ` : ''}
+
+      ${service.usedParts ? `
+      <div class="section">
+        <div class="section-title">🔧 Upotrijebljeni rezervni dijelovi</div>
+        <div style="background: #f8fafc; padding: 15px; border-radius: 6px; border-left: 4px solid #2563eb;">
+          ${service.usedParts}
+        </div>
+      </div>
+      ` : ''}
 
       ${service.removedParts && service.removedParts.length > 0 ? `
       <div class="section">
