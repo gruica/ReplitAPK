@@ -916,7 +916,19 @@ Encryption: https://keys.openpgp.org/search?q=info@frigosistemtodosijevic.me`);
   });
 
   // ===== REVIEWER ENDPOINTS - FOR FACEBOOK APP REVIEW =====
+  // SECURITY: Only available in development/demo environment
   app.get('/api/reviewer/credentials', (req, res) => {
+    // Disable in production for security
+    const isProduction = process.env.NODE_ENV === 'production' || 
+                        process.env.REPLIT_DEPLOYMENT === '1';
+    
+    if (isProduction) {
+      return res.status(404).json({ 
+        error: 'Not found',
+        message: 'This endpoint is only available in development/demo environments' 
+      });
+    }
+    
     res.json({
       message: 'Test credentials for Facebook App Review',
       environment: 'Demo/Test Environment',
