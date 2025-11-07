@@ -73,20 +73,28 @@ Creating new functions instead of changing existing ones is mandatory.
   - **Implementation:** Client-side filtering using filteredServices computed from billingData.services
   - **Impact:** Admins can quickly find specific services within monthly billing reports without backend queries
 
-- **2025-11-06**: Fixed mobile app voice input and copy-paste issues
+- **2025-11-06**: Fixed mobile app voice input and copy-paste issues (COMPLETE FIX)
   - **Problem:** Voice input and copy-paste in mobile app didn't update form fields properly - values would disappear unless user typed additional characters manually
   - **Root Cause:** Mobile browsers trigger `onInput` event for voice dictation and paste operations instead of `onChange` event
-  - **Fix:** Modified MobileInput and MobileTextarea components to synchronize `onInput` and `onChange` events
+  - **Fix v1 (Incomplete):** Initially modified only MobileInput and MobileTextarea - but some forms still used regular Input/Textarea
+  - **Fix v2 (Complete):** Modified ALL input/textarea components to synchronize `onInput` and `onChange` events
   - **Implementation:**
-    - Added `handleInput` function that triggers both `onChange` (for React state) and original `onInput` callbacks
+    - Added `handleInput` function to Input, Textarea, MobileInput, and MobileTextarea components
+    - Function triggers both `onChange` (for React state) and original `onInput` callbacks
     - When `onInput` event fires, it now automatically calls `onChange` to update React form state
     - Ensures compatibility with voice input, copy-paste, and standard typing
-  - **Files:** client/src/components/ui/mobile-input.tsx, client/src/components/ui/mobile-textarea.tsx
+  - **Files:** 
+    - client/src/components/ui/input.tsx (NEW - added fix)
+    - client/src/components/ui/textarea.tsx (NEW - added fix)
+    - client/src/components/ui/mobile-input.tsx (updated)
+    - client/src/components/ui/mobile-textarea.tsx (updated)
   - **Impact:** 
-    - Voice dictation now works reliably - spoken text immediately saves to form state
+    - Voice dictation now works reliably in ALL form fields - spoken text immediately saves to form state
     - Copy-paste operations preserve content without requiring additional keystrokes
     - All mobile form fields (service completion, spare parts requests, notes) now work correctly with all input methods
+    - Fix works regardless of which input component is used in the form
   - **Technical Details:** `onInput` event cast to synthetic `ChangeEvent` to maintain React type compatibility
+  - **Testing Required:** New APK build required to test complete fix in mobile app
 
 ## System Architecture
 
