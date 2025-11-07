@@ -590,14 +590,9 @@ export function registerMiscRoutes(app: Express) {
 
       const photos = await storage.getServicePhotos(serviceId);
       
-      // Map photoPath → photoUrl and category → photoCategory for frontend compatibility
-      const mappedPhotos = photos.map(photo => ({
-        ...photo,
-        photoUrl: photo.photoPath,
-        photoCategory: photo.category
-      }));
-      
-      res.json(mappedPhotos);
+      // Storage already returns mapped photos with photoUrl and photoCategory
+      // No need for additional mapping here
+      res.json(photos);
     } catch (error) {
       console.error("Error fetching service photos:", error);
       res.status(500).json({ error: "Neuspešno dohvatanje fotografija servisa" });
