@@ -26,6 +26,54 @@ Refactoring existing functions is forbidden; only add new ones.
 Creating new functions instead of changing existing ones is mandatory.
 
 ## Recent Changes
+- **2025-11-07**: Fixed critical photo upload system bugs discovered post-deployment (ZERO ERROR TOLERANCE)
+  - **Deployment Context:** Production deployment phase - all bugs must be resolved before go-live
+  - **Bug #1 - API Parameter Mismatch (Frontend ↔ Backend)**
+    - **Problem:** MobilePhotoUploader sent `image` and `category`, but backend expected `base64Data` and `photoCategory`
+    - **Root Cause:** Frontend-backend API contract inconsistency after recent refactoring
+    - **Fix:** Updated MobilePhotoUploader.tsx to send correct parameters (base64Data, photoCategory)
+    - **File:** client/src/components/MobilePhotoUploader.tsx
+    - **Impact:** Photo uploads now work correctly from mobile app
+  - **Bug #2 - Missing Object Storage Endpoint**
+    - **Problem:** Uploaded photos saved to `/objects/uploads/...` but no endpoint existed to serve them
+    - **Root Cause:** Object Storage migration complete but GET endpoint never implemented
+    - **Fix:** Added GET /objects/* endpoint in misc.routes.ts to stream files from Replit Object Storage
+    - **Implementation:** Uses ObjectStorageService.downloadObject() to stream images directly
+    - **File:** server/routes/misc.routes.ts
+    - **Impact:** Photos now accessible via direct Object Storage paths
+  - **Bug #3 - Duplicate Photo Rendering**
+    - **Problem:** After upload, photos appeared duplicated in UI grid
+    - **Root Cause:** MobilePhotoUploader triggered both queryClient.invalidateQueries() AND manual refetch()
+    - **Fix:** Removed redundant refetch() call - invalidateQueries() automatically triggers refetch
+    - **File:** client/src/components/MobilePhotoUploader.tsx
+    - **Impact:** Photos now appear exactly once in grid after upload
+  - **Bug #4 - Proxy Endpoint Crash (photoPath undefined)**
+    - **Problem:** GET /api/service-photo-proxy/:id crashed with "Cannot read properties of undefined (reading 'startsWith')"
+    - **Root Cause:** Storage layer maps `photoPath` → `photoUrl`, but proxy endpoint tried to access non-existent `photo.photoPath`
+    - **Technical Details:**
+      - Database column: `photo_path` (snake_case)
+      - Drizzle ORM maps to: `photoPath` TypeScript property
+      - Storage.getServicePhoto() returns: `{ photoUrl: photo.photoPath, photoCategory: photo.category }` (mapped for frontend)
+      - Proxy endpoint tried: `photo.photoPath` (undefined after mapping)
+    - **Fix:** Use fallback pattern `photoUrl || photoPath` in proxy endpoint
+    - **Code:** `const photoPath = (photo as any).photoUrl || (photo as any).photoPath;`
+    - **File:** server/routes/misc.routes.ts (line 794)
+    - **Impact:** Proxy endpoint now works correctly, serves images with authentication
+  - **Complete Photo System Architecture:**
+    - **Upload Flow:** Frontend (base64) → POST /api/service-photos/upload-base64 → Object Storage → Database
+    - **Storage Paths:** `/objects/uploads/service-{id}-{timestamp}-{filename}`
+    - **Serving Options:**
+      - Direct: GET /objects/* (no auth, fast streaming)
+      - Proxy: GET /api/service-photo-proxy/:id (with auth, permission checks)
+      - List: GET /api/service-photos?serviceId=X (returns array with photoUrl)
+    - **Frontend Components:**
+      - MobilePhotoUploader: Camera/gallery capture and upload
+      - MobileServicePhotos: Photo grid display with categories
+    - **Database Schema:** service_photos table with photo_path column (maps to photoPath in code)
+  - **Testing:** Complete E2E test verified entire workflow (upload, display, proxy, delete)
+  - **Legacy Data:** Some older photos show broken thumbnails (pre-Object Storage migration) - not blocking current functionality
+  - **Production Status:** All critical photo system bugs resolved, system ready for deployment
+
 - **2025-11-06**: Fixed critical billing report bugs - price changes and service deletions not persisting
   - **Problem 1 (UniversalBillingReport):** Admin could edit billing prices and exclude services, but changes reverted after page refresh
     - **Root Cause:** React Query cache invalidation was incomplete - only invalidated endpoint, not full queryKey
