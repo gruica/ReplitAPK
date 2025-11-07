@@ -173,9 +173,9 @@ export function MobilePhotoUploader({ serviceId, onPhotoUploaded, onClose }: Mob
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          image: capturedImage,
+          base64Data: capturedImage,
           serviceId: serviceId,
-          category: selectedCategory,
+          photoCategory: selectedCategory,
           description: enhancedDescription,
           location: location ? {
             latitude: location.coords.latitude,
