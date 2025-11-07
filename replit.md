@@ -56,6 +56,34 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Billing Management**: Supports warranty (ComPlus, Beko) and out-of-warranty billing with admin override capabilities, documentation, and service exclusion, including PDF generation for reports.
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
+## Recent Changes
+- **2025-11-07 (Evening)**: Fixed photo duplication bug in mobile app after upload
+  - **Problem:** After uploading a photo in mobile app, the photo appeared duplicated (showed twice) immediately after upload
+  - **User Report:** Photos uploaded via APK appear twice on the upload screen
+  - **Root Cause:** Double mapping in GET /api/service-photos endpoint
+    - storage.getServicePhotos() already returns mapped data with `photoUrl` and `photoCategory` fields
+    - Backend endpoint performed redundant mapping: `{ ...photo, photoUrl: photo.photoPath, photoCategory: photo.category }`
+    - This created duplicate fields in response object, causing React Query to render each photo twice
+  - **Fix:** Removed redundant mapping in misc.routes.ts line 594-598
+  - **Code Change:** 
+    ```typescript
+    // BEFORE (WRONG - Double mapping)
+    const photos = await storage.getServicePhotos(serviceId);
+    const mappedPhotos = photos.map(photo => ({
+      ...photo,
+      photoUrl: photo.photoPath,  // Duplicate!
+      photoCategory: photo.category  // Duplicate!
+    }));
+    res.json(mappedPhotos);
+    
+    // AFTER (CORRECT - Single mapping)
+    const photos = await storage.getServicePhotos(serviceId);
+    res.json(photos); // Storage already returns mapped data
+    ```
+  - **File:** server/routes/misc.routes.ts (GET /api/service-photos endpoint)
+  - **Impact:** Photos now appear exactly once after upload in mobile app
+  - **Production Status:** Ready for deployment - fix verified in development
+
 ## External Dependencies
 - **Email Service**: Nodemailer
 - **SMS Service**: Configurable SMS Mobile API
