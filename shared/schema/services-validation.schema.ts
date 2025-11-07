@@ -17,6 +17,7 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   cost: true,
   billingPrice: true,
   billingPriceReason: true,
+  excludeFromBilling: true,
   usedParts: true,
   machineNotes: true,
   isCompletelyFixed: true,
@@ -70,6 +71,9 @@ export const insertServiceSchema = createInsertSchema(services).pick({
     }, "Nevažeći datum završetka"),
   technicianNotes: z.string().max(1000, "Napomene su predugačke").or(z.literal("")).nullable().optional(),
   cost: z.string().max(50, "Iznos je predugačak").or(z.literal("")).nullable().optional(),
+  billingPrice: z.string().max(50, "Cena za naplatu je predugačka").or(z.literal("")).nullable().optional(),
+  billingPriceReason: z.string().max(500, "Razlog cene je predugačak").or(z.literal("")).nullable().optional(),
+  excludeFromBilling: z.boolean().nullable().optional(),
   usedParts: z.string().max(1000, "Lista delova je predugačka").or(z.literal("")).nullable().optional()
     .refine(val => {
       if (!val || val === "") return true;
@@ -111,6 +115,9 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   completedDate: true,
   technicianNotes: true,
   cost: true,
+  billingPrice: true,
+  billingPriceReason: true,
+  excludeFromBilling: true,
   usedParts: true,
   machineNotes: true,
   isCompletelyFixed: true,
