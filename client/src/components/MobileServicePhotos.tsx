@@ -153,7 +153,6 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
         description: "Fotografija je uspešno uploadovana",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
-      refetch();
       setUploadProgress(0);
     },
     onError: (error: any) => {
@@ -182,7 +181,6 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
         description: "Fotografija je uspešno obrisana",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
-      refetch();
       setSelectedPhoto(null);
     },
     onError: (error: any) => {
