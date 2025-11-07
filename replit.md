@@ -73,6 +73,21 @@ Creating new functions instead of changing existing ones is mandatory.
   - **Implementation:** Client-side filtering using filteredServices computed from billingData.services
   - **Impact:** Admins can quickly find specific services within monthly billing reports without backend queries
 
+- **2025-11-06**: Fixed mobile app voice input and copy-paste issues
+  - **Problem:** Voice input and copy-paste in mobile app didn't update form fields properly - values would disappear unless user typed additional characters manually
+  - **Root Cause:** Mobile browsers trigger `onInput` event for voice dictation and paste operations instead of `onChange` event
+  - **Fix:** Modified MobileInput and MobileTextarea components to synchronize `onInput` and `onChange` events
+  - **Implementation:**
+    - Added `handleInput` function that triggers both `onChange` (for React state) and original `onInput` callbacks
+    - When `onInput` event fires, it now automatically calls `onChange` to update React form state
+    - Ensures compatibility with voice input, copy-paste, and standard typing
+  - **Files:** client/src/components/ui/mobile-input.tsx, client/src/components/ui/mobile-textarea.tsx
+  - **Impact:** 
+    - Voice dictation now works reliably - spoken text immediately saves to form state
+    - Copy-paste operations preserve content without requiring additional keystrokes
+    - All mobile form fields (service completion, spare parts requests, notes) now work correctly with all input methods
+  - **Technical Details:** `onInput` event cast to synthetic `ChangeEvent` to maintain React type compatibility
+
 ## System Architecture
 
 ### UI/UX Decisions
