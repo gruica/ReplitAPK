@@ -550,6 +550,130 @@ export class PDFService {
       </div>
       ` : ''}
 
+      ${service.completionReports && service.completionReports.length > 0 ? `
+      <div class="section" style="border-left: 4px solid #059669;">
+        <div class="section-title" style="color: #059669;">✅ Izvještaj o završetku servisa</div>
+        ${service.completionReports.map((report: any, idx: number) => `
+          ${idx > 0 ? '<hr style="margin: 20px 0; border: 1px dashed #e2e8f0;" />' : ''}
+          
+          <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <div style="font-weight: bold; color: #047857; margin-bottom: 10px; font-size: 16px;">
+              📋 Detaljni izvještaj ${service.completionReports.length > 1 ? `#${idx + 1}` : ''}
+            </div>
+            
+            ${report.workDescription ? `
+            <div style="margin-bottom: 15px;">
+              <div style="font-weight: bold; color: #475569; margin-bottom: 5px;">Opis izvršenih radova:</div>
+              <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #059669;">
+                ${report.workDescription}
+              </div>
+            </div>
+            ` : ''}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              ${report.problemDiagnosis ? `
+              <div>
+                <div style="font-weight: bold; color: #475569; margin-bottom: 5px;">Dijagnoza problema:</div>
+                <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #f59e0b; font-size: 13px;">
+                  ${report.problemDiagnosis}
+                </div>
+              </div>
+              ` : ''}
+              
+              ${report.solutionDescription ? `
+              <div>
+                <div style="font-weight: bold; color: #475569; margin-bottom: 5px;">Opis rješenja:</div>
+                <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #2563eb; font-size: 13px;">
+                  ${report.solutionDescription}
+                </div>
+              </div>
+              ` : ''}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; padding: 15px; background: white; border-radius: 6px;">
+              ${report.warrantyStatus ? `
+              <div>
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Status garancije</div>
+                <div style="font-weight: bold; color: #1e293b;">
+                  ${report.warrantyStatus === 'u_garanciji' ? '✓ U garanciji' : 'Van garancije'}
+                </div>
+              </div>
+              ` : ''}
+              
+              ${report.warrantyPeriod ? `
+              <div>
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Period garancije</div>
+                <div style="font-weight: bold; color: #1e293b;">${report.warrantyPeriod}</div>
+              </div>
+              ` : ''}
+              
+              ${report.laborTime ? `
+              <div>
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Vrijeme rada</div>
+                <div style="font-weight: bold; color: #1e293b;">${report.laborTime} min</div>
+              </div>
+              ` : ''}
+              
+              ${report.totalCost ? `
+              <div>
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Ukupna cijena</div>
+                <div style="font-weight: bold; color: #047857; font-size: 16px;">${report.totalCost} €</div>
+              </div>
+              ` : ''}
+              
+              ${report.clientSatisfaction ? `
+              <div>
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Zadovoljstvo klijenta</div>
+                <div style="font-weight: bold; color: #f59e0b;">
+                  ${'★'.repeat(report.clientSatisfaction)}${'☆'.repeat(5 - report.clientSatisfaction)}
+                </div>
+              </div>
+              ` : ''}
+            </div>
+            
+            ${report.usedSpareParts && report.usedSpareParts !== '[]' ? `
+            <div style="margin-bottom: 15px;">
+              <div style="font-weight: bold; color: #475569; margin-bottom: 5px;">Korišteni rezervni dijelovi:</div>
+              <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #2563eb; font-size: 13px;">
+                ${report.usedSpareParts}
+              </div>
+            </div>
+            ` : ''}
+            
+            ${report.additionalNotes ? `
+            <div style="margin-bottom: 15px;">
+              <div style="font-weight: bold; color: #475569; margin-bottom: 5px;">Dodatne napomene:</div>
+              <div style="background: #fef3c7; padding: 10px; border-radius: 6px; border-left: 3px solid #f59e0b; font-size: 13px;">
+                ${report.additionalNotes}
+              </div>
+            </div>
+            ` : ''}
+            
+            ${report.techniciansSignature ? `
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1fae5;">
+              <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Potpis servisera:</div>
+              <div style="font-family: 'Brush Script MT', cursive; font-size: 18px; color: #1e293b;">
+                ${report.techniciansSignature}
+              </div>
+            </div>
+            ` : ''}
+            
+            ${report.createdAt ? `
+            <div style="text-align: right; font-size: 11px; color: #64748b; margin-top: 10px;">
+              Izvještaj kreiran: ${new Date(report.createdAt).toLocaleDateString('sr-RS', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+
       ${service.billingPrice ? `
       <div class="section">
         <div class="section-title">💰 Naplata i fakturisanje</div>
@@ -688,10 +812,15 @@ export class PDFService {
         return null;
       }
 
-      console.log(`📊 ✅ Servis sa detaljima dohvaćen: ${service.id}`);
+      // Dohvati i completion reports za ovaj servis
+      const completionReports = await storage.getServiceCompletionReportsByService(serviceId);
+      console.log(`📊 ✅ Servis sa detaljima dohvaćen: ${service.id}, Completion Reports: ${completionReports.length}`);
       
       return {
-        service,
+        service: {
+          ...service,
+          completionReports: completionReports.length > 0 ? completionReports : null
+        },
         client: service.client,
         appliance: service.appliance, 
         technician: service.technician
