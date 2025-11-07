@@ -541,11 +541,6 @@ export function registerBillingRoutes(app: Express) {
             eq(schema.services.warrantyStatus, 'van garancije'),
             ne(schema.services.excludeFromBilling, true),
             or(
-              isNull(schema.services.cost),
-              eq(schema.services.cost, ''),
-              eq(schema.services.cost, '0')
-            ),
-            or(
               eq(schema.manufacturers.name, 'Beko'),
               eq(schema.manufacturers.name, 'Grundig'),
               eq(schema.manufacturers.name, 'Blomberg')
@@ -1286,11 +1281,6 @@ export function registerBillingRoutes(app: Express) {
             eq(schema.services.status, 'completed'),
             eq(schema.services.warrantyStatus, 'van garancije'),
             ne(schema.services.excludeFromBilling, true),
-            or(
-              isNull(schema.services.cost),
-              eq(schema.services.cost, ''),
-              eq(schema.services.cost, '0')
-            ),
             or(
               eq(schema.manufacturers.name, 'Electrolux'),
               eq(schema.manufacturers.name, 'Elica'),
