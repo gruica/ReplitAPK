@@ -42,6 +42,16 @@ export const dataDeletionRequests = pgTable("data_deletion_requests", {
   userAgent: text("user_agent"),
 });
 
+export const insertDataDeletionRequestSchema = createInsertSchema(dataDeletionRequests).omit({
+  id: true,
+  requestedAt: true,
+  status: true,
+  processedAt: true,
+  processedBy: true,
+  adminNotes: true,
+});
+
+export type InsertDataDeletionRequest = z.infer<typeof insertDataDeletionRequestSchema>;
 export type DataDeletionRequest = typeof dataDeletionRequests.$inferSelect;
 
 // Service Audit Logs

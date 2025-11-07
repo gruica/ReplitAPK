@@ -188,6 +188,8 @@ export function registerMiscRoutes(app: Express) {
   // ===== GLOBAL SEARCH ENDPOINT =====
   app.get("/api/search", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const query = req.query.q as string;
       
       logger.debug(`🔍 [SEARCH DEBUG] Received query: "${query}", length: ${query?.length || 0}`);
@@ -267,8 +269,7 @@ export function registerMiscRoutes(app: Express) {
           const users = await storage.getAllUsers();
           const technicians = users.filter(user => user.role === "technician");
           const matchingTechnicians = technicians.filter(tech => 
-            tech.fullName.toLowerCase().includes(query.toLowerCase()) ||
-            (tech.specialization && tech.specialization.toLowerCase().includes(query.toLowerCase()))
+            tech.fullName.toLowerCase().includes(query.toLowerCase())
           ).slice(0, 3);
 
           matchingTechnicians.forEach(tech => {
@@ -276,7 +277,6 @@ export function registerMiscRoutes(app: Express) {
               id: tech.id,
               type: "technician",
               fullName: tech.fullName,
-              specialization: tech.specialization,
               phone: tech.phone
             });
           });
@@ -495,6 +495,8 @@ export function registerMiscRoutes(app: Express) {
   // Endpoint za dobijanje signed URL-a za upload fotografija
   app.get("/api/object-storage/upload-url", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const { ObjectStorageService } = await import("../objectStorage");
       const objectStorageService = new ObjectStorageService();
       
@@ -517,6 +519,8 @@ export function registerMiscRoutes(app: Express) {
   // Frontend endpoint za iniciranje upload procesa (vraća signed URL)
   app.post("/api/objects/upload", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const { ObjectStorageService } = await import("../objectStorage");
       const objectStorageService = new ObjectStorageService();
       
@@ -543,6 +547,8 @@ export function registerMiscRoutes(app: Express) {
   // ===== SERVICE PHOTOS ENDPOINTS =====
   app.get("/api/service-photos", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const serviceId = parseInt(req.query.serviceId as string);
       if (!serviceId || isNaN(serviceId)) {
         return res.status(400).json({ error: "Valjan serviceId je potreban" });
@@ -572,6 +578,8 @@ export function registerMiscRoutes(app: Express) {
 
   app.post("/api/service-photos", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const { ObjectStorageService } = await import("../objectStorage");
       const { insertServicePhotoSchema } = await import("@shared/schema");
       
@@ -648,6 +656,8 @@ export function registerMiscRoutes(app: Express) {
 
   app.delete("/api/service-photos/:id", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const photoId = parseInt(req.params.id);
       if (!photoId || isNaN(photoId)) {
         return res.status(400).json({ error: "Valjan ID fotografije je potreban" });
@@ -670,7 +680,8 @@ export function registerMiscRoutes(app: Express) {
         try {
           const { ObjectStorageService } = await import("../objectStorage");
           const objectStorageService = new ObjectStorageService();
-          await objectStorageService.deleteObject(photo.photoPath);
+          const file = await objectStorageService.getObjectEntityFile(photo.photoPath);
+          await file.delete();
           console.log(`🗑️ [PHOTOS] Deleted object from storage: ${photo.photoPath}`);
         } catch (storageError) {
           console.error("Error deleting from object storage:", storageError);
@@ -691,6 +702,8 @@ export function registerMiscRoutes(app: Express) {
 
   app.get("/api/service-photos/:serviceId/category/:category", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const serviceId = parseInt(req.params.serviceId);
       const category = req.params.category;
       
@@ -728,6 +741,8 @@ export function registerMiscRoutes(app: Express) {
 
   app.get("/api/service-photo-proxy/:id", jwtAuth, async (req, res) => {
     try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+      
       const photoId = parseInt(req.params.id);
       if (!photoId || isNaN(photoId)) {
         return res.status(400).json({ error: "Valjan ID fotografije je potreban" });
@@ -744,15 +759,15 @@ export function registerMiscRoutes(app: Express) {
         return res.status(403).json({ error: "Nemate dozvolu za pristup ovoj fotografiji" });
       }
 
-      logger.info(`📸 [PROXY] Serving photo ${photoId} with path: ${photo.photoUrl}`);
+      logger.info(`📸 [PROXY] Serving photo ${photoId} with path: ${photo.photoPath}`);
 
       // Handle Object Storage paths (/objects/...)
-      if (photo.photoUrl.startsWith('/objects/')) {
+      if (photo.photoPath.startsWith('/objects/')) {
         try {
           const { ObjectStorageService } = await import("../objectStorage");
           const objectStorageService = new ObjectStorageService();
           
-          const file = await objectStorageService.getObjectEntityFile(photo.photoUrl);
+          const file = await objectStorageService.getObjectEntityFile(photo.photoPath);
           await objectStorageService.downloadObject(file, res);
           
           logger.info(`📸 [PROXY] Successfully streamed photo ${photoId}`);
@@ -764,8 +779,8 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Legacy paths (/uploads/...) - these files no longer exist
-      if (photo.photoUrl.startsWith('/uploads/')) {
-        logger.warn(`📸 [PROXY] Legacy upload path detected for photo ${photoId}: ${photo.photoUrl}`);
+      if (photo.photoPath.startsWith('/uploads/')) {
+        logger.warn(`📸 [PROXY] Legacy upload path detected for photo ${photoId}: ${photo.photoPath}`);
         return res.status(404).json({ 
           error: "Fotografija više nije dostupna (legacy format)",
           message: "Ova fotografija je sačuvana sa starim sistemom i nije dostupna. Molimo ponovo uploadujte."
@@ -773,19 +788,19 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Google Storage URLs - redirect to signed URL
-      if (photo.photoUrl.startsWith('https://storage.googleapis.com/')) {
+      if (photo.photoPath.startsWith('https://storage.googleapis.com/')) {
         logger.info(`📸 [PROXY] Redirecting to Google Storage URL for photo ${photoId}`);
-        return res.redirect(photo.photoUrl);
+        return res.redirect(photo.photoPath);
       }
 
       // ANY external HTTPS URL (placehold.co, imgur, etc.) - redirect
-      if (photo.photoUrl.startsWith('https://') || photo.photoUrl.startsWith('http://')) {
-        logger.info(`📸 [PROXY] Redirecting to external URL for photo ${photoId}: ${photo.photoUrl}`);
-        return res.redirect(photo.photoUrl);
+      if (photo.photoPath.startsWith('https://') || photo.photoPath.startsWith('http://')) {
+        logger.info(`📸 [PROXY] Redirecting to external URL for photo ${photoId}: ${photo.photoPath}`);
+        return res.redirect(photo.photoPath);
       }
 
       // Unknown format
-      logger.warn(`📸 [PROXY] Unknown photo path format for photo ${photoId}: ${photo.photoUrl}`);
+      logger.warn(`📸 [PROXY] Unknown photo path format for photo ${photoId}: ${photo.photoPath}`);
       return res.status(404).json({ error: "Nepoznat format fotografije" });
 
     } catch (error) {
