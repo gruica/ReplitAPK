@@ -7,6 +7,21 @@ export interface InputProps
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
+    // CRITICAL FIX: Handle voice input and paste compatibility
+    const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+      // Voice input and paste events use onInput instead of onChange on mobile
+      // This ensures React state updates work correctly with all input methods
+      if (props.onChange) {
+        const syntheticEvent = e as unknown as React.ChangeEvent<HTMLInputElement>;
+        props.onChange(syntheticEvent);
+      }
+      
+      // Call original onInput if provided
+      if (props.onInput) {
+        props.onInput(e);
+      }
+    };
+
     return (
       <input
         type={type}
@@ -15,6 +30,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className
         )}
         ref={ref}
+        onInput={handleInput}
         {...props}
       />
     )
