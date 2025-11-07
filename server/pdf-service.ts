@@ -458,27 +458,95 @@ export class PDFService {
 
       ${service.removedParts && service.removedParts.length > 0 ? `
       <div class="section">
-        <div class="section-title">🔩 Uklonjeni / Utrošeni rezervni delovi</div>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background: #f1f5f9;">
-              <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Naziv dela</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Šifra dela</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">Količina</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #e2e8f0;">Napomena</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${service.removedParts.map((part: any) => `
-              <tr>
-                <td style="padding: 10px; border: 1px solid #e2e8f0;">${part.partName || 'N/A'}</td>
-                <td style="padding: 10px; border: 1px solid #e2e8f0;">${part.partNumber || 'N/A'}</td>
-                <td style="padding: 10px; text-align: center; border: 1px solid #e2e8f0;">${part.quantity || 1}</td>
-                <td style="padding: 10px; border: 1px solid #e2e8f0;">${part.notes || '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+        <div class="section-title">🔩 Uklonjeni / Zamijenjeni rezervni dijelovi</div>
+        ${service.removedParts.map((part: any, index: number) => `
+          <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: ${index % 2 === 0 ? '#f8fafc' : '#ffffff'};">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+              <div>
+                <div style="font-weight: bold; color: #1e40af; margin-bottom: 5px;">
+                  ${index + 1}. ${part.partName || 'Nepoznat dio'}
+                </div>
+                ${part.partDescription ? `
+                <div style="color: #64748b; font-size: 13px; margin-bottom: 8px;">
+                  ${part.partDescription}
+                </div>
+                ` : ''}
+              </div>
+              <div style="text-align: right;">
+                <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; 
+                  background: ${part.partStatus === 'returned' ? '#d1fae5' : part.partStatus === 'in_repair' ? '#fef3c7' : part.partStatus === 'repaired' ? '#dbeafe' : part.partStatus === 'replaced' ? '#fee2e2' : '#f1f5f9'}; 
+                  color: ${part.partStatus === 'returned' ? '#047857' : part.partStatus === 'in_repair' ? '#92400e' : part.partStatus === 'repaired' ? '#1d4ed8' : part.partStatus === 'replaced' ? '#dc2626' : '#475569'};">
+                  ${part.partStatus === 'removed' ? 'UKLONJENO' : 
+                    part.partStatus === 'in_repair' ? 'NA POPRAVCI' :
+                    part.partStatus === 'repaired' ? 'POPRAVLJENO' :
+                    part.partStatus === 'returned' ? 'VRAĆENO' :
+                    part.partStatus === 'replaced' ? 'ZAMIJENJENO' : part.partStatus?.toUpperCase() || 'NEPOZNATO'}
+                </span>
+                ${part.isReinstalled ? `
+                <div style="margin-top: 5px; font-size: 11px; color: #047857; font-weight: bold;">
+                  ✓ Reinstalirano
+                </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+              <div>
+                <span style="font-weight: bold; color: #475569;">Datum uklanjanja:</span><br/>
+                <span style="color: #1e293b;">${part.removalDate ? new Date(part.removalDate).toLocaleDateString('sr-RS') : 'N/A'}</span>
+              </div>
+              <div>
+                <span style="font-weight: bold; color: #475569;">Trenutna lokacija:</span><br/>
+                <span style="color: #1e293b;">
+                  ${part.currentLocation === 'workshop' ? '🔧 Radionica' : 
+                    part.currentLocation === 'external_repair' ? '🏭 Vanjska popravka' :
+                    part.currentLocation === 'returned' ? '✓ Vraćeno' : part.currentLocation || 'N/A'}
+                </span>
+              </div>
+              ${part.repairCost ? `
+              <div>
+                <span style="font-weight: bold; color: #475569;">Trošak popravke:</span><br/>
+                <span style="color: #047857; font-weight: bold;">${part.repairCost} €</span>
+              </div>
+              ` : '<div></div>'}
+            </div>
+            
+            ${part.expectedReturnDate || part.actualReturnDate ? `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+              ${part.expectedReturnDate ? `
+              <div>
+                <span style="font-weight: bold; color: #475569;">Očekivani povratak:</span><br/>
+                <span style="color: #1e293b;">${new Date(part.expectedReturnDate).toLocaleDateString('sr-RS')}</span>
+              </div>
+              ` : ''}
+              ${part.actualReturnDate ? `
+              <div>
+                <span style="font-weight: bold; color: #475569;">Stvarni povratak:</span><br/>
+                <span style="color: #047857; font-weight: bold;">${new Date(part.actualReturnDate).toLocaleDateString('sr-RS')}</span>
+              </div>
+              ` : ''}
+            </div>
+            ` : ''}
+            
+            ${part.removalReason ? `
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+              <div style="font-weight: bold; color: #475569; font-size: 12px; margin-bottom: 5px;">Razlog uklanjanja:</div>
+              <div style="background: #fef3c7; padding: 8px; border-radius: 4px; font-size: 12px; color: #1e293b; border-left: 3px solid #f59e0b;">
+                ${part.removalReason}
+              </div>
+            </div>
+            ` : ''}
+            
+            ${part.technicianNotes ? `
+            <div style="margin-top: 10px;">
+              <div style="font-weight: bold; color: #475569; font-size: 12px; margin-bottom: 5px;">Napomene servisera:</div>
+              <div style="background: #f0fdf4; padding: 8px; border-radius: 4px; font-size: 12px; color: #1e293b; border-left: 3px solid #059669;">
+                ${part.technicianNotes}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        `).join('')}
       </div>
       ` : ''}
 
