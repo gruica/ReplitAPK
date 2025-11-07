@@ -110,6 +110,7 @@ export const serviceCompletionReports = pgTable('service_completion_reports', {
 
 export const insertServiceCompletionReportSchema = z.object({
   serviceId: z.number().int().positive("ID servisa mora biti pozitivan broj"),
+  technicianId: z.number().int().positive("ID servisera mora biti pozitivan broj"),
   workDescription: z.string().min(10, "Opis rada mora biti detaljniji (min 10 karaktera)").max(1000, "Opis rada je predugačak"),
   problemDiagnosis: z.string().min(10, "Dijagnoza mora biti detaljnija (min 10 karaktera)").max(500, "Dijagnoza je predugačka"),
   solutionDescription: z.string().min(10, "Opis rešenja mora biti detaljniji (min 10 karaktera)").max(500, "Opis rešenja je predugačak"),
