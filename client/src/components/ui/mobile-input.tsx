@@ -41,6 +41,22 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
       }
     };
 
+    // Handle input for voice input and paste compatibility
+    const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+      // CRITICAL FIX: Trigger onChange for voice input and paste compatibility
+      // Voice input and paste events use onInput instead of onChange on mobile
+      // This ensures React state updates work correctly with all input methods
+      if (props.onChange) {
+        const syntheticEvent = e as unknown as React.ChangeEvent<HTMLInputElement>;
+        props.onChange(syntheticEvent);
+      }
+      
+      // Call original onInput if provided
+      if (props.onInput) {
+        props.onInput(e);
+      }
+    };
+
     // Determine input mode for mobile keyboards
     const getInputMode = (): string => {
       if (type === 'tel') return 'tel';
@@ -104,6 +120,7 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
         )}
         ref={combinedRef}
         onFocus={handleFocus}
+        onInput={handleInput}
         data-testid={testId}
         {...mobileProps}
         {...speechProps}
