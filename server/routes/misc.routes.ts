@@ -787,15 +787,24 @@ export function registerMiscRoutes(app: Express) {
         return res.status(403).json({ error: "Nemate dozvolu za pristup ovoj fotografiji" });
       }
 
-      logger.info(`📸 [PROXY] Serving photo ${photoId} with path: ${photo.photoPath}`);
+      // Storage returns photo with photoUrl (mapped from photoPath)
+      const photoPath = (photo as any).photoUrl || (photo as any).photoPath;
+      
+      logger.info(`📸 [PROXY] Serving photo ${photoId} with path: ${photoPath}`);
+
+      // Safety check - photoPath must exist
+      if (!photoPath) {
+        logger.error(`📸 [PROXY] Photo ${photoId} has no path (photoUrl/photoPath) in database!`);
+        return res.status(500).json({ error: "Fotografija nema putanju u bazi podataka" });
+      }
 
       // Handle Object Storage paths (/objects/...)
-      if (photo.photoPath.startsWith('/objects/')) {
+      if (photoPath.startsWith('/objects/')) {
         try {
           const { ObjectStorageService } = await import("../objectStorage");
           const objectStorageService = new ObjectStorageService();
           
-          const file = await objectStorageService.getObjectEntityFile(photo.photoPath);
+          const file = await objectStorageService.getObjectEntityFile(photoPath);
           await objectStorageService.downloadObject(file, res);
           
           logger.info(`📸 [PROXY] Successfully streamed photo ${photoId}`);
@@ -807,8 +816,8 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Legacy paths (/uploads/...) - these files no longer exist
-      if (photo.photoPath.startsWith('/uploads/')) {
-        logger.warn(`📸 [PROXY] Legacy upload path detected for photo ${photoId}: ${photo.photoPath}`);
+      if (photoPath.startsWith('/uploads/')) {
+        logger.warn(`📸 [PROXY] Legacy upload path detected for photo ${photoId}: ${photoPath}`);
         return res.status(404).json({ 
           error: "Fotografija više nije dostupna (legacy format)",
           message: "Ova fotografija je sačuvana sa starim sistemom i nije dostupna. Molimo ponovo uploadujte."
@@ -816,19 +825,19 @@ export function registerMiscRoutes(app: Express) {
       }
 
       // Google Storage URLs - redirect to signed URL
-      if (photo.photoPath.startsWith('https://storage.googleapis.com/')) {
+      if (photoPath.startsWith('https://storage.googleapis.com/')) {
         logger.info(`📸 [PROXY] Redirecting to Google Storage URL for photo ${photoId}`);
-        return res.redirect(photo.photoPath);
+        return res.redirect(photoPath);
       }
 
       // ANY external HTTPS URL (placehold.co, imgur, etc.) - redirect
-      if (photo.photoPath.startsWith('https://') || photo.photoPath.startsWith('http://')) {
-        logger.info(`📸 [PROXY] Redirecting to external URL for photo ${photoId}: ${photo.photoPath}`);
-        return res.redirect(photo.photoPath);
+      if (photoPath.startsWith('https://') || photoPath.startsWith('http://')) {
+        logger.info(`📸 [PROXY] Redirecting to external URL for photo ${photoId}: ${photoPath}`);
+        return res.redirect(photoPath);
       }
 
       // Unknown format
-      logger.warn(`📸 [PROXY] Unknown photo path format for photo ${photoId}: ${photo.photoPath}`);
+      logger.warn(`📸 [PROXY] Unknown photo path format for photo ${photoId}: ${photoPath}`);
       return res.status(404).json({ error: "Nepoznat format fotografije" });
 
     } catch (error) {
