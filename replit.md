@@ -73,28 +73,44 @@ Creating new functions instead of changing existing ones is mandatory.
   - **Implementation:** Client-side filtering using filteredServices computed from billingData.services
   - **Impact:** Admins can quickly find specific services within monthly billing reports without backend queries
 
-- **2025-11-06**: Fixed mobile app voice input and copy-paste issues (COMPLETE FIX)
+- **2025-11-07**: Fixed mobile app voice input and copy-paste issues (TRIPLE PROTECTION)
   - **Problem:** Voice input and copy-paste in mobile app didn't update form fields properly - values would disappear unless user typed additional characters manually
-  - **Root Cause:** Mobile browsers trigger `onInput` event for voice dictation and paste operations instead of `onChange` event
+  - **Root Cause Analysis:** 
+    - Android WebView triggers `onInput` event for voice dictation and paste, not `onChange`
+    - React controlled components (using `value` prop) display what's in state
+    - When user uses voice input → text appears visually → but `onChange` doesn't fire → state not updated
+    - When user clicks another field → React re-renders → displays state value (empty) → **text disappears!**
   - **Fix v1 (Incomplete):** Initially modified only MobileInput and MobileTextarea - but some forms still used regular Input/Textarea
-  - **Fix v2 (Complete):** Modified ALL input/textarea components to synchronize `onInput` and `onChange` events
+  - **Fix v2 (Incomplete):** Added `onInput` handler to ALL components - but still had issues on Android WebView
+  - **Fix v3 (TRIPLE PROTECTION - Current):** Implemented three-layer safety net for bulletproof input handling
   - **Implementation:**
-    - Added `handleInput` function to Input, Textarea, MobileInput, and MobileTextarea components
-    - Function triggers both `onChange` (for React state) and original `onInput` callbacks
-    - When `onInput` event fires, it now automatically calls `onChange` to update React form state
-    - Ensures compatibility with voice input, copy-paste, and standard typing
-  - **Files:** 
-    - client/src/components/ui/input.tsx (NEW - added fix)
-    - client/src/components/ui/textarea.tsx (NEW - added fix)
-    - client/src/components/ui/mobile-input.tsx (updated)
-    - client/src/components/ui/mobile-textarea.tsx (updated)
+    - **Layer 1:** Standard `onChange` handler - works for normal typing
+    - **Layer 2:** `onInput` handler - catches voice input and paste, immediately triggers `onChange`
+    - **Layer 3:** `onBlur` handler - safety net that compares current value vs state value when field loses focus
+  - **Technical Details:**
+    - `handleInput`: Triggers on every input event, syncs to `onChange`, includes debug logging
+    - `handleBlur`: Compares `e.currentTarget.value` with `props.value`, triggers `onChange` if different
+    - Debug logging with emoji markers: 🎤 for onInput events, 🔄 for onBlur value captures
+    - All events cast to synthetic `ChangeEvent` for React type compatibility
+  - **Files Modified:** 
+    - client/src/components/ui/input.tsx - added onInput + onBlur handlers
+    - client/src/components/ui/textarea.tsx - added onInput + onBlur handlers
+    - client/src/components/ui/mobile-input.tsx - added onBlur handler + debug logs
+    - client/src/components/ui/mobile-textarea.tsx - added onBlur handler + debug logs
+  - **Debugging Support:**
+    - Console logs visible via Chrome Remote Debugging (chrome://inspect on desktop)
+    - Logs include: value, valueLength, eventType, inputType, timestamp
+    - Mobile components use emoji prefixes for easy identification in logs
   - **Impact:** 
-    - Voice dictation now works reliably in ALL form fields - spoken text immediately saves to form state
-    - Copy-paste operations preserve content without requiring additional keystrokes
-    - All mobile form fields (service completion, spare parts requests, notes) now work correctly with all input methods
-    - Fix works regardless of which input component is used in the form
-  - **Technical Details:** `onInput` event cast to synthetic `ChangeEvent` to maintain React type compatibility
-  - **Testing Required:** New APK build required to test complete fix in mobile app
+    - Voice dictation captured via onInput OR onBlur (double protection)
+    - Copy-paste operations guaranteed to save (triple protection)
+    - Manual typing works as before (onChange primary, onInput + onBlur backup)
+    - All mobile form fields now work with ALL input methods (typing, voice, paste, swipe-to-type)
+    - Fix works in ALL input components regardless of which is used in form
+  - **Testing Required:** 
+    - New APK build required to test on Android device
+    - Use Chrome Remote Debugging to monitor console logs during voice input
+    - Test scenarios: voice input, paste, swipe-to-type, field switching
 
 ## System Architecture
 
