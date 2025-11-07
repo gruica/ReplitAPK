@@ -1506,7 +1506,8 @@ export class DatabaseStorage implements IStorage {
       if (!supplier) {
         console.log("Supplier ID 3 does not exist, creating it...");
         await db.insert(suppliers).values({
-          name: "Eurotehnika Mont-Negra d.o.o.",
+          name: "Eurotehnika Mont-Negra",
+          companyName: "Eurotehnika Mont-Negra d.o.o.",
           address: "Podgorica",
           phone: "+382 20 123 456",
           email: "servis@eurotehnikamn.me"
@@ -2445,10 +2446,12 @@ export class DatabaseStorage implements IStorage {
         .from(servicePhotos)
         .groupBy(servicePhotos.category);
       
-      const categoryStats = result.map(row => ({
-        category: row.category,
-        count: row.count
-      }));
+      const categoryStats = result
+        .filter(row => row.category !== null)
+        .map(row => ({
+          category: row.category as string,
+          count: row.count
+        }));
       
       console.log('📊 Statistike po kategorijama:', categoryStats);
       return categoryStats;
@@ -2789,7 +2792,7 @@ export class DatabaseStorage implements IStorage {
 
   async getScrapingLogs(sourceId?: number): Promise<any[]> {
     try {
-      let query = db
+      const baseQuery = db
         .select({
           id: webScrapingLogs.id,
           sourceId: webScrapingLogs.sourceId,
@@ -2805,15 +2808,16 @@ export class DatabaseStorage implements IStorage {
           createdBy: webScrapingLogs.createdBy,
           createdAt: webScrapingLogs.createdAt
         })
-        .from(webScrapingLogs)
+        .from(webScrapingLogs);
+      
+      const query = sourceId 
+        ? baseQuery.where(eq(webScrapingLogs.sourceId, sourceId))
+        : baseQuery;
+      
+      const logs = await query
         .orderBy(desc(webScrapingLogs.createdAt))
         .limit(100);
       
-      if (sourceId) {
-        query = query.where(eq(webScrapingLogs.sourceId, sourceId));
-      }
-      
-      const logs = await query;
       return logs;
     } catch (error) {
       console.error('Greška pri dohvatanju scraping logova:', error);
@@ -2891,15 +2895,8 @@ export class DatabaseStorage implements IStorage {
   // Service completion reports methods
   async createServiceCompletionReport(data: InsertServiceCompletionReport): Promise<ServiceCompletionReport> {
     try {
-      const reportData = {
-        ...data,
-        technicianId: data.technicianId || await this.getTechnicianIdFromService(data.serviceId),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
       const [result] = await db.insert(serviceCompletionReports)
-        .values(reportData)
+        .values(data)
         .returning();
       return result;
     } catch (error) {
@@ -3105,28 +3102,29 @@ export class DatabaseStorage implements IStorage {
 
   async searchPartsInCatalog(query: string, category?: string, manufacturerId?: number): Promise<PartsCatalog[]> {
     try {
-      let searchQuery = db.select()
-        .from(partsCatalog)
-        .where(
-          and(
-            eq(partsCatalog.isActive, true),
-            or(
-              ilike(partsCatalog.partName, `%${query}%`),
-              ilike(partsCatalog.partNumber, `%${query}%`),
-              ilike(partsCatalog.description, `%${query}%`)
-            )
-          )
-        );
+      const conditions = [
+        eq(partsCatalog.isActive, true),
+        or(
+          ilike(partsCatalog.partName, `%${query}%`),
+          ilike(partsCatalog.partNumber, `%${query}%`),
+          ilike(partsCatalog.description, `%${query}%`)
+        )
+      ];
 
       if (category) {
-        searchQuery = searchQuery.where(eq(partsCatalog.category, category));
+        conditions.push(eq(partsCatalog.category, category));
       }
 
       if (manufacturerId) {
-        searchQuery = searchQuery.where(eq(partsCatalog.manufacturerId, manufacturerId));
+        conditions.push(eq(partsCatalog.manufacturerId, manufacturerId));
       }
 
-      return await searchQuery.orderBy(desc(partsCatalog.lastUpdated));
+      const searchQuery = db.select()
+        .from(partsCatalog)
+        .where(and(...conditions))
+        .orderBy(desc(partsCatalog.lastUpdated));
+
+      return await searchQuery;
     } catch (error) {
       console.error('Greška pri pretraživanju kataloga:', error);
       return [];
@@ -3302,9 +3300,23 @@ export class DatabaseStorage implements IStorage {
   // Service Audit Log funkcije
   async createServiceAuditLog(log: Partial<ServiceAuditLog>): Promise<ServiceAuditLog | undefined> {
     try {
+      const auditLogData = {
+        serviceId: log.serviceId!,
+        action: log.action!,
+        performedBy: log.performedBy!,
+        performedByUsername: log.performedByUsername!,
+        performedByRole: log.performedByRole!,
+        timestamp: log.timestamp || new Date(),
+        oldValues: log.oldValues || null,
+        newValues: log.newValues || null,
+        ipAddress: log.ipAddress || null,
+        userAgent: log.userAgent || null,
+        notes: log.notes || null
+      };
+      
       const [auditLog] = await db
         .insert(serviceAuditLogs)
-        .values(log)
+        .values(auditLogData)
         .returning();
       console.log(`🔒 [AUDIT LOG] ${log.action} servis ${log.serviceId} od strane ${log.performedByUsername} (${log.performedByRole})`);
       return auditLog;
@@ -3341,7 +3353,23 @@ export class DatabaseStorage implements IStorage {
 
   // ===== USER PERMISSIONS - Delegated to UserStorage =====
   async createUserPermission(permission: Partial<UserPermission>): Promise<UserPermission | undefined> {
-    return userStorage.createUserPermission(permission);
+    if (!permission.userId) {
+      throw new Error('userId is required for createUserPermission');
+    }
+    
+    const fullPermission: Omit<UserPermission, 'id'> = {
+      userId: permission.userId,
+      canDeleteServices: permission.canDeleteServices ?? false,
+      canDeleteClients: permission.canDeleteClients ?? false,
+      canDeleteAppliances: permission.canDeleteAppliances ?? false,
+      canViewAllServices: permission.canViewAllServices ?? false,
+      canManageUsers: permission.canManageUsers ?? false,
+      grantedBy: permission.grantedBy ?? null,
+      grantedAt: permission.grantedAt ?? new Date(),
+      notes: permission.notes ?? null
+    };
+    
+    return userStorage.createUserPermission(fullPermission);
   }
 
   async getUserPermissions(userId: number): Promise<UserPermission | undefined> {
@@ -3372,16 +3400,18 @@ export class DatabaseStorage implements IStorage {
       const originalServiceData = JSON.stringify(service);
 
       // 3. Unesi u deleted_services tabelu
-      const deletedServiceData: Partial<DeletedService> = {
+      const deletedServiceData = {
         serviceId: serviceId,
         originalServiceData: originalServiceData,
         deletedBy: deletedBy,
         deletedByUsername: deletedByUsername,
         deletedByRole: deletedByRole,
+        deletedAt: new Date(),
         deleteReason: reason || null,
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
-        canBeRestored: true
+        canBeRestored: true,
+        restoredAt: null
       };
 
       const [deletedService] = await db
@@ -3564,7 +3594,7 @@ export class DatabaseStorage implements IStorage {
     try {
       return await db.select()
         .from(maintenancePatterns)
-        .where(eq(maintenancePatterns.categoryId, categoryId))
+        .where(eq(maintenancePatterns.applianceCategoryId, categoryId))
         .orderBy(desc(maintenancePatterns.createdAt));
     } catch (error) {
       console.error('Greška pri dohvatanju pattern-a održavanja po kategoriji:', error);
