@@ -544,6 +544,34 @@ export function registerMiscRoutes(app: Express) {
     }
   });
 
+  // ===== OBJECT STORAGE IMAGE SERVING =====
+  app.get("/objects/*", async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("../objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      
+      const objectPath = req.path; // e.g., /objects/uploads/service-123-...jpg
+      console.log(`📸 [OBJECT STORAGE] Serving image: ${objectPath}`);
+      
+      try {
+        const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+        await objectStorageService.downloadObject(objectFile, res);
+        console.log(`✅ [OBJECT STORAGE] Image served successfully: ${objectPath}`);
+      } catch (error: any) {
+        if (error.name === 'ObjectNotFoundError') {
+          console.log(`❌ [OBJECT STORAGE] Image not found: ${objectPath}`);
+          return res.status(404).json({ error: "Slika nije pronađena" });
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error("❌ [OBJECT STORAGE] Error serving image:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Greška pri učitavanju slike" });
+      }
+    }
+  });
+
   // ===== SERVICE PHOTOS ENDPOINTS =====
   app.get("/api/service-photos", jwtAuth, async (req, res) => {
     try {
