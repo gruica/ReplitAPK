@@ -281,22 +281,35 @@ export function registerTechnicianRoutes(app: Express) {
         return res.status(404).json({ error: "Servis nije pronađen" });
       }
       
+      const finalCost = cost?.trim() || service.cost;
+      const customerPaidOnSite = finalCost && finalCost !== '' && finalCost !== '0';
+      
+      const finalWarrantyStatus = isWarrantyService ? 'u garanciji' : (service.warrantyStatus === 'nepoznato' ? 'van garancije' : service.warrantyStatus) as 'u garanciji' | 'van garancije';
+      
+      const shouldExcludeFromBilling = customerPaidOnSite || (finalWarrantyStatus === 'u garanciji' && customerPaidOnSite);
+      
+      console.log(`[BILLING LOGIC] Servis #${serviceId}:`);
+      console.log(`  - Klijent platio na terenu: ${customerPaidOnSite ? 'DA' : 'NE'} (cena: ${finalCost || 'nije unesena'})`);
+      console.log(`  - Garantni status: ${finalWarrantyStatus}`);
+      console.log(`  - Isključiti iz fakturisanja partneru: ${shouldExcludeFromBilling ? 'DA' : 'NE'}`);
+      
       const updateData = {
         id: service.id,
         clientId: service.clientId,
         applianceId: service.applianceId,
         description: service.description,
-        warrantyStatus: isWarrantyService ? 'u garanciji' : (service.warrantyStatus === 'nepoznato' ? 'van garancije' : service.warrantyStatus) as 'u garanciji' | 'van garancije',
+        warrantyStatus: finalWarrantyStatus,
         createdAt: service.createdAt,
         
         status: 'completed' as const,
         technicianNotes: technicianNotes.trim(),
         machineNotes: machineNotes?.trim() || service.machineNotes,
-        cost: cost?.trim() || service.cost,
+        cost: finalCost,
         usedParts: usedParts?.trim() || service.usedParts || "[]",
         isCompletelyFixed: true,
         completedDate: new Date().toISOString().split('T')[0],
         isWarrantyService: isWarrantyService || service.isWarrantyService || false,
+        excludeFromBilling: shouldExcludeFromBilling,
         
         technicianId: service.technicianId,
         scheduledDate: service.scheduledDate,
@@ -449,16 +462,28 @@ export function registerTechnicianRoutes(app: Express) {
         }
       }
       
+      const finalCost = cost !== undefined ? cost : service.cost;
+      const customerPaidOnSite = finalCost && finalCost !== '' && finalCost !== '0';
+      
+      const finalWarrantyStatus = warrantyStatus !== undefined ? warrantyStatus : service.warrantyStatus;
+      
+      const shouldExcludeFromBilling = customerPaidOnSite;
+      
+      if (customerPaidOnSite) {
+        console.log(`[BILLING LOGIC] Status Update - Servis #${serviceId}: Klijent platio ${finalCost} - isključujem iz fakturisanja partneru`);
+      }
+      
       const updatedService = await storage.updateService(serviceId, {
         ...service,
         status: validStatus,
         technicianNotes: technicianNotes !== undefined ? technicianNotes : service.technicianNotes,
         usedParts: usedParts !== undefined ? usedParts : service.usedParts,
         machineNotes: machineNotes !== undefined ? machineNotes : service.machineNotes,
-        cost: cost !== undefined ? cost : service.cost,
+        cost: finalCost,
         isCompletelyFixed: isCompletelyFixed !== undefined ? isCompletelyFixed : service.isCompletelyFixed,
-        warrantyStatus: warrantyStatus !== undefined ? warrantyStatus : service.warrantyStatus,
+        warrantyStatus: finalWarrantyStatus,
         completedDate: validStatus === "completed" ? new Date().toISOString() : service.completedDate,
+        excludeFromBilling: customerPaidOnSite ? true : service.excludeFromBilling,
         clientUnavailableReason: clientUnavailableReason !== undefined ? clientUnavailableReason : service.clientUnavailableReason,
         needsRescheduling: needsRescheduling !== undefined ? needsRescheduling : service.needsRescheduling,
         reschedulingNotes: reschedulingNotes !== undefined ? reschedulingNotes : service.reschedulingNotes,
