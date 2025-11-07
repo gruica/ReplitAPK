@@ -87,6 +87,7 @@ const CameraUpload = lazy(() => import("@/pages/mobile/CameraUpload"));
 const ComprehensiveAnalytics = lazy(() => import("@/pages/admin/comprehensive-analytics"));
 const SMSMobileAPIConfigPage = lazy(() => import("@/pages/admin/sms-mobile-api-config"));
 const SMSBulkPage = lazy(() => import("@/pages/admin/sms-bulk"));
+const BillingLandingPage = lazy(() => import("@/pages/admin/billing"));
 const ComplusBillingPage = lazy(() => import("@/pages/admin/complus-billing"));
 const BekoBillingPage = lazy(() => import("@/pages/admin/beko-billing"));
 const BekoOutOfWarrantyBillingPage = lazy(() => import("@/pages/admin/beko-out-of-warranty-billing"));
@@ -203,6 +204,7 @@ function Router() {
       <RoleProtectedRoute path="/admin/data-export" component={DataExportPage} allowedRoles={["admin"]} />
       <RoleProtectedRoute path="/admin/comprehensive-analytics" component={ComprehensiveAnalytics} allowedRoles={["admin"]} />
       <RoleProtectedRoute path="/admin/servis-komerc" component={ServisKomerc} allowedRoles={["admin"]} />
+      <RoleProtectedRoute path="/admin/billing" component={BillingLandingPage} allowedRoles={["admin"]} />
       <RoleProtectedRoute path="/admin/complus-billing" component={ComplusBillingPage} allowedRoles={["admin"]} />
       <RoleProtectedRoute path="/admin/beko-billing" component={BekoBillingPage} allowedRoles={["admin"]} />
       <RoleProtectedRoute path="/admin/beko-out-of-warranty-billing" component={BekoOutOfWarrantyBillingPage} allowedRoles={["admin"]} />
