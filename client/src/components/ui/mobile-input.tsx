@@ -41,13 +41,44 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
       }
     };
 
+    // Handle blur to catch value changes missed by onChange/onInput
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      const currentValue = e.currentTarget.value;
+      const propsValue = props.value || '';
+      
+      if (currentValue !== propsValue && props.onChange) {
+        console.log('🔄 [MobileInput] onBlur detected value change:', {
+          oldValue: propsValue,
+          newValue: currentValue
+        });
+        
+        const syntheticEvent = {
+          ...e,
+          target: e.currentTarget,
+          currentTarget: e.currentTarget
+        } as React.ChangeEvent<HTMLInputElement>;
+        
+        props.onChange(syntheticEvent);
+      }
+      
+      if (props.onBlur) {
+        props.onBlur(e);
+      }
+    };
+
     // Handle input for voice input and paste compatibility
     const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+      console.log('🎤 [MobileInput] onInput fired:', {
+        value: e.currentTarget.value,
+        inputType: (e as any).inputType
+      });
+      
       // CRITICAL FIX: Trigger onChange for voice input and paste compatibility
       // Voice input and paste events use onInput instead of onChange on mobile
       // This ensures React state updates work correctly with all input methods
       if (props.onChange) {
         const syntheticEvent = e as unknown as React.ChangeEvent<HTMLInputElement>;
+        console.log('🎤 [MobileInput] Triggering onChange with value:', syntheticEvent.currentTarget.value);
         props.onChange(syntheticEvent);
       }
       
@@ -121,6 +152,7 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
         ref={combinedRef}
         onFocus={handleFocus}
         onInput={handleInput}
+        onBlur={handleBlur}
         data-testid={testId}
         {...mobileProps}
         {...speechProps}

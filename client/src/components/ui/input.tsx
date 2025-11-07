@@ -22,6 +22,26 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       }
     };
 
+    // Handle blur to catch value changes missed by onChange/onInput
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      const currentValue = e.currentTarget.value;
+      const propsValue = props.value || '';
+      
+      if (currentValue !== propsValue && props.onChange) {
+        const syntheticEvent = {
+          ...e,
+          target: e.currentTarget,
+          currentTarget: e.currentTarget
+        } as React.ChangeEvent<HTMLInputElement>;
+        
+        props.onChange(syntheticEvent);
+      }
+      
+      if (props.onBlur) {
+        props.onBlur(e);
+      }
+    };
+
     return (
       <input
         type={type}
@@ -31,6 +51,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         ref={ref}
         onInput={handleInput}
+        onBlur={handleBlur}
         {...props}
       />
     )
