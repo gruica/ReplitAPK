@@ -59,15 +59,56 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
       }
     };
 
+    // Handle blur to catch value changes missed by onChange/onInput
+    const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+      // CRITICAL: Ensure value is captured when user leaves the field
+      // This is a safety net for voice input and paste that might not trigger onChange/onInput
+      const currentValue = e.currentTarget.value;
+      const propsValue = props.value || '';
+      
+      // Only trigger onChange if value has changed and differs from props.value
+      if (currentValue !== propsValue && props.onChange) {
+        console.log('🔄 [MobileTextarea] onBlur detected value change:', {
+          oldValue: propsValue,
+          newValue: currentValue,
+          changed: true
+        });
+        
+        const syntheticEvent = {
+          ...e,
+          target: e.currentTarget,
+          currentTarget: e.currentTarget
+        } as React.ChangeEvent<HTMLTextAreaElement>;
+        
+        props.onChange(syntheticEvent);
+      }
+      
+      // Call original onBlur if provided
+      if (props.onBlur) {
+        props.onBlur(e);
+      }
+    };
+
     // Handle input for dynamic height
     const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
       adjustHeight();
+      
+      // DEBUG: Log what's happening with voice input
+      const currentValue = e.currentTarget.value;
+      console.log('🎤 [MobileTextarea] onInput fired:', {
+        value: currentValue,
+        valueLength: currentValue?.length || 0,
+        eventType: e.type,
+        inputType: (e as any).inputType,
+        timestamp: new Date().toISOString()
+      });
       
       // CRITICAL FIX: Trigger onChange for voice input and paste compatibility
       // Voice input and paste events use onInput instead of onChange on mobile
       // This ensures React state updates work correctly with all input methods
       if (props.onChange) {
         const syntheticEvent = e as unknown as React.ChangeEvent<HTMLTextAreaElement>;
+        console.log('🎤 [MobileTextarea] Triggering onChange with value:', syntheticEvent.currentTarget.value);
         props.onChange(syntheticEvent);
       }
       
@@ -130,6 +171,7 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
         ref={combinedRef}
         onFocus={handleFocus}
         onInput={handleInput}
+        onBlur={handleBlur}
         data-testid={testId}
         {...mobileProps}
         {...speechProps}

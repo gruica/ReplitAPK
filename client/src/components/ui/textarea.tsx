@@ -22,6 +22,26 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     };
 
+    // Handle blur to catch value changes missed by onChange/onInput
+    const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+      const currentValue = e.currentTarget.value;
+      const propsValue = props.value || '';
+      
+      if (currentValue !== propsValue && props.onChange) {
+        const syntheticEvent = {
+          ...e,
+          target: e.currentTarget,
+          currentTarget: e.currentTarget
+        } as React.ChangeEvent<HTMLTextAreaElement>;
+        
+        props.onChange(syntheticEvent);
+      }
+      
+      if (props.onBlur) {
+        props.onBlur(e);
+      }
+    };
+
     return (
       <textarea
         className={cn(
@@ -30,6 +50,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
         ref={ref}
         onInput={handleInput}
+        onBlur={handleBlur}
         {...props}
       />
     )
