@@ -84,12 +84,21 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
       
       return photoUrls;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Slike su uspešno otpremljene",
         description: "Sve slike su sačuvane u sistemu.",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
+      
+      // CRITICAL FIX: Remove cached data completely before refetching
+      // This prevents duplicate photos caused by stale cache merging with new data
+      queryClient.removeQueries({ queryKey: ['/api/service-photos', serviceId] });
+      
+      // Force immediate refetch with fresh data
+      await queryClient.refetchQueries({ 
+        queryKey: ['/api/service-photos', serviceId],
+        exact: true 
+      });
     },
     onError: (error) => {
       logger.error('📸 Upload error:', error);
