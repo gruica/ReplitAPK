@@ -23,8 +23,8 @@ export default function HomePage() {
       {/* Hero section */}
       <header className="w-full py-6 px-4 border-b border-blue-100 bg-white shadow-sm">
         <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <SettingsIcon className="h-8 w-8 text-blue-600" />
+          <div className="flex items-center space-x-3">
+            <img src="/fst-logo.png" alt="FST Logo" className="h-12 w-12 object-contain" />
             <h1 className="text-2xl font-bold text-blue-900">Frigo Sistem Todosijević</h1>
           </div>
         </div>
