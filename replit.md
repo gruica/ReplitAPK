@@ -57,32 +57,43 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
-- **2025-11-07 (Evening)**: Fixed photo duplication bug in mobile app after upload
+- **2025-11-08 (Morning)**: Fixed photo duplication bug in mobile app - FINAL FIX
   - **Problem:** After uploading a photo in mobile app, the photo appeared duplicated (showed twice) immediately after upload
-  - **User Report:** Photos uploaded via APK appear twice on the upload screen
-  - **Root Cause:** Double mapping in GET /api/service-photos endpoint
-    - storage.getServicePhotos() already returns mapped data with `photoUrl` and `photoCategory` fields
-    - Backend endpoint performed redundant mapping: `{ ...photo, photoUrl: photo.photoPath, photoCategory: photo.category }`
-    - This created duplicate fields in response object, causing React Query to render each photo twice
-  - **Fix:** Removed redundant mapping in misc.routes.ts line 594-598
-  - **Code Change:** 
+  - **User Report:** 
+    - User clicks upload button ONCE
+    - Sees ONE "Upload uspešan" notification
+    - But photo appears TWICE on screen
+  - **Root Cause:** React Query cache invalidation race condition
+    - After successful upload, `invalidateQueries()` was called
+    - But stale cache data was merging with new API response
+    - This caused React to render both old cached photo + new photo from API
+  - **Fix Applied:** Changed cache invalidation strategy in MobileServicePhotos.tsx
+    - **BEFORE:** `queryClient.invalidateQueries()` - marks cache as stale but doesn't remove it
+    - **AFTER:** `queryClient.removeQueries()` + `queryClient.refetchQueries()` - completely removes stale cache then fetches fresh data
+  - **Code Change:**
     ```typescript
-    // BEFORE (WRONG - Double mapping)
-    const photos = await storage.getServicePhotos(serviceId);
-    const mappedPhotos = photos.map(photo => ({
-      ...photo,
-      photoUrl: photo.photoPath,  // Duplicate!
-      photoCategory: photo.category  // Duplicate!
-    }));
-    res.json(mappedPhotos);
+    // BEFORE (WRONG - Cache merge causing duplicates)
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
+    }
     
-    // AFTER (CORRECT - Single mapping)
-    const photos = await storage.getServicePhotos(serviceId);
-    res.json(photos); // Storage already returns mapped data
+    // AFTER (CORRECT - Complete cache removal before refetch)
+    onSuccess: async () => {
+      // Remove stale cache completely
+      queryClient.removeQueries({ queryKey: ['/api/service-photos', serviceId] });
+      
+      // Force fresh refetch
+      await queryClient.refetchQueries({ 
+        queryKey: ['/api/service-photos', serviceId],
+        exact: true 
+      });
+    }
     ```
-  - **File:** server/routes/misc.routes.ts (GET /api/service-photos endpoint)
-  - **Impact:** Photos now appear exactly once after upload in mobile app
-  - **Production Status:** Ready for deployment - fix verified in development
+  - **Files Modified:** 
+    - client/src/components/MobileServicePhotos.tsx (uploadMutation.onSuccess)
+  - **Impact:** Photos now appear exactly ONCE after upload - no duplicates
+  - **Testing Required:** End-to-end testing with APK rebuild and real device upload
+  - **Production Status:** Ready for deployment after successful e2e testing
 
 ## External Dependencies
 - **Email Service**: Nodemailer

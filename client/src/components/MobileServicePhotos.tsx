@@ -154,10 +154,16 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
         description: "Fotografija je uspešno uploadovana",
       });
       
-      // IMPORTANT: Wait a bit before invalidating to avoid race conditions
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // CRITICAL FIX: Remove cached data completely before refetching
+      // This prevents duplicate photos caused by stale cache merging with new data
+      queryClient.removeQueries({ queryKey: ['/api/service-photos', serviceId] });
       
-      await queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
+      // Force immediate refetch with fresh data
+      await queryClient.refetchQueries({ 
+        queryKey: ['/api/service-photos', serviceId],
+        exact: true 
+      });
+      
       setUploadProgress(0);
     },
     onError: (error: any) => {
