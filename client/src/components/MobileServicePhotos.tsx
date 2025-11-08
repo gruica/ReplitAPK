@@ -143,16 +143,21 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
         },
       });
 
+      const responseData = await result.json();
       setUploadProgress(100);
-      logger.log('[BASE64 UPLOAD] Upload uspešan:', result);
-      return result;
+      logger.log('[BASE64 UPLOAD] Upload uspešan:', responseData);
+      return responseData;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "📸 Fotografija dodana",
         description: "Fotografija je uspešno uploadovana",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
+      
+      // IMPORTANT: Wait a bit before invalidating to avoid race conditions
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      await queryClient.invalidateQueries({ queryKey: ['/api/service-photos', serviceId] });
       setUploadProgress(0);
     },
     onError: (error: any) => {
