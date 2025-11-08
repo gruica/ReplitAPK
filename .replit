@@ -100,6 +100,10 @@ localPort = 45617
 localPort = 46495
 
 [[ports]]
+localPort = 46643
+externalPort = 8008
+
+[[ports]]
 localPort = 46815
 
 [workflows]
