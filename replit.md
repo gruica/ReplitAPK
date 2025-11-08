@@ -90,10 +90,16 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
     }
     ```
   - **Files Modified:** 
-    - client/src/components/MobileServicePhotos.tsx (uploadMutation.onSuccess)
-  - **Impact:** Photos now appear exactly ONCE after upload - no duplicates
-  - **Testing Required:** End-to-end testing with APK rebuild and real device upload
-  - **Production Status:** Ready for deployment after successful e2e testing
+    - client/src/components/MobileServicePhotos.tsx (uploadMutation.onSuccess) - For APK mobile app
+    - client/src/components/SimpleServicePhotos.tsx (uploadMutation.onSuccess) - For desktop admin panel
+  - **Impact:** Photos now appear exactly ONCE after upload - no duplicates in both mobile and desktop
+  - **E2E Testing:** ✅ PASSED - Automated E2E test confirmed fix works correctly
+    - Test service: ID 533
+    - Initial photos: 1
+    - Uploaded: 1 photo
+    - Result: Exactly 2 photos total (NOT 3) - duplication bug FIXED
+    - Verified: After modal re-open, still shows 2 photos (no new duplicates)
+  - **Production Status:** ✅ READY FOR DEPLOYMENT - E2E test passed, fix verified working
 
 ## External Dependencies
 - **Email Service**: Nodemailer
