@@ -126,6 +126,9 @@ export default function AuthPage() {
       <div className="w-full md:w-2/5 flex items-center justify-center p-4 md:p-10">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
+            <div className="flex justify-center mb-4">
+              <img src="/fst-logo.png" alt="FST Logo" className="h-24 w-24 object-contain" />
+            </div>
             <CardTitle className="text-2xl font-bold text-center">Frigo Sistem Todosijević</CardTitle>
             <CardDescription className="text-center">
               Aplikacija za vođenje servisa bele tehnike
