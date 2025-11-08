@@ -65,9 +65,17 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   // Upload photos
   const uploadPhotosMutation = useMutation({
     mutationFn: async (photoUrls: string[]) => {
-      logger.log('📸 Uploading photos for serviceId:', serviceId, 'URLs:', photoUrls);
+      logger.log('🔥🔥🔥 [MUTATION START] uploadPhotosMutation called');
+      logger.log('📸 [MUTATION] serviceId:', serviceId);
+      logger.log('📸 [MUTATION] photoUrls array:', photoUrls);
+      logger.log('📸 [MUTATION] photoUrls.length:', photoUrls.length);
       
+      let requestCount = 0;
       for (const photoUrl of photoUrls) {
+        requestCount++;
+        logger.log(`📸 [MUTATION] Loop iteration #${requestCount} - Processing URL: ${photoUrl}`);
+        logger.log(`📸 [MUTATION] About to send POST request #${requestCount} to /api/service-photos`);
+        
         await apiRequest('/api/service-photos', {
           method: 'POST',
           body: JSON.stringify({
@@ -80,8 +88,11 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
             'Content-Type': 'application/json'
           }
         });
+        
+        logger.log(`📸 [MUTATION] POST request #${requestCount} completed successfully`);
       }
       
+      logger.log(`🔥🔥🔥 [MUTATION END] Total POST requests sent: ${requestCount}`);
       return photoUrls;
     },
     onSuccess: async () => {
@@ -150,8 +161,19 @@ export function SimpleServicePhotos({ serviceId, readOnly = false, showUpload = 
   };
 
   const handleUploadComplete = (result: any) => {
-    logger.log('📸 Upload completed:', result);
-    const uploadedUrls = result.successful.map((file: any) => file.uploadURL);
+    logger.log('📸 [UPPY CALLBACK] Upload completed - FULL RESULT:', JSON.stringify(result, null, 2));
+    logger.log('📸 [UPPY CALLBACK] result.successful array:', result.successful);
+    logger.log('📸 [UPPY CALLBACK] result.successful.length:', result.successful?.length);
+    
+    const uploadedUrls = result.successful.map((file: any) => {
+      logger.log('📸 [UPPY CALLBACK] Processing file:', file.uploadURL);
+      return file.uploadURL;
+    });
+    
+    logger.log('📸 [UPPY CALLBACK] Final uploadedUrls array:', uploadedUrls);
+    logger.log('📸 [UPPY CALLBACK] uploadedUrls.length:', uploadedUrls.length);
+    logger.log('📸 [UPPY CALLBACK] About to call uploadPhotosMutation.mutate()');
+    
     uploadPhotosMutation.mutate(uploadedUrls);
   };
 
