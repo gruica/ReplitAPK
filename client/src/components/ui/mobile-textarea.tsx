@@ -22,6 +22,8 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
   }, ref) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const combinedRef = ref || textareaRef;
+    const lastValueRef = React.useRef<string>('');
+    const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
     // Auto-resize functionality
     const adjustHeight = React.useCallback(() => {
@@ -38,8 +40,53 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
       }
     }, [dynamicHeight, minRows, maxRows]);
 
+    // AGGRESSIVE VALUE POLLING - Rešava problem sa glasovnim unosom koji ima delay
+    // Provera vrednosti svakih 200ms kada je polje fokusirano
+    const checkValueChange = React.useCallback(() => {
+      const currentElement = textareaRef.current;
+      if (!currentElement) return;
+      
+      const currentValue = currentElement.value;
+      const lastValue = lastValueRef.current;
+      
+      if (currentValue !== lastValue && currentValue !== (props.value || '')) {
+        console.log('🔍 [MobileTextarea POLLING] Detektovana promena vrednosti:', {
+          oldValue: lastValue,
+          newValue: currentValue,
+          propsValue: props.value,
+          timestamp: new Date().toISOString()
+        });
+        
+        lastValueRef.current = currentValue;
+        
+        // Triggeru onChange
+        if (props.onChange) {
+          const syntheticEvent = {
+            target: currentElement,
+            currentTarget: currentElement
+          } as React.ChangeEvent<HTMLTextAreaElement>;
+          
+          console.log('🎤 [MobileTextarea POLLING] Pozivam onChange sa novom vrednosti:', currentValue);
+          props.onChange(syntheticEvent);
+        }
+        
+        // Adjust height ako je dinamička visina
+        adjustHeight();
+      }
+    }, [props.onChange, props.value, adjustHeight]);
+
     // Auto-scroll textarea into view when focused on mobile
     const handleFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+      console.log('🎯 [MobileTextarea] Focus - Pokretam polling za glasovni unos');
+      
+      // Započni agresivno polling kada je polje fokusirano
+      // Ovo hvata glasovni unos bez obzira na delay
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      
+      pollingIntervalRef.current = setInterval(checkValueChange, 200);
+      
       if (autoScrollOnFocus) {
         // Slight delay to ensure virtual keyboard is shown
         setTimeout(() => {
@@ -61,6 +108,14 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
 
     // Handle blur to catch value changes missed by onChange/onInput
     const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+      console.log('🔴 [MobileTextarea] Blur - Zaustavljam polling');
+      
+      // Zaustavi polling kada polje izgubi fokus
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      
       // CRITICAL: Ensure value is captured when user leaves the field
       // This is a safety net for voice input and paste that might not trigger onChange/onInput
       const currentValue = e.currentTarget.value;
@@ -88,6 +143,15 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
         props.onBlur(e);
       }
     };
+    
+    // Cleanup na unmount
+    React.useEffect(() => {
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+      };
+    }, []);
 
     // Handle input for dynamic height
     const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
