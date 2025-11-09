@@ -19,9 +19,53 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
   }, ref) => {
     const inputRef = React.useRef<HTMLInputElement>(null);
     const combinedRef = ref || inputRef;
+    const lastValueRef = React.useRef<string>('');
+    const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    // AGGRESSIVE VALUE POLLING - Rešava problem sa glasovnim unosom koji ima delay
+    // Provera vrednosti svakih 200ms kada je polje fokusirano
+    const checkValueChange = React.useCallback(() => {
+      const currentElement = inputRef.current;
+      if (!currentElement) return;
+      
+      const currentValue = currentElement.value;
+      const lastValue = lastValueRef.current;
+      
+      if (currentValue !== lastValue && currentValue !== (props.value || '')) {
+        console.log('🔍 [MobileInput POLLING] Detektovana promena vrednosti:', {
+          oldValue: lastValue,
+          newValue: currentValue,
+          propsValue: props.value,
+          timestamp: new Date().toISOString()
+        });
+        
+        lastValueRef.current = currentValue;
+        
+        // Triggeru onChange
+        if (props.onChange) {
+          const syntheticEvent = {
+            target: currentElement,
+            currentTarget: currentElement
+          } as React.ChangeEvent<HTMLInputElement>;
+          
+          console.log('🎤 [MobileInput POLLING] Pozivam onChange sa novom vrednosti:', currentValue);
+          props.onChange(syntheticEvent);
+        }
+      }
+    }, [props.onChange, props.value]);
 
     // Auto-scroll input into view when focused on mobile
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      console.log('🎯 [MobileInput] Focus - Pokretam polling za glasovni unos');
+      
+      // Započni agresivno polling kada je polje fokusirano
+      // Ovo hvata glasovni unos bez obzira na delay
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      
+      pollingIntervalRef.current = setInterval(checkValueChange, 200);
+      
       if (autoScrollOnFocus) {
         // Slight delay to ensure virtual keyboard is shown
         setTimeout(() => {
@@ -43,6 +87,14 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
 
     // Handle blur to catch value changes missed by onChange/onInput
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      console.log('🔴 [MobileInput] Blur - Zaustavljam polling');
+      
+      // Zaustavi polling kada polje izgubi fokus
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      
       const currentValue = e.currentTarget.value;
       const propsValue = props.value || '';
       
@@ -65,6 +117,15 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
         props.onBlur(e);
       }
     };
+    
+    // Cleanup na unmount
+    React.useEffect(() => {
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+      };
+    }, []);
 
     // Handle input for voice input and paste compatibility
     const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
