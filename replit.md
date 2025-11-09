@@ -57,6 +57,39 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **2025-11-09 (Morning)**: FST Logo Integration + Smart Voice Input Fix
+  - **Problem 1:** FST logo was only visible on Android launcher icon, NOT inside the mobile app interface
+  - **Problem 2:** Android voice input adds text without spaces between words (e.g., "popravljenotrebalo" instead of "popravljeno trebalo")
+  - **Solution 1 - FST Logo in Mobile App:**
+    - Added FST logo (`/fst-logo.png`) to mobile technician interface header
+    - Replaced generic `<Home>` icon with actual FST logo image
+    - Logo now visible in:
+      - Main header of mobile app (services-mobile.tsx)
+      - Hamburger menu header (user profile section)
+    - Visual branding now consistent across launcher icon AND app interface
+  - **Solution 2 - Smart Space Insertion:**
+    - Implemented automatic space detection and insertion for voice input
+    - Added `addMissingSpaces()` function in both `mobile-input.tsx` and `mobile-textarea.tsx`
+    - Algorithm detects missing spaces using regex patterns:
+      - Lowercase→Uppercase transitions: "popravljenoTrebalo" → "popravljeno Trebalo"
+      - Word concatenation detection: automatically adds space between joined words
+    - Works with Cyrillic (šđčćž) and Latin characters
+    - Real-time correction during polling (200ms interval)
+  - **Technical Implementation:**
+    - Files modified:
+      - `client/src/pages/technician/services-mobile.tsx` - FST logo integration
+      - `client/src/components/ui/mobile-input.tsx` - Smart space insertion
+      - `client/src/components/ui/mobile-textarea.tsx` - Smart space insertion
+    - Logo implementation: `<img src="/fst-logo.png" />` with responsive sizing
+    - Space insertion runs during value polling before React Hook Form update
+  - **Impact:**
+    - ✅ Professional branding visible throughout mobile app
+    - ✅ Voice input text automatically corrected for missing spaces
+    - ✅ Improved user experience for technicians using voice dictation
+  - **Next Steps:** 
+    - Requires APK rebuild via GitHub Actions to test on physical Android device
+    - User needs to push changes to GitHub to trigger automated build
+  
 - **2025-11-08 (Morning)**: Fixed photo duplication bug in mobile app - FINAL FIX
   - **Problem:** After uploading a photo in mobile app, the photo appeared duplicated (showed twice) immediately after upload
   - **User Report:** 
