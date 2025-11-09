@@ -57,6 +57,52 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **2025-11-09 (Afternoon)**: iOS Platform Integration - Complete Setup
+  - **Achievement:** Successfully added iOS platform to Capacitor project alongside existing Android APK
+  - **iOS Assets Generated:**
+    - ✅ FST Logo App Icon (1024x1024) - Apple App Store standard
+    - ✅ Splash Screens (2732x2732) - FST logo on blue background matching Android
+    - ✅ All assets optimized for iPhone and iPad devices
+  - **Capacitor iOS Configuration:**
+    - Installed `@capacitor/ios` package
+    - Added iOS platform via `npx cap add ios`
+    - Synced iOS project with web assets and plugins
+    - Configured 6 Capacitor plugins for iOS:
+      - @capacitor/splash-screen
+      - @capacitor/status-bar
+      - @capacitor/device
+      - @capacitor/preferences
+      - @capacitor/network
+      - @capacitor/camera
+  - **Production API Setup:**
+    - iOS app configured to use production server: `https://tehnikamne.me`
+    - HTTPS enforced for security
+    - Identical configuration to Android APK for consistency
+  - **iOS Build Documentation:**
+    - Created comprehensive `IOS_BUILD_GUIDE.md` with step-by-step instructions
+    - Covers: Xcode setup, CocoaPods installation, build process, App Store distribution
+    - Includes troubleshooting guide and test account credentials
+  - **Project Structure:**
+    - `ios/` folder created with complete Xcode project
+    - `ios/App/App/Assets.xcassets/` contains FST branding assets
+    - Ready for local Mac build (requires Xcode + CocoaPods)
+  - **Next Steps:**
+    - ⏳ Waiting for Apple Developer Account verification (~2 days)
+    - 🔧 User will build iOS app on Mac using IOS_BUILD_GUIDE.md
+    - 📱 Testing on physical iPhone/iPad devices
+    - 🚀 App Store submission when ready
+  - **Cost Optimization:**
+    - Local Mac build preferred (free) vs GitHub Actions macOS runners ($0.08/min)
+    - User has Mac computer ready for iOS development
+  - **Files Added/Modified:**
+    - `ios/` - Complete iOS Xcode project folder
+    - `IOS_BUILD_GUIDE.md` - Comprehensive build documentation
+    - `capacitor.config.ts` - iOS configuration already present
+  - **Impact:**
+    - ✅ Cross-platform expansion: Android APK + iOS App
+    - ✅ Consistent FST branding across all mobile platforms
+    - ✅ Ready for dual-platform deployment (Google Play + App Store)
+
 - **2025-11-09 (Morning)**: FST Logo Integration + Smart Voice Input Fix
   - **Problem 1:** FST logo was only visible on Android launcher icon, NOT inside the mobile app interface
   - **Problem 2:** Android voice input adds text without spaces between words (e.g., "popravljenotrebalo" instead of "popravljeno trebalo")
