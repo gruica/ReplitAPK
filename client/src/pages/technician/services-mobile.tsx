@@ -1499,8 +1499,12 @@ export default function TechnicianServicesMobile() {
         <div className="px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                <Home className="h-5 w-5 text-blue-600" />
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1.5 overflow-hidden">
+                <img 
+                  src="/fst-logo.png" 
+                  alt="FST Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">Serviser Panel</h1>
@@ -1533,8 +1537,12 @@ export default function TechnicianServicesMobile() {
               <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-2 overflow-hidden">
+                      <img 
+                        src="/fst-logo.png" 
+                        alt="FST Logo" 
+                        className="w-full h-full object-contain"
+                      />
                     </div>
                     <div>
                       <h3 className="text-white font-semibold">Gruica Serviser</h3>
