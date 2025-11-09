@@ -68,18 +68,36 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
 
     // Handle input for voice input and paste compatibility
     const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+      const currentValue = e.currentTarget.value;
       console.log('🎤 [MobileInput] onInput fired:', {
-        value: e.currentTarget.value,
-        inputType: (e as any).inputType
+        value: currentValue,
+        inputType: (e as any).inputType,
+        timestamp: new Date().toISOString()
       });
       
       // CRITICAL FIX: Trigger onChange for voice input and paste compatibility
       // Voice input and paste events use onInput instead of onChange on mobile
       // This ensures React state updates work correctly with all input methods
       if (props.onChange) {
-        const syntheticEvent = e as unknown as React.ChangeEvent<HTMLInputElement>;
-        console.log('🎤 [MobileInput] Triggering onChange with value:', syntheticEvent.currentTarget.value);
+        const syntheticEvent = {
+          ...e,
+          target: e.currentTarget,
+          currentTarget: e.currentTarget
+        } as React.ChangeEvent<HTMLInputElement>;
+        
+        console.log('🎤 [MobileInput] Triggering onChange with value:', currentValue);
+        
+        // Force React Hook Form update by calling onChange
         props.onChange(syntheticEvent);
+        
+        // EXTRA FIX: Schedule another update after a small delay
+        // This ensures React Hook Form catches the value even if there's timing issues
+        setTimeout(() => {
+          if (e.currentTarget.value === currentValue && props.onChange) {
+            console.log('🔄 [MobileInput] Delayed onChange verification:', currentValue);
+            props.onChange(syntheticEvent);
+          }
+        }, 100);
       }
       
       // Call original onInput if provided

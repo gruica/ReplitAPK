@@ -107,9 +107,25 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
       // Voice input and paste events use onInput instead of onChange on mobile
       // This ensures React state updates work correctly with all input methods
       if (props.onChange) {
-        const syntheticEvent = e as unknown as React.ChangeEvent<HTMLTextAreaElement>;
-        console.log('🎤 [MobileTextarea] Triggering onChange with value:', syntheticEvent.currentTarget.value);
+        const syntheticEvent = {
+          ...e,
+          target: e.currentTarget,
+          currentTarget: e.currentTarget
+        } as React.ChangeEvent<HTMLTextAreaElement>;
+        
+        console.log('🎤 [MobileTextarea] Triggering onChange with value:', currentValue);
+        
+        // Force React Hook Form update by calling onChange
         props.onChange(syntheticEvent);
+        
+        // EXTRA FIX: Schedule another update after a small delay
+        // This ensures React Hook Form catches the value even if there's timing issues
+        setTimeout(() => {
+          if (e.currentTarget.value === currentValue && props.onChange) {
+            console.log('🔄 [MobileTextarea] Delayed onChange verification:', currentValue);
+            props.onChange(syntheticEvent);
+          }
+        }, 100);
       }
       
       // Call original onInput if provided
