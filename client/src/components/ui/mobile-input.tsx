@@ -22,14 +22,40 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
     const lastValueRef = React.useRef<string>('');
     const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
+    // SMART SPACE INSERTION - Automatski dodaje razmak između reči kod glasovnog unosa
+    // Android često dodaje tekst bez razmaka: "popravljenotrebalo" -> "popravljeno trebalo"
+    const addMissingSpaces = React.useCallback((value: string): string => {
+      if (!value || value.length < 2) return value;
+      
+      // Proveri da li postoje mesta gde nedostaje razmak između reči
+      // Detektujemo mali->veliko slovo prelaz (npr. "poravljenoTrebalo" -> "popravljeno Trebalo")
+      const withSpaces = value.replace(/([a-zšđčćž])([A-ZŠĐČĆŽ])/g, '$1 $2');
+      
+      // Dodatno, detektujemo ako se reč završava sa slovom i sledeća počinje sa slovom
+      // ali samo ako nema razmaka između njih (heuristika za spojene reči)
+      const improved = withSpaces.replace(/([a-zšđčćžA-ZŠĐČĆŽ]{3,})([A-ZŠĐČĆŽ][a-zšđčćž]{2,})/g, '$1 $2');
+      
+      if (improved !== value) {
+        console.log('✨ [MobileInput SPACE FIX] Dodati razmaci:', {
+          original: value,
+          fixed: improved
+        });
+      }
+      
+      return improved;
+    }, []);
+
     // AGGRESSIVE VALUE POLLING - Rešava problem sa glasovnim unosom koji ima delay
     // Provera vrednosti svakih 200ms kada je polje fokusirano
     const checkValueChange = React.useCallback(() => {
       const currentElement = inputRef.current;
       if (!currentElement) return;
       
-      const currentValue = currentElement.value;
+      let currentValue = currentElement.value;
       const lastValue = lastValueRef.current;
+      
+      // Automatski dodaj razmake ako nedostaju (glasovni unos bug fix)
+      currentValue = addMissingSpaces(currentValue);
       
       if (currentValue !== lastValue && currentValue !== (props.value || '')) {
         console.log('🔍 [MobileInput POLLING] Detektovana promena vrednosti:', {
@@ -40,6 +66,11 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
         });
         
         lastValueRef.current = currentValue;
+        
+        // Update input value sa razmacima ako je potrebno
+        if (currentElement.value !== currentValue) {
+          currentElement.value = currentValue;
+        }
         
         // Triggeru onChange
         if (props.onChange) {
@@ -52,7 +83,7 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
           props.onChange(syntheticEvent);
         }
       }
-    }, [props.onChange, props.value]);
+    }, [props.onChange, props.value, addMissingSpaces]);
 
     // Auto-scroll input into view when focused on mobile
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
