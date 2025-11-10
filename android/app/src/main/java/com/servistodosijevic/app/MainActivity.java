@@ -1,40 +1,43 @@
 package com.servistodosijevic.app;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.Bridge;
 
 /**
- * MainActivity sa custom WebView konfiguracijom za optimizovan glasovni unos
+ * MainActivity with custom WebView configuration for optimized voice input
  * 
- * Optimizacije:
- * - DOM Storage enabled za bolje React state handling
- * - Hardware acceleration za smooth input
- * - Save form data disabled za privacy i fresh state
- * - Custom WebView settings za Android IME (Input Method Editor)
+ * Optimizations:
+ * - DOM Storage enabled for better React state handling
+ * - Hardware acceleration for smooth input
+ * - Save form data disabled for privacy and fresh state
+ * - Custom WebView settings for Android IME (Input Method Editor)
  */
 public class MainActivity extends BridgeActivity {
+    
+    private static final String TAG = "MainActivity";
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Log za debugging
-        android.util.Log.d("MainActivity", "🚀 [VOICE INPUT FIX] Inicijalizujem custom WebView konfiguraciju");
+        // Log for debugging
+        Log.d(TAG, "[VOICE INPUT FIX] Initializing custom WebView configuration");
     }
     
     @Override
     protected void onStart() {
         super.onStart();
         
-        // Primeni custom WebView settings nakon što je WebView kreiran
+        // Apply custom WebView settings after WebView is created
         configureWebViewForVoiceInput();
     }
     
     /**
-     * Konfiguracija WebView-a specifično za glasovni unos i copy-paste
+     * Configure WebView specifically for voice input and copy-paste
      */
     private void configureWebViewForVoiceInput() {
         try {
@@ -44,39 +47,39 @@ public class MainActivity extends BridgeActivity {
                 if (webView != null) {
                     WebSettings settings = webView.getSettings();
                     
-                    // KRITIČNO: DOM Storage mora biti enabled za React state
+                    // CRITICAL: DOM Storage must be enabled for React state
                     settings.setDomStorageEnabled(true);
                     
-                    // Disable save form data za fresh state nakon voice input
+                    // Disable save form data for fresh state after voice input
                     settings.setSaveFormData(false);
                     
-                    // Enable JavaScript (već enabled u Capacitor, ali eksplicitno)
+                    // Enable JavaScript (already enabled in Capacitor, but explicit)
                     settings.setJavaScriptEnabled(true);
                     
-                    // VAŽNO: Allow content access za clipboard operations
+                    // IMPORTANT: Allow content access for clipboard operations
                     settings.setAllowContentAccess(true);
                     settings.setAllowFileAccess(true);
                     
-                    // Hardware acceleration za smooth input handling
+                    // Hardware acceleration for smooth input handling
                     webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
                     
-                    // Enable text selection i long press za copy-paste
+                    // Enable text selection and long press for copy-paste
                     webView.setLongClickable(true);
                     webView.setHapticFeedbackEnabled(true);
                     
-                    android.util.Log.d("MainActivity", "✅ [VOICE INPUT FIX] WebView konfigurisan uspešno");
-                    android.util.Log.d("MainActivity", "   - DOM Storage: enabled");
-                    android.util.Log.d("MainActivity", "   - Save Form Data: disabled");
-                    android.util.Log.d("MainActivity", "   - Hardware Acceleration: enabled");
-                    android.util.Log.d("MainActivity", "   - Content Access: enabled");
+                    Log.d(TAG, "[VOICE INPUT FIX] WebView configured successfully");
+                    Log.d(TAG, "   - DOM Storage: enabled");
+                    Log.d(TAG, "   - Save Form Data: disabled");
+                    Log.d(TAG, "   - Hardware Acceleration: enabled");
+                    Log.d(TAG, "   - Content Access: enabled");
                 } else {
-                    android.util.Log.w("MainActivity", "⚠️ [VOICE INPUT FIX] WebView je null");
+                    Log.w(TAG, "[VOICE INPUT FIX] WebView is null");
                 }
             } else {
-                android.util.Log.w("MainActivity", "⚠️ [VOICE INPUT FIX] Bridge je null");
+                Log.w(TAG, "[VOICE INPUT FIX] Bridge is null");
             }
         } catch (Exception e) {
-            android.util.Log.e("MainActivity", "❌ [VOICE INPUT FIX] Greška pri konfiguraciji WebView-a", e);
+            Log.e(TAG, "[VOICE INPUT FIX] Error configuring WebView", e);
         }
     }
     
@@ -84,8 +87,8 @@ public class MainActivity extends BridgeActivity {
     protected void onResume() {
         super.onResume();
         
-        // Re-apply settings kada se app vraća u focus
-        // Ovo pomaže sa edge case-ovima kada Android resetuje WebView state
+        // Re-apply settings when app returns to focus
+        // This helps with edge cases when Android resets WebView state
         configureWebViewForVoiceInput();
     }
 }
