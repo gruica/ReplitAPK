@@ -56,6 +56,44 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Billing Management**: Supports warranty (ComPlus, Beko) and out-of-warranty billing with admin override capabilities, documentation, and service exclusion, including PDF generation for reports.
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
+## Recent Changes
+- **2025-11-10 (Evening)**: Professional Privacy Policy Page for App Store & Google Play
+  - **Privacy Policy Complete:**
+    - ✅ Created comprehensive `/privacy/policy` page in Serbian/Croatian language
+    - ✅ **App Store Compliance**: App Privacy Details, Data Collection Disclosure, User Rights
+    - ✅ **Google Play Compliance**: Data Safety Section, Privacy Policy Link, GDPR
+    - ✅ **12 Detailed Sections**: Introduction, Data Collection (photos, SMS, email), Usage, Legal Basis (GDPR), Third-party Sharing, Security, User Rights, Retention, Children, Cookies, Changes, Contact
+    - ✅ **Visual Design**: Professional gradient background, icons for each section, color-coded categories
+    - ✅ **Mobile-specific Disclosures**: Camera permissions, photo storage (Object Storage), SMS notifications, email communications
+    - ✅ **Contact Information**: gruica@frigosistemtodosijevic.com, jelena@frigosistemtodosijevic.me, phone, website
+    - ✅ **SEO Optimized**: Meta tags, canonical URL, responsive design
+  - **Compliance Checklist:**
+    - ✅ GDPR compliance (user rights: access, rectification, erasure, portability)
+    - ✅ Data retention periods specified (services 5 years, photos 2 years, logs 12 months)
+    - ✅ Third-party services disclosed (Nodemailer, SMS API, Replit/Neon Cloud)
+    - ✅ Security measures documented (SSL/TLS, JWT, Scrypt, Rate limiting, XSS protection)
+    - ✅ Children's privacy protection (no collection under 13 years)
+    - ✅ Cookie policy (session, functional - NO marketing cookies)
+  - **Files Modified**: `client/src/pages/privacy-policy.tsx`
+  - **Production Status**: ✅ Ready for App Store and Google Play submission
+
+- **2025-11-10 (Afternoon)**: Supplier System Implementation + Photo Duplication Fix V2
+  - **Supplier Workflow Complete:**
+    - ✅ Created `/supplier` dashboard for dobavljači (suppliers)
+    - ✅ Backend endpoints: `/api/supplier/assigned-spare-parts` (GET), `/api/supplier/assigned-spare-parts/:id/respond` (PATCH)
+    - ✅ Database migration: Added `assigned_to_partner_id`, `assigned_at`, `assigned_by`, `supplier_price`, `supplier_notes`, `estimated_delivery` columns
+    - ✅ Email notifications with full context (appliance, client, service data)
+    - ✅ Supplier can view assigned parts with complete context and respond with price, availability, delivery estimate
+  - **Photo Duplication Bug - FINAL FIX V2:**
+    - **Problem Identified**: Database showed duplicate uploads (same photo uploaded twice with 2 second gap)
+    - **Root Cause**: File input onChange triggered multiple times OR user double-clicked upload button
+    - **Fix Applied**: Added double-upload guard in `MobileServicePhotos.tsx`
+      - Reset input.value immediately after file selection
+      - Added `isUploading || uploadMutation.isPending` check to prevent concurrent uploads
+      - Added logging for debugging future issues
+    - **Files Modified**: `client/src/components/MobileServicePhotos.tsx`
+  - **Production Status**: ✅ Supplier system ready, photo fix deployed
+
 ## External Dependencies
 - **Email Service**: Nodemailer
 - **SMS Service**: Configurable SMS Mobile API
