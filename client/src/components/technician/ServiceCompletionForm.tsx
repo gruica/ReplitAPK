@@ -173,15 +173,82 @@ function ServiceCompletionForm({ service, isOpen, onClose }: ServiceCompletionFo
     setSpareParts(updatedParts);
   };
 
-  const onSubmit = (data: ServiceCompletionFormData) => {
+  const onSubmit = async (data: ServiceCompletionFormData) => {
+    console.log('🔄 [COMPLETION FORM] Započinjem podnošenje - DELAY za glasovni unos...');
+    
+    // CRITICAL FIX: Dodaj delay za glasovni unos da se završi
+    // Android glasovni unos ima latenciju 200-800ms pre nego što se state ažurira
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    console.log('🔄 [COMPLETION FORM] Delay završen - Čitam stvarne vrednosti iz DOM-a...');
+    
+    // CRITICAL FIX: Čitaj stvarne vrednosti iz textarea DOM elemenata
+    // Glasovni unos može biti u DOM-u ali ne u state-u zbog async delay-a
+    const workDescriptionElement = document.querySelector('[data-testid="input-work-description"]') as HTMLTextAreaElement;
+    const problemDiagnosisElement = document.querySelector('[data-testid="input-problem-diagnosis"]') as HTMLTextAreaElement;
+    const solutionDescriptionElement = document.querySelector('[data-testid="input-solution-description"]') as HTMLTextAreaElement;
+    
+    // Pročitaj stvarne vrednosti iz DOM-a
+    const actualWorkDescription = workDescriptionElement?.value || data.workDescription;
+    const actualProblemDiagnosis = problemDiagnosisElement?.value || data.problemDiagnosis;
+    const actualSolutionDescription = solutionDescriptionElement?.value || data.solutionDescription;
+    
+    console.log('🔍 [COMPLETION FORM] Stvarne vrednosti iz DOM-a:', {
+      workDescription: actualWorkDescription,
+      problemDiagnosis: actualProblemDiagnosis,
+      solutionDescription: actualSolutionDescription
+    });
+    
+    // Validacija sa stvarnim vrednostima
+    if (!actualWorkDescription.trim() || actualWorkDescription.length < 10) {
+      toast({
+        title: "Greška",
+        description: "Opis rada mora biti detaljniji (min 10 karaktera)",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!actualProblemDiagnosis.trim() || actualProblemDiagnosis.length < 10) {
+      toast({
+        title: "Greška",
+        description: "Dijagnoza mora biti detaljnija (min 10 karaktera)",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!actualSolutionDescription.trim() || actualSolutionDescription.length < 10) {
+      toast({
+        title: "Greška",
+        description: "Opis rešenja mora biti detaljniji (min 10 karaktera)",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Kreiraj objekat sa stvarnim vrednostima iz DOM-a
     const finalData = {
       ...data,
+      workDescription: actualWorkDescription,
+      problemDiagnosis: actualProblemDiagnosis,
+      solutionDescription: actualSolutionDescription,
       usedSpareParts: spareParts
     };
+    
+    console.log('📤 [COMPLETION FORM] Šaljem finalne podatke:', finalData);
+    
     createReportMutation.mutate(finalData);
   };
 
   const handleReturnDevice = async () => {
+    console.log('🔄 [RETURN DEVICE] Započinjem vraćanje - DELAY za glasovni unos...');
+    
+    // CRITICAL FIX: Dodaj delay za glasovni unos
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    console.log('🔄 [RETURN DEVICE] Delay završen - Proveravam napomenu...');
+    
     if (!returnNotes.trim()) {
       toast({
         title: "Greška",

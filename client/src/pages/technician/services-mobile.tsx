@@ -467,8 +467,8 @@ function ServiceCard({ service }: { service: Service }) {
   const submitCustomerRefusal = async () => {
     console.log('🔄 [REFUSAL] Započinjem podnošenje odbijanja - DELAY za glasovni unos...');
     
-    // CRITICAL FIX: Dodaj delay za glasovni unos
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // CRITICAL FIX: Dodaj delay za glasovni unos (povećano sa 600ms na 800ms)
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     // CRITICAL FIX: Čitaj stvarnu vrednost iz DOM-a
     const refusalReasonElement = document.getElementById('refusal-reason') as HTMLTextAreaElement;
@@ -524,8 +524,8 @@ function ServiceCard({ service }: { service: Service }) {
     console.log('🔄 [SUBMIT] Započinjem podnošenje servisa - DELAY za glasovni unos...');
     
     // CRITICAL FIX: Dodaj delay za glasovni unos da se završi
-    // Android glasovni unos ima latenciju 200-500ms pre nego što se state ažurira
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // Android glasovni unos ima latenciju 200-800ms pre nego što se state ažurira
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     console.log('🔄 [SUBMIT] Delay završen - Čitam stvarne vrednosti iz DOM-a...');
     
@@ -607,8 +607,8 @@ function ServiceCard({ service }: { service: Service }) {
   const submitReturnDevice = async () => {
     console.log('🔄 [RETURN] Započinjem vraćanje aparata - DELAY za glasovni unos...');
     
-    // CRITICAL FIX: Dodaj delay za glasovni unos
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // CRITICAL FIX: Dodaj delay za glasovni unos (povećano sa 600ms na 800ms)
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     // CRITICAL FIX: Čitaj stvarnu vrednost iz DOM-a
     const returnNotesElement = document.getElementById('return-notes') as HTMLTextAreaElement;
@@ -631,8 +631,8 @@ function ServiceCard({ service }: { service: Service }) {
   const submitRepairFailed = async () => {
     console.log('🔄 [FAILED] Započinjem neuspešan servis - DELAY za glasovni unos...');
     
-    // CRITICAL FIX: Dodaj delay za glasovni unos
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // CRITICAL FIX: Dodaj delay za glasovni unos (povećano sa 600ms na 800ms)
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     // CRITICAL FIX: Čitaj stvarne vrednosti iz DOM-a
     const failureReasonElement = document.getElementById('failure-reason') as HTMLTextAreaElement;
