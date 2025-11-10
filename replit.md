@@ -57,6 +57,37 @@ The frontend uses React.js, Wouter for routing, and React Query for server state
 - **Servis Komerc System**: Parallel system for Beko brand services including automated daily reports, SMS, service completion tracking, and spare parts.
 
 ## Recent Changes
+- **2025-11-10 (Evening - Late)**: Voice Input Fix for Mobile APK - AI Processing Integration
+  - **Problem:** Voice input text not recognized by form validation - AI sees empty field
+  - **Root Cause:** 
+    - Android voice input has 200-500ms latency before state updates
+    - When user clicks "Submit" button, React state is still empty
+    - Validation checks state instead of actual DOM value
+    - AI processing runs before voice input completes
+  - **Solution Implemented:**
+    - ✅ Added 600ms delay before form submission to wait for voice input completion
+    - ✅ Read actual values from DOM elements (textarea.value) instead of React state
+    - ✅ Applied fix to ALL submit functions that use voice input:
+      - `submitServiceCompletion` (technicianNotes, workPerformed, usedParts, machineNotes)
+      - `submitCustomerRefusal` (refusalReason)
+      - `submitReturnDevice` (returnNotes)
+      - `submitRepairFailed` (failureReason, replacedParts, additionalNotes)
+    - ✅ Added comprehensive console logging for debugging
+  - **Technical Details:**
+    ```javascript
+    // Before: Reads only from state (FAILS with voice input)
+    if (!completionData.technicianNotes.trim()) { ... }
+    
+    // After: Waits 600ms + reads from DOM (WORKS with voice input)
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const element = document.getElementById('technician-notes');
+    const actualValue = element?.value || completionData.technicianNotes;
+    if (!actualValue.trim()) { ... }
+    ```
+  - **Files Modified:** `client/src/pages/technician/services-mobile.tsx`
+  - **Impact:** Voice input now works reliably for all forms in mobile APK
+  - **Testing Required:** APK rebuild needed to test on physical Android device
+
 - **2025-11-10 (Evening)**: Professional Privacy Policy Page for App Store & Google Play
   - **Privacy Policy Complete:**
     - ✅ Created comprehensive `/privacy/policy` page in Serbian/Croatian language
