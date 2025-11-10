@@ -773,6 +773,134 @@ export function registerSparePartsRoutes(app: Express) {
     }
   });
 
+  // 9c. Dobavljač dohvata delove dodeljene njemu (Supplier gets assigned parts)
+  app.get("/api/supplier/assigned-spare-parts", jwtAuth, requireRole(['supplier']), async (req, res) => {
+    try {
+      const supplierId = req.user?.supplierId;
+      
+      if (!supplierId) {
+        return res.status(400).json({ error: "Korisnik nema dodeljenog dobavljača" });
+      }
+
+      // Dohvati sve spare_part_orders dodeljene ovom dobavljaču
+      const allOrders = await storage.getAllSparePartOrders();
+      const assignedOrders = allOrders.filter((order: any) => 
+        order.assignedToSupplierId === supplierId
+      );
+
+      // Obogati sa podacima o servisu, aparatu, klijentu
+      const enrichedOrders = await Promise.all(
+        assignedOrders.map(async (order: any) => {
+          let serviceData = null;
+          let clientData = null;
+          let applianceData = null;
+          let manufacturerData = null;
+          let categoryData = null;
+
+          try {
+            if (order.serviceId) {
+              serviceData = await storage.getService(order.serviceId);
+              if (serviceData) {
+                if (serviceData.clientId) {
+                  clientData = await storage.getClient(serviceData.clientId);
+                }
+                if (serviceData.applianceId) {
+                  applianceData = await storage.getAppliance(serviceData.applianceId);
+                  if (applianceData?.manufacturerId) {
+                    manufacturerData = await storage.getManufacturer(applianceData.manufacturerId);
+                  }
+                  if (applianceData?.categoryId) {
+                    categoryData = await storage.getCategory(applianceData.categoryId);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            logger.error("Greška pri obogaćivanju podataka:", error);
+          }
+
+          return {
+            ...order,
+            service: serviceData,
+            client: clientData,
+            appliance: applianceData,
+            manufacturer: manufacturerData,
+            category: categoryData
+          };
+        })
+      );
+
+      res.json(enrichedOrders);
+    } catch (error) {
+      logger.error("Greška pri dohvatanju dodeljenih delova:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju dodeljenih rezervnih delova" });
+    }
+  });
+
+  // 9d. Dobavljač ažurira status/odgovor na dodeljen deo (Supplier updates assigned part)
+  app.patch("/api/supplier/assigned-spare-parts/:id/respond", jwtAuth, requireRole(['supplier']), async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const supplierId = req.user?.supplierId;
+      const { 
+        isAvailable, 
+        supplierPrice, 
+        estimatedDeliveryDays, 
+        supplierNotes,
+        newStatus
+      } = req.body;
+
+      if (!supplierId) {
+        return res.status(400).json({ error: "Korisnik nema dodeljenog dobavljača" });
+      }
+
+      // Proveri da li order postoji i da li je dodeljen ovom dobavljaču
+      const existingOrder = await storage.getSparePartOrder(orderId);
+      if (!existingOrder) {
+        return res.status(404).json({ error: "Porudžbina nije pronađena" });
+      }
+
+      if (existingOrder.assignedToSupplierId !== supplierId) {
+        return res.status(403).json({ error: "Nemate dozvolu za ovaj rezervni deo" });
+      }
+
+      // Pripremi ažuriranje
+      const updateData: any = {};
+      
+      if (supplierNotes !== undefined) {
+        updateData.supplierNotes = supplierNotes;
+      }
+
+      if (supplierPrice !== undefined) {
+        updateData.supplierPrice = supplierPrice;
+      }
+
+      if (estimatedDeliveryDays !== undefined) {
+        updateData.estimatedDelivery = `${estimatedDeliveryDays} dana`;
+      }
+
+      if (newStatus) {
+        updateData.status = newStatus;
+      } else if (isAvailable === false) {
+        updateData.status = 'cancelled';
+      } else if (isAvailable === true && !newStatus) {
+        updateData.status = 'supplier_processing';
+      }
+
+      // Ažuriraj order
+      const updatedOrder = await storage.updateSparePartOrderStatus(orderId, updateData);
+
+      res.json({
+        success: true,
+        message: "Odgovor dobavljača je uspešno sačuvan",
+        order: updatedOrder
+      });
+    } catch (error) {
+      logger.error("Greška pri ažuriranju odgovora dobavljača:", error);
+      res.status(500).json({ error: "Greška pri ažuriranju odgovora" });
+    }
+  });
+
   // 10. Dohvati rezervne delove po statusu (Get parts by status)
   app.get("/api/admin/spare-parts/status/:status", jwtAuth, requireRole(['admin']), async (req, res) => {
     try {
