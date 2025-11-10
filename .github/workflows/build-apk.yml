@@ -66,23 +66,6 @@ jobs:
     - name: Sync Capacitor with Android
       run: npx cap sync android
 
-    - name: Validate secrets
-      run: |
-        echo "🔍 Validacija GitHub Secrets..."
-        if [ -z "${{ secrets.KEYSTORE_ALIAS }}" ]; then
-          echo "❌ GREŠKA: KEYSTORE_ALIAS secret nije postavljen!"
-          exit 1
-        fi
-        if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then
-          echo "❌ GREŠKA: KEYSTORE_PASSWORD secret nije postavljen!"
-          exit 1
-        fi
-        if [ -z "${{ secrets.KEYSTORE_FILE }}" ]; then
-          echo "❌ GREŠKA: KEYSTORE_FILE secret nije postavljen!"
-          exit 1
-        fi
-        echo "✅ Svi secrets su prisutni"
-
     - name: Build and Sign Release APK
       env:
         KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
@@ -90,77 +73,17 @@ jobs:
       run: |
         cd android
         echo "🏗️ Kompajliranje i potpisivanje APK-a..."
-        echo ""
-        echo "📋 Build informacije:"
-        echo "  - KEYSTORE_ALIAS: ${KEYSTORE_ALIAS:0:3}***"
-        echo "  - KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
-        echo "  - Keystore file:"
-        ls -lh app/android-release.keystore
-        echo ""
-        
-        set -e
-        
-        echo "🔨 Pokretanje Gradle build-a..."
-        ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee gradle-build.log
-        
-        BUILD_EXIT_CODE=${PIPESTATUS[0]}
-        if [ $BUILD_EXIT_CODE -ne 0 ]; then
-          echo ""
-          echo "❌ ============================================"
-          echo "❌ GRADLE BUILD FAIL-OVAO!"
-          echo "❌ ============================================"
-          echo ""
-          echo "📄 Poslednje linije build log-a:"
-          tail -100 gradle-build.log
-          echo ""
-          echo "💡 Proveri da li su GitHub Secrets pravilno postavljeni:"
-          echo "   - KEYSTORE_ALIAS"
-          echo "   - KEYSTORE_PASSWORD"
-          echo "   - KEYSTORE_FILE (mora biti base64 enkodovan)"
-          exit $BUILD_EXIT_CODE
-        fi
-        
-        echo ""
-        echo "📁 Proveravanje output foldera..."
-        ls -lR app/build/outputs/apk/ || echo "⚠️ Folder ne postoji"
-        
-        if [ ! -f "app/build/outputs/apk/release/app-release.apk" ]; then
-          echo ""
-          echo "❌ ============================================"
-          echo "❌ APK FAJL NIJE KREIRAN!"
-          echo "❌ ============================================"
-          echo ""
-          echo "📄 Build je prošao ali APK nije napravljen. Build log:"
-          tail -150 gradle-build.log
-          exit 1
-        fi
-        
-        echo ""
-        echo "✅ ============================================"
-        echo "✅ APK USPEŠNO NAPRAVLJEN I POTPISAN!"
-        echo "✅ ============================================"
-        echo ""
-        ls -lh app/build/outputs/apk/release/app-release.apk
-
-    - name: Upload Gradle build log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: gradle-build-log-${{ github.run_number }}
-        path: android/gradle-build.log
-        retention-days: 30
+        for i in 1 2 3; do
+          ./gradlew assembleRelease --no-daemon --stacktrace && break || sleep 15
+        done
+        echo "✅ APK uspešno napravljen i potpisan!"
 
     - name: Verify APK signature
-      if: success()
       run: |
         echo "🔍 Provera potpisa APK-a..."
         jarsigner -verify -verbose -certs android/app/build/outputs/apk/release/app-release.apk
-        
-        echo ""
-        echo "✅ APK potpis je validan!"
 
     - name: Upload Signed APK Artifact
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: servis-todosijevic-signed-apk-v${{ github.run_number }}

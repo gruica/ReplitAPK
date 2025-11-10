@@ -76,11 +76,9 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
     Keyboard: {
-      resize: "body", // OPTIMIZOVANO: body umesto ionic za bolje voice input handling
+      resize: "ionic", // Bolje upravljanje keyboard-om
       style: "dark",
       resizeOnFullScreen: true,
-      accessoryBarVisible: false, // Sakrij accessory bar za cleaner UX
-      scrollAssist: true, // Auto scroll do input polja
     },
     // Network plugin za offline/online detekciju
     Network: {

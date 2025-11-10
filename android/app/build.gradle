@@ -20,24 +20,10 @@ android {
     
     signingConfigs {
         release {
-            def alias = System.getenv('KEYSTORE_ALIAS')
-            def password = System.getenv('KEYSTORE_PASSWORD')
-            def keystoreFile = file('android-release.keystore')
-            
-            if (alias == null || alias.isEmpty()) {
-                throw new GradleException("❌ GREŠKA: KEYSTORE_ALIAS environment variable nije postavljena!")
-            }
-            if (password == null || password.isEmpty()) {
-                throw new GradleException("❌ GREŠKA: KEYSTORE_PASSWORD environment variable nije postavljena!")
-            }
-            if (!keystoreFile.exists()) {
-                throw new GradleException("❌ GREŠKA: Keystore fajl ne postoji: ${keystoreFile.absolutePath}")
-            }
-            
-            keyAlias alias
-            keyPassword password
-            storeFile keystoreFile
-            storePassword password
+            keyAlias System.getenv('KEYSTORE_ALIAS')
+            keyPassword System.getenv('KEYSTORE_PASSWORD')
+            storeFile file('android-release.keystore')
+            storePassword System.getenv('KEYSTORE_PASSWORD')
         }
     }
     

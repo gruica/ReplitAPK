@@ -63,8 +63,8 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
       return improved;
     }, []);
 
-    // ULTRA AGGRESSIVE VALUE POLLING - Rešava problem sa glasovnim unosom koji ima delay
-    // Provera vrednosti svakih 100ms kada je polje fokusirano (smanjen sa 200ms za brži response)
+    // AGGRESSIVE VALUE POLLING - Rešava problem sa glasovnim unosom koji ima delay
+    // Provera vrednosti svakih 200ms kada je polje fokusirano
     const checkValueChange = React.useCallback(() => {
       const currentElement = textareaRef.current;
       if (!currentElement) return;
@@ -108,15 +108,15 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
 
     // Auto-scroll textarea into view when focused on mobile
     const handleFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-      console.log('🎯 [MobileTextarea] Focus - Pokretam ULTRA AGRESIVNI polling za glasovni unos (100ms interval)');
+      console.log('🎯 [MobileTextarea] Focus - Pokretam polling za glasovni unos');
       
-      // Započni ultra agresivno polling kada je polje fokusirano
-      // Smanjen interval sa 200ms na 100ms za brži odgovor na glasovni unos
+      // Započni agresivno polling kada je polje fokusirano
+      // Ovo hvata glasovni unos bez obzira na delay
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
       
-      pollingIntervalRef.current = setInterval(checkValueChange, 100);
+      pollingIntervalRef.current = setInterval(checkValueChange, 200);
       
       if (autoScrollOnFocus) {
         // Slight delay to ensure virtual keyboard is shown
@@ -173,49 +173,6 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
       if (props.onBlur) {
         props.onBlur(e);
       }
-    };
-    
-    // CRITICAL: Android glasovni unos triggera compositionend event
-    // Dodajemo handler za composition events koji hvata završetak glasovnog unosa
-    const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
-      console.log('🎙️ [MobileTextarea] compositionEnd triggered - glasovni unos završen');
-      
-      const currentValue = e.currentTarget.value;
-      
-      // Automatski dodaj razmake ako nedostaju
-      const improvedValue = addMissingSpaces(currentValue);
-      
-      if (improvedValue !== currentValue && textareaRef.current) {
-        textareaRef.current.value = improvedValue;
-      }
-      
-      // Force onChange sa finalnom vrednosti
-      if (props.onChange) {
-        const syntheticEvent = {
-          target: e.currentTarget,
-          currentTarget: e.currentTarget
-        } as unknown as React.ChangeEvent<HTMLTextAreaElement>;
-        
-        console.log('🎙️ [MobileTextarea] Pozivam onChange nakon compositionEnd:', improvedValue);
-        props.onChange(syntheticEvent);
-        
-        // Double-check sa delay
-        setTimeout(() => {
-          if (textareaRef.current && props.onChange) {
-            const finalValue = textareaRef.current.value;
-            if (finalValue) {
-              console.log('🔄 [MobileTextarea] compositionEnd delayed check:', finalValue);
-              const syntheticEvent2 = {
-                target: textareaRef.current,
-                currentTarget: textareaRef.current
-              } as React.ChangeEvent<HTMLTextAreaElement>;
-              props.onChange(syntheticEvent2);
-            }
-          }
-        }, 150);
-      }
-      
-      adjustHeight();
     };
     
     // Cleanup na unmount
@@ -326,7 +283,6 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
         onFocus={handleFocus}
         onInput={handleInput}
         onBlur={handleBlur}
-        onCompositionEnd={handleCompositionEnd}
         data-testid={testId}
         {...mobileProps}
         {...speechProps}

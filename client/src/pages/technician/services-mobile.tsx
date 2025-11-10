@@ -464,20 +464,9 @@ function ServiceCard({ service }: { service: Service }) {
     setShowRepairFailedDialog(true);
   };
 
-  const submitCustomerRefusal = async () => {
-    console.log('🔄 [REFUSAL] Započinjem podnošenje odbijanja - DELAY za glasovni unos...');
-    
-    // CRITICAL FIX: Dodaj delay za glasovni unos (povećano sa 600ms na 800ms)
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // CRITICAL FIX: Čitaj stvarnu vrednost iz DOM-a
-    const refusalReasonElement = document.getElementById('refusal-reason') as HTMLTextAreaElement;
-    const actualRefusalReason = refusalReasonElement?.value || refusalReason;
-    
-    console.log('🔍 [REFUSAL] Stvarna vrednost iz DOM-a:', actualRefusalReason);
-    
-    if (actualRefusalReason.trim()) {
-      customerRefusalMutation.mutate({ serviceId: service.id, reason: actualRefusalReason });
+  const submitCustomerRefusal = () => {
+    if (refusalReason.trim()) {
+      customerRefusalMutation.mutate({ serviceId: service.id, reason: refusalReason });
       setShowRefusalDialog(false);
       setRefusalReason('');
     }
@@ -520,37 +509,8 @@ function ServiceCard({ service }: { service: Service }) {
     }
   };
 
-  const submitServiceCompletion = async () => {
-    console.log('🔄 [SUBMIT] Započinjem podnošenje servisa - DELAY za glasovni unos...');
-    
-    // CRITICAL FIX: Dodaj delay za glasovni unos da se završi
-    // Android glasovni unos ima latenciju 200-800ms pre nego što se state ažurira
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    console.log('🔄 [SUBMIT] Delay završen - Čitam stvarne vrednosti iz DOM-a...');
-    
-    // CRITICAL FIX: Čitaj stvarne vrednosti iz textarea DOM elemenata
-    // Glasovni unos može biti u DOM-u ali ne u state-u zbog async delay-a
-    const technicianNotesElement = document.getElementById('technician-notes') as HTMLTextAreaElement;
-    const workPerformedElement = document.getElementById('work-performed') as HTMLTextAreaElement;
-    const usedPartsElement = document.getElementById('used-parts') as HTMLTextAreaElement;
-    const machineNotesElement = document.getElementById('machine-notes') as HTMLTextAreaElement;
-    
-    // Pročitaj stvarne vrednosti iz DOM-a
-    const actualTechnicianNotes = technicianNotesElement?.value || completionData.technicianNotes;
-    const actualWorkPerformed = workPerformedElement?.value || completionData.workPerformed;
-    const actualUsedParts = usedPartsElement?.value || completionData.usedParts;
-    const actualMachineNotes = machineNotesElement?.value || completionData.machineNotes;
-    
-    console.log('🔍 [SUBMIT] Stvarne vrednosti iz DOM-a:', {
-      technicianNotes: actualTechnicianNotes,
-      workPerformed: actualWorkPerformed,
-      usedParts: actualUsedParts,
-      machineNotes: actualMachineNotes
-    });
-    
-    // Validacija sa stvarnim vrednostima
-    if (!actualTechnicianNotes.trim() || !actualWorkPerformed.trim()) {
+  const submitServiceCompletion = () => {
+    if (!completionData.technicianNotes.trim() || !completionData.workPerformed.trim()) {
       toast({
         title: "Greška",
         description: "Molimo unesite napomenu servisera i opis izvršenog rada",
@@ -559,21 +519,12 @@ function ServiceCard({ service }: { service: Service }) {
       return;
     }
 
-    // Kreiraj objekat sa stvarnim vrednostima iz DOM-a
-    const finalCompletionData = {
-      ...completionData,
-      technicianNotes: actualTechnicianNotes,
-      workPerformed: actualWorkPerformed,
-      usedParts: actualUsedParts,
-      machineNotes: actualMachineNotes
-    };
-    
-    console.log('📤 [SUBMIT] Šaljem finalne podatke na API:', finalCompletionData);
+    // Sending completion data
     
     // Call the service completion API with all the data
     apiRequest(`/api/services/${service.id}/complete`, {
       method: 'POST',
-      body: JSON.stringify(finalCompletionData)
+      body: JSON.stringify(completionData)
     }).then(() => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-services'] });
       toast({
@@ -604,19 +555,8 @@ function ServiceCard({ service }: { service: Service }) {
     });
   };
 
-  const submitReturnDevice = async () => {
-    console.log('🔄 [RETURN] Započinjem vraćanje aparata - DELAY za glasovni unos...');
-    
-    // CRITICAL FIX: Dodaj delay za glasovni unos (povećano sa 600ms na 800ms)
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // CRITICAL FIX: Čitaj stvarnu vrednost iz DOM-a
-    const returnNotesElement = document.getElementById('return-notes') as HTMLTextAreaElement;
-    const actualReturnNotes = returnNotesElement?.value || returnNotes;
-    
-    console.log('🔍 [RETURN] Stvarna vrednost iz DOM-a:', actualReturnNotes);
-    
-    if (!actualReturnNotes.trim()) {
+  const submitReturnDevice = () => {
+    if (!returnNotes.trim()) {
       toast({
         title: "Greška",
         description: "Molimo unesite napomenu o vraćanju aparata",
@@ -625,31 +565,11 @@ function ServiceCard({ service }: { service: Service }) {
       return;
     }
 
-    returnDeviceMutation.mutate({ serviceId: service.id, returnNotes: actualReturnNotes });
+    returnDeviceMutation.mutate({ serviceId: service.id, returnNotes });
   };
 
-  const submitRepairFailed = async () => {
-    console.log('🔄 [FAILED] Započinjem neuspešan servis - DELAY za glasovni unos...');
-    
-    // CRITICAL FIX: Dodaj delay za glasovni unos (povećano sa 600ms na 800ms)
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // CRITICAL FIX: Čitaj stvarne vrednosti iz DOM-a
-    const failureReasonElement = document.getElementById('failure-reason') as HTMLTextAreaElement;
-    const replacedPartsElement = document.getElementById('replaced-parts') as HTMLTextAreaElement;
-    const additionalNotesElement = document.getElementById('additional-notes') as HTMLTextAreaElement;
-    
-    const actualReason = failureReasonElement?.value || repairFailureData.reason;
-    const actualReplacedParts = replacedPartsElement?.value || repairFailureData.replacedParts;
-    const actualAdditionalNotes = additionalNotesElement?.value || repairFailureData.additionalNotes;
-    
-    console.log('🔍 [FAILED] Stvarne vrednosti iz DOM-a:', {
-      reason: actualReason,
-      replacedParts: actualReplacedParts,
-      additionalNotes: actualAdditionalNotes
-    });
-    
-    if (!actualReason.trim()) {
+  const submitRepairFailed = () => {
+    if (!repairFailureData.reason.trim()) {
       toast({
         title: "Greška",
         description: "Molimo unesite razlog neuspešnog servisa",
@@ -660,9 +580,9 @@ function ServiceCard({ service }: { service: Service }) {
 
     repairFailedMutation.mutate({
       serviceId: service.id,
-      reason: actualReason,
-      replacedParts: actualReplacedParts,
-      additionalNotes: actualAdditionalNotes
+      reason: repairFailureData.reason,
+      replacedParts: repairFailureData.replacedParts,
+      additionalNotes: repairFailureData.additionalNotes
     });
   };
   
