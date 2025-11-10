@@ -579,6 +579,39 @@ export function registerSparePartsRoutes(app: Express) {
         return res.status(400).json({ error: "Nevažeći dobavljač" });
       }
 
+      // Učitaj sve podatke o servisu, aparatu, klijentu, tehničaru
+      let serviceData: any = null;
+      let clientData: any = null;
+      let applianceData: any = null;
+      let technicianData: any = null;
+      let manufacturerData: any = null;
+      let categoryData: any = null;
+
+      try {
+        if (existingOrder.serviceId) {
+          serviceData = await storage.getService(existingOrder.serviceId);
+          if (serviceData) {
+            if (serviceData.clientId) {
+              clientData = await storage.getClient(serviceData.clientId);
+            }
+            if (serviceData.applianceId) {
+              applianceData = await storage.getAppliance(serviceData.applianceId);
+              if (applianceData?.manufacturerId) {
+                manufacturerData = await storage.getManufacturer(applianceData.manufacturerId);
+              }
+              if (applianceData?.categoryId) {
+                categoryData = await storage.getCategory(applianceData.categoryId);
+              }
+            }
+            if (serviceData.technicianId) {
+              technicianData = await storage.getUser(serviceData.technicianId);
+            }
+          }
+        }
+      } catch (dataError) {
+        logger.error("Greška pri učitavanju dodatnih podataka:", dataError);
+      }
+
       // Ažuriraj order - dodeli dobavljaču
       const updatedOrder = await storage.updateSparePartOrderStatus(orderId, {
         status: 'assigned_to_supplier' as any,
@@ -590,26 +623,71 @@ export function registerSparePartsRoutes(app: Express) {
           : `${existingOrder.adminNotes || ''}\n\nDodeljen dobavljaču ${supplier.name} (${supplier.contactPerson || 'N/A'}) - ${new Date().toLocaleString('sr-RS')}`
       });
 
-      // Pošalji email notifikaciju dobavljaču
+      // Pošalji email notifikaciju dobavljaču sa svim podacima
       try {
         if (supplier.email) {
+          const emailHtml = `
+            <h2>Poštovani ${supplier.contactPerson || supplier.name},</h2>
+            <p>Dodeljen vam je rezervni deo za obradu:</p>
+            
+            <h3>📦 Podaci o delu:</h3>
+            <ul>
+              <li><strong>Naziv dela:</strong> ${existingOrder.partName}</li>
+              <li><strong>Kataloški broj:</strong> ${existingOrder.partNumber || 'N/A'}</li>
+              <li><strong>Količina:</strong> ${existingOrder.quantity}</li>
+              <li><strong>Opis:</strong> ${existingOrder.description || 'N/A'}</li>
+              ${notes ? `<li><strong>Napomena:</strong> ${notes}</li>` : ''}
+            </ul>
+
+            ${applianceData ? `
+            <h3>🏠 Podaci o aparatu:</h3>
+            <ul>
+              <li><strong>Tip aparata:</strong> ${categoryData?.name || 'N/A'}</li>
+              <li><strong>Proizvođač:</strong> ${manufacturerData?.name || 'N/A'}</li>
+              <li><strong>Model:</strong> ${applianceData.model || 'N/A'}</li>
+              <li><strong>Serijski broj:</strong> ${applianceData.serialNumber || 'N/A'}</li>
+              ${applianceData.catalogNumber ? `<li><strong>Kataloški broj aparata:</strong> ${applianceData.catalogNumber}</li>` : ''}
+            </ul>
+            ` : ''}
+
+            ${clientData ? `
+            <h3>👤 Podaci o klijentu:</h3>
+            <ul>
+              <li><strong>Ime:</strong> ${clientData.firstName} ${clientData.lastName}</li>
+              <li><strong>Telefon:</strong> ${clientData.phone || 'N/A'}</li>
+              <li><strong>Adresa:</strong> ${clientData.address || 'N/A'}, ${clientData.city || 'N/A'}</li>
+            </ul>
+            ` : ''}
+
+            ${serviceData ? `
+            <h3>🔧 Podaci o servisu:</h3>
+            <ul>
+              <li><strong>Servis ID:</strong> #${serviceData.id}</li>
+              <li><strong>Status:</strong> ${serviceData.status}</li>
+              <li><strong>Datum prijema:</strong> ${serviceData.dateReceived ? new Date(serviceData.dateReceived).toLocaleDateString('sr-RS') : 'N/A'}</li>
+              ${serviceData.problemDescription ? `<li><strong>Opis kvara:</strong> ${serviceData.problemDescription}</li>` : ''}
+              ${technicianData ? `<li><strong>Tehničar:</strong> ${technicianData.fullName} (${technicianData.phone || 'N/A'})</li>` : ''}
+            </ul>
+            ` : ''}
+
+            <hr style="margin: 20px 0; border: 1px solid #ccc;">
+            <p><strong>Molimo vas da proverite dostupnost i rok isporuke ovog dela.</strong></p>
+            <p>Za dodatne informacije, kontaktirajte naš tim na:</p>
+            <ul>
+              <li>Email: servis@frigosistemtodosijevic.com</li>
+              <li>Telefon: +382 67 123 456</li>
+            </ul>
+            
+            <p>Srdačan pozdrav,<br><strong>Frigo Sistem Todosijević</strong></p>
+          `;
+
           await emailService.sendEmail({
             to: supplier.email,
-            subject: `Dodeljen rezervni deo - ${existingOrder.partName}`,
-            html: `
-              <h2>Poštovani ${supplier.contactPerson || supplier.name},</h2>
-              <p>Dodeljen vam je rezervni deo za obradu:</p>
-              <ul>
-                <li><strong>Naziv dela:</strong> ${existingOrder.partName}</li>
-                <li><strong>Kataloški broj:</strong> ${existingOrder.partNumber || 'N/A'}</li>
-                <li><strong>Količina:</strong> ${existingOrder.quantity}</li>
-                <li><strong>Opis:</strong> ${existingOrder.description || 'N/A'}</li>
-                ${notes ? `<li><strong>Napomena:</strong> ${notes}</li>` : ''}
-              </ul>
-              <p>Molimo vas da kontaktirate naš tim za dalje detalje.</p>
-              <p>Srdačan pozdrav,<br>Frigo Sistem Todosijević</p>
-            `
+            subject: `Zahtev za rezervni deo - ${existingOrder.partName} ${applianceData ? `(${manufacturerData?.name || ''} ${applianceData.model || ''})` : ''}`,
+            html: emailHtml
           });
+
+          logger.info(`Email poslat dobavljaču ${supplier.name} (${supplier.email}) za deo: ${existingOrder.partName}`);
         }
       } catch (emailError) {
         logger.error("Greška pri slanju email-a dobavljaču:", emailError);
