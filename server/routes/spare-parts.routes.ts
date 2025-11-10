@@ -557,7 +557,76 @@ export function registerSparePartsRoutes(app: Express) {
     }
   });
 
-  // 9. Admin dodeljuje rezervni deo poslovnom partneru (Assign part to business partner)
+  // 9a. Admin dodeljuje rezervni deo dobavljaču (Assign part to supplier)
+  app.patch("/api/admin/spare-parts/:id/assign-to-supplier", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { supplierId, notes } = req.body;
+
+      if (!supplierId) {
+        return res.status(400).json({ error: "ID dobavljača je obavezan" });
+      }
+
+      // Proveri da li order postoji
+      const existingOrder = await storage.getSparePartOrder(orderId);
+      if (!existingOrder) {
+        return res.status(404).json({ error: "Porudžbina rezervnog dela nije pronađena" });
+      }
+
+      // Proveri da li dobavljač postoji
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier) {
+        return res.status(400).json({ error: "Nevažeći dobavljač" });
+      }
+
+      // Ažuriraj order - dodeli dobavljaču
+      const updatedOrder = await storage.updateSparePartOrderStatus(orderId, {
+        status: 'assigned_to_supplier' as any,
+        assignedToSupplierId: supplierId,
+        assignedAt: new Date(),
+        assignedBy: req.user!.id,
+        adminNotes: notes 
+          ? `${existingOrder.adminNotes || ''}\n\nDodeljen dobavljaču ${supplier.name} (${supplier.contactPerson || 'N/A'}): ${notes}`
+          : `${existingOrder.adminNotes || ''}\n\nDodeljen dobavljaču ${supplier.name} (${supplier.contactPerson || 'N/A'}) - ${new Date().toLocaleString('sr-RS')}`
+      });
+
+      // Pošalji email notifikaciju dobavljaču
+      try {
+        if (supplier.email) {
+          await emailService.sendEmail({
+            to: supplier.email,
+            subject: `Dodeljen rezervni deo - ${existingOrder.partName}`,
+            html: `
+              <h2>Poštovani ${supplier.contactPerson || supplier.name},</h2>
+              <p>Dodeljen vam je rezervni deo za obradu:</p>
+              <ul>
+                <li><strong>Naziv dela:</strong> ${existingOrder.partName}</li>
+                <li><strong>Kataloški broj:</strong> ${existingOrder.partNumber || 'N/A'}</li>
+                <li><strong>Količina:</strong> ${existingOrder.quantity}</li>
+                <li><strong>Opis:</strong> ${existingOrder.description || 'N/A'}</li>
+                ${notes ? `<li><strong>Napomena:</strong> ${notes}</li>` : ''}
+              </ul>
+              <p>Molimo vas da kontaktirate naš tim za dalje detalje.</p>
+              <p>Srdačan pozdrav,<br>Frigo Sistem Todosijević</p>
+            `
+          });
+        }
+      } catch (emailError) {
+        logger.error("Greška pri slanju email-a dobavljaču:", emailError);
+      }
+
+      res.json({
+        success: true,
+        message: `Rezervni deo je uspešno dodeljen dobavljaču ${supplier.name}`,
+        order: updatedOrder
+      });
+    } catch (error) {
+      logger.error("Greška pri dodeljivanju dela dobavljaču:", error);
+      res.status(500).json({ error: "Greška pri dodeljivanju rezervnog dela" });
+    }
+  });
+
+  // 9b. Admin dodeljuje rezervni deo poslovnom partneru (Assign part to business partner) - STARI ENDPOINT
   app.patch("/api/admin/spare-parts/:id/assign-to-partner", jwtAuth, requireRole(['admin']), async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
@@ -581,7 +650,7 @@ export function registerSparePartsRoutes(app: Express) {
 
       // Ažuriraj order - dodeli poslovnom partneru
       const updatedOrder = await storage.updateSparePartOrderStatus(orderId, {
-        status: 'assigned_to_partner',
+        status: 'assigned_to_partner' as any,
         assignedToPartnerId: partnerId,
         assignedAt: new Date(),
         assignedBy: req.user!.id,
