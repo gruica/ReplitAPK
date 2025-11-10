@@ -210,6 +210,15 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
 
     const file = files[0];
     
+    // CRITICAL FIX: Reset input value immediately to prevent double upload
+    event.target.value = '';
+    
+    // Prevent double upload - if already uploading, ignore
+    if (isUploading || uploadMutation.isPending) {
+      logger.log('[UPLOAD GUARD] Upload already in progress, ignoring duplicate request');
+      return;
+    }
+    
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
@@ -231,6 +240,7 @@ export function MobileServicePhotos({ serviceId, readOnly = false, showUpload = 
     }
 
     setIsUploading(true);
+    logger.log('[UPLOAD START] Starting upload for file:', file.name);
 
     // If offline, save to offline cache
     if (!isOnline) {
