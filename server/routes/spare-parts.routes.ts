@@ -700,7 +700,12 @@ export function registerSparePartsRoutes(app: Express) {
       });
     } catch (error) {
       logger.error("Greška pri dodeljivanju dela dobavljaču:", error);
-      res.status(500).json({ error: "Greška pri dodeljivanju rezervnog dela" });
+      const errorMessage = error instanceof Error ? error.message : 'Nepoznata greška';
+      logger.error("Detalji greške:", errorMessage);
+      res.status(500).json({ 
+        error: "Greška pri dodeljivanju rezervnog dela",
+        details: errorMessage
+      });
     }
   });
 
@@ -904,7 +909,7 @@ export function registerSparePartsRoutes(app: Express) {
   // 10. Dohvati rezervne delove po statusu (Get parts by status)
   app.get("/api/admin/spare-parts/status/:status", jwtAuth, requireRole(['admin']), async (req, res) => {
     try {
-      const status = req.params.status;
+      const status = req.params.status as any; // Cast zbog TypeScript-a
       const orders = await storage.getSparePartOrdersByStatus(status);
       
       res.json(orders);
