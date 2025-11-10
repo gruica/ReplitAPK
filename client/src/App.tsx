@@ -56,7 +56,7 @@ const CustomerProfile = lazy(() => import("@/pages/customer/profile"));
 const CustomerServices = lazy(() => import("@/pages/customer/services"));
 
 // PERFORMANCE BOOST: Lazy load supplier pages
-const SupplierDashboard = lazy(() => import("@/pages/supplier"));
+const SupplierDashboard = lazy(() => import("@/pages/supplier/assigned-parts"));
 
 // PERFORMANCE BOOST: Lazy load business partner pages  
 const BusinessDashboard = lazy(() => import("@/pages/business"));
