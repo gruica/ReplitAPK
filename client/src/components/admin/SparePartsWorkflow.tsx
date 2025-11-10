@@ -587,6 +587,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
             size="sm" 
             onClick={() => onAction(order, 'approve-pending')}
             className="flex items-center gap-1"
+            data-testid={`button-approve-${order.id}`}
           >
             <ArrowRight className="w-3 h-3" />
             Odobri zahtev
@@ -598,6 +599,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
             size="sm" 
             onClick={() => onAction(order, 'order')}
             className="flex items-center gap-1"
+            data-testid={`button-order-${order.id}`}
           >
             <ShoppingCart className="w-3 h-3" />
             Poruči
@@ -610,6 +612,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
             variant="outline"
             onClick={() => onAction(order, 'receive')}
             className="flex items-center gap-1"
+            data-testid={`button-receive-${order.id}`}
           >
             <Truck className="w-3 h-3" />
             Potvrdi prijem
@@ -621,6 +624,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
             size="sm" 
             onClick={() => onAction(order, 'make-available')}
             className="flex items-center gap-1"
+            data-testid={`button-make-available-${order.id}`}
           >
             <CheckCircle className="w-3 h-3" />
             U dostupno
@@ -633,6 +637,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
             variant="outline"
             onClick={() => onAction(order, 'consume')}
             className="flex items-center gap-1"
+            data-testid={`button-consume-${order.id}`}
           >
             <CheckCircle className="w-3 h-3" />
             Potrošeno
@@ -644,7 +649,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
+    <Card className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500 flex flex-col min-h-[500px]">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="flex-1">
@@ -657,7 +662,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 space-y-4">
+      <CardContent className="pt-0 space-y-4 flex-1 flex flex-col">
         {/* OSNVNE INFORMACIJE */}
         <div className="flex items-center justify-between bg-slate-50 rounded-lg p-3">
           <div className="flex items-center gap-3">
@@ -756,7 +761,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
         )}
 
         {/* FOOTER - DATUM I ACTION */}
-        <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+        <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-auto">
           <div className="text-xs text-gray-500">
             <span className="bg-gray-100 px-2 py-1 rounded">
               📅 {new Date(order.createdAt).toLocaleDateString('sr-RS')}
@@ -768,6 +773,7 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
               size="sm"
               onClick={() => onShare(order)}
               className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+              data-testid={`button-share-${order.id}`}
             >
               <Share2 className="w-3 h-3 mr-1" />
               Podijeli
