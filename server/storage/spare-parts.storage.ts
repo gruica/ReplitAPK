@@ -288,6 +288,21 @@ class SparePartsStorage {
     }
   }
 
+  async getSparePartOrdersByAssignedPartner(partnerId: number): Promise<SparePartOrder[]> {
+    try {
+      const orders = await db
+        .select()
+        .from(sparePartOrders)
+        .where(eq(sparePartOrders.assignedToPartnerId, partnerId))
+        .orderBy(desc(sparePartOrders.createdAt));
+      
+      return orders;
+    } catch (error) {
+      console.error('Greška pri dohvatanju delova dodeljenih partneru:', error);
+      throw error;
+    }
+  }
+
   async getPendingSparePartOrders(): Promise<SparePartOrder[]> {
     try {
       const result = await pool.query(`

@@ -216,6 +216,7 @@ export interface IStorage {
   getSparePartOrdersByService(serviceId: number): Promise<SparePartOrder[]>;
   getSparePartOrdersByTechnician(technicianId: number): Promise<SparePartOrder[]>;
   getSparePartOrdersByStatus(status: SparePartStatus): Promise<SparePartOrder[]>;
+  getSparePartOrdersByAssignedPartner(partnerId: number): Promise<SparePartOrder[]>;
   getPendingSparePartOrders(): Promise<SparePartOrder[]>;
   getAllRequestsSparePartOrders(): Promise<SparePartOrder[]>; // Kombinuje 'pending' i 'requested'
   createSparePartOrder(order: InsertSparePartOrder): Promise<SparePartOrder>;
@@ -1964,6 +1965,10 @@ export class DatabaseStorage implements IStorage {
 
   async getSparePartOrdersByStatus(status: SparePartStatus): Promise<any[]> {
     return sparePartsStorage.getSparePartOrdersByStatus(status);
+  }
+
+  async getSparePartOrdersByAssignedPartner(partnerId: number): Promise<SparePartOrder[]> {
+    return sparePartsStorage.getSparePartOrdersByAssignedPartner(partnerId);
   }
 
   async getPendingSparePartOrders(): Promise<SparePartOrder[]> {

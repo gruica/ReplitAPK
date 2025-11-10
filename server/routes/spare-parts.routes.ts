@@ -557,7 +557,76 @@ export function registerSparePartsRoutes(app: Express) {
     }
   });
 
-  // 9. Dohvati rezervne delove po statusu (Get parts by status)
+  // 9. Admin dodeljuje rezervni deo poslovnom partneru (Assign part to business partner)
+  app.patch("/api/admin/spare-parts/:id/assign-to-partner", jwtAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { partnerId, notes } = req.body;
+
+      if (!partnerId) {
+        return res.status(400).json({ error: "ID poslovnog partnera je obavezan" });
+      }
+
+      // Proveri da li order postoji
+      const existingOrder = await storage.getSparePartOrder(orderId);
+      if (!existingOrder) {
+        return res.status(404).json({ error: "Porudžbina rezervnog dela nije pronađena" });
+      }
+
+      // Proveri da li poslovni partner postoji
+      const partner = await storage.getUser(partnerId);
+      if (!partner || (partner.role !== 'business_partner' && partner.role !== 'business')) {
+        return res.status(400).json({ error: "Nevažeći poslovni partner" });
+      }
+
+      // Ažuriraj order - dodeli poslovnom partneru
+      const updatedOrder = await storage.updateSparePartOrderStatus(orderId, {
+        status: 'assigned_to_partner',
+        assignedToPartnerId: partnerId,
+        assignedAt: new Date(),
+        assignedBy: req.user!.id,
+        adminNotes: notes 
+          ? `${existingOrder.adminNotes || ''}\n\nDodeljen partneru ${partner.fullName} (${partner.companyName || 'N/A'}): ${notes}`
+          : `${existingOrder.adminNotes || ''}\n\nDodeljen partneru ${partner.fullName} (${partner.companyName || 'N/A'}) - ${new Date().toLocaleString('sr-RS')}`
+      });
+
+      // Pošalji email notifikaciju poslovnom partneru
+      try {
+        if (partner.email) {
+          await emailService.sendEmail({
+            to: partner.email,
+            subject: `Dodeljen rezervni deo - ${existingOrder.partName}`,
+            html: `
+              <h2>Poštovani ${partner.fullName},</h2>
+              <p>Dodeljen vam je rezervni deo za obradu:</p>
+              <ul>
+                <li><strong>Naziv dela:</strong> ${existingOrder.partName}</li>
+                <li><strong>Kataloški broj:</strong> ${existingOrder.partNumber || 'N/A'}</li>
+                <li><strong>Količina:</strong> ${existingOrder.quantity}</li>
+                <li><strong>Opis:</strong> ${existingOrder.description || 'N/A'}</li>
+                ${notes ? `<li><strong>Napomena:</strong> ${notes}</li>` : ''}
+              </ul>
+              <p>Molimo vas da se prijavite u sistem kako biste videli detalje i nastavili sa obradom.</p>
+              <p>Srdačan pozdrav,<br>Frigo Sistem Todosijević</p>
+            `
+          });
+        }
+      } catch (emailError) {
+        logger.error("Greška pri slanju email-a partneru:", emailError);
+      }
+
+      res.json({
+        success: true,
+        message: `Rezervni deo je uspešno dodeljen poslovnom partneru ${partner.fullName}`,
+        order: updatedOrder
+      });
+    } catch (error) {
+      logger.error("Greška pri dodeljivanju dela poslovnom partneru:", error);
+      res.status(500).json({ error: "Greška pri dodeljivanju rezervnog dela" });
+    }
+  });
+
+  // 10. Dohvati rezervne delove po statusu (Get parts by status)
   app.get("/api/admin/spare-parts/status/:status", jwtAuth, requireRole(['admin']), async (req, res) => {
     try {
       const status = req.params.status;
@@ -836,5 +905,77 @@ export function registerSparePartsRoutes(app: Express) {
     }
   });
 
-  console.log("✅ Spare Parts routes registered (with supplier integration)");
+  // ===== BUSINESS PARTNER ENDPOINTS =====
+
+  /**
+   * GET endpoint za poslovne partnere da vide svoje dodeljene rezervne delove
+   */
+  app.get("/api/business/spare-parts/assigned", jwtAuth, async (req, res) => {
+    try {
+      if (!req.user || (req.user.role !== 'business_partner' && req.user.role !== 'business' && req.user.role !== 'admin')) {
+        return res.status(403).json({ error: "Samo poslovni partneri mogu pristupiti ovim podacima" });
+      }
+
+      const partnerId = req.user.id;
+      
+      // Dohvati sve delove dodeljene ovom partneru
+      const assignedParts = await storage.getSparePartOrdersByAssignedPartner(partnerId);
+      
+      res.json({
+        success: true,
+        parts: assignedParts,
+        meta: {
+          count: assignedParts.length,
+          partnerId,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      logger.error("Greška pri dohvatanju dodeljenih delova za partnera:", error);
+      res.status(500).json({ error: "Greška pri dohvatanju dodeljenih rezervnih delova" });
+    }
+  });
+
+  /**
+   * PATCH endpoint za poslovne partnere da ažuriraju status dodeljenog dela
+   */
+  app.patch("/api/business/spare-parts/:id/update-status", jwtAuth, async (req, res) => {
+    try {
+      if (!req.user || (req.user.role !== 'business_partner' && req.user.role !== 'business')) {
+        return res.status(403).json({ error: "Samo poslovni partneri mogu ažurirati status" });
+      }
+
+      const orderId = parseInt(req.params.id);
+      const { status, notes } = req.body;
+
+      // Proveri da li order postoji i da li je dodeljen ovom partneru
+      const existingOrder = await storage.getSparePartOrder(orderId);
+      if (!existingOrder) {
+        return res.status(404).json({ error: "Porudžbina rezervnog dela nije pronađena" });
+      }
+
+      if (existingOrder.assignedToPartnerId !== req.user.id) {
+        return res.status(403).json({ error: "Nemate pristup ovom rezervnom delu" });
+      }
+
+      // Ažuriraj status
+      const updatedOrder = await storage.updateSparePartOrderStatus(orderId, {
+        status: status || 'partner_processing',
+        adminNotes: notes 
+          ? `${existingOrder.adminNotes || ''}\n\n[${req.user.fullName}]: ${notes} - ${new Date().toLocaleString('sr-RS')}`
+          : existingOrder.adminNotes
+      });
+
+      res.json({
+        success: true,
+        message: "Status rezervnog dela je uspešno ažuriran",
+        order: updatedOrder
+      });
+    } catch (error) {
+      logger.error("Greška pri ažuriranju statusa od strane partnera:", error);
+      res.status(500).json({ error: "Greška pri ažuriranju statusa rezervnog dela" });
+    }
+  });
+
+  console.log("✅ Spare Parts routes registered (with supplier integration & business partner features)");
 }

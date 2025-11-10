@@ -21,7 +21,9 @@ export const sparePartStatusEnum = z.enum([
   "admin_ordered",
   "waiting_delivery",
   "available",
-  "consumed"
+  "consumed",
+  "assigned_to_partner",
+  "partner_processing"
 ]);
 
 export const sparePartWarrantyStatusEnum = z.enum([
@@ -58,11 +60,15 @@ export const sparePartOrders = pgTable("spare_part_orders", {
   expectedDelivery: timestamp("expected_delivery"),
   receivedDate: timestamp("received_date"),
   adminNotes: text("admin_notes"),
+  assignedToPartnerId: integer("assigned_to_partner_id"),
+  assignedAt: timestamp("assigned_at"),
+  assignedBy: integer("assigned_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
   serviceIdIdx: index("spare_part_orders_service_id_idx").on(table.serviceId),
   statusIdx: index("spare_part_orders_status_idx").on(table.status),
+  assignedToPartnerIdx: index("spare_part_orders_assigned_to_partner_idx").on(table.assignedToPartnerId),
 }));
 
 export const insertSparePartOrderSchema = createInsertSchema(sparePartOrders).pick({
@@ -82,6 +88,9 @@ export const insertSparePartOrderSchema = createInsertSchema(sparePartOrders).pi
   expectedDelivery: true,
   receivedDate: true,
   adminNotes: true,
+  assignedToPartnerId: true,
+  assignedAt: true,
+  assignedBy: true,
 }).extend({
   serviceId: z.number().int().positive("ID servisa mora biti pozitivan broj").optional(),
   technicianId: z.number().int().positive("ID servisera mora biti pozitivan broj").optional(),
@@ -97,6 +106,8 @@ export const insertSparePartOrderSchema = createInsertSchema(sparePartOrders).pi
   actualCost: z.string().max(50, "Stvarna cena je predugačka").or(z.literal("")).optional(),
   supplierName: z.string().max(100, "Naziv dobavljača je predugačak").or(z.literal("")).optional(),
   adminNotes: z.string().max(1000, "Napomene su predugačke").or(z.literal("")).optional(),
+  assignedToPartnerId: z.number().int().positive("ID poslovnog partnera mora biti pozitivan broj").optional(),
+  assignedBy: z.number().int().positive("ID admina mora biti pozitivan broj").optional(),
   isDelivered: z.boolean().default(false).optional(),
   deliveryConfirmedBy: z.number().int().positive().optional(),
   autoRemoveAfterDelivery: z.boolean().default(true).optional(),
