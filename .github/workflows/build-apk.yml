@@ -73,10 +73,31 @@ jobs:
       run: |
         cd android
         echo "🏗️ Kompajliranje i potpisivanje APK-a..."
-        for i in 1 2 3; do
-          ./gradlew assembleRelease --no-daemon --stacktrace && break || sleep 15
-        done
+        echo "KEYSTORE_ALIAS: ${KEYSTORE_ALIAS:0:3}***"
+        echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
+        ls -lh app/android-release.keystore
+        
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=app/android-release.keystore \
+          -Pandroid.injected.signing.store.password="${KEYSTORE_PASSWORD}" \
+          -Pandroid.injected.signing.key.alias="${KEYSTORE_ALIAS}" \
+          -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}" \
+          --no-daemon --stacktrace --info 2>&1 | tail -150
+        
+        echo ""
+        echo "📁 Proveravanje output foldera..."
+        ls -lR app/build/outputs/apk/ || echo "Folder ne postoji"
+        
+        if [ ! -f "app/build/outputs/apk/release/app-release.apk" ]; then
+          echo ""
+          echo "❌ KRITIČNA GREŠKA: APK fajl nije kreiran!"
+          echo "Build output gore pokazuje zašto je build fail-ovao."
+          exit 1
+        fi
+        
+        echo ""
         echo "✅ APK uspešno napravljen i potpisan!"
+        ls -lh app/build/outputs/apk/release/app-release.apk
 
     - name: Verify APK signature
       run: |
