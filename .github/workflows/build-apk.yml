@@ -73,10 +73,17 @@ jobs:
       run: |
         cd android
         echo "🏗️ Kompajliranje i potpisivanje APK-a..."
-        for i in 1 2 3; do
-          ./gradlew assembleRelease --no-daemon --stacktrace && break || sleep 15
-        done
+        ./gradlew assembleRelease --no-daemon --stacktrace
+        
+        # Proveri da li je APK kreiran
+        if [ ! -f "app/build/outputs/apk/release/app-release.apk" ]; then
+          echo "❌ ERROR: APK fajl nije kreiran!"
+          echo "Build je failovao. Proverite greške iznad."
+          exit 1
+        fi
+        
         echo "✅ APK uspešno napravljen i potpisan!"
+        ls -lh app/build/outputs/apk/release/app-release.apk
 
     - name: Verify APK signature
       run: |
