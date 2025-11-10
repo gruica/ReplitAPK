@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Package, Clock, CheckCircle, ArrowRight, Truck, ShoppingCart, Wrench, User, Phone, MapPin, Settings, Share2 } from 'lucide-react';
+import { Package, Clock, CheckCircle, ArrowRight, Truck, ShoppingCart, Wrench, User, Phone, MapPin, Settings, Share2, Users } from 'lucide-react';
 import { shareSparePartOrder } from '@/utils/shareUtils';
 import { logger } from '@/utils/logger';
 
@@ -72,8 +73,114 @@ interface SparePartOrder {
 
 interface WorkflowActionDialogProps {
   order: SparePartOrder;
-  action: 'order' | 'receive' | 'make-available' | 'consume' | 'approve-pending';
+  action: 'order' | 'receive' | 'make-available' | 'consume' | 'approve-pending' | 'assign-to-partner';
   onClose: () => void;
+}
+
+interface BusinessPartner {
+  id: number;
+  fullName: string;
+  email: string;
+  phone?: string;
+  companyName?: string;
+}
+
+function AssignToPartnerForm({ order, onClose }: { order: SparePartOrder; onClose: () => void }) {
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('');
+  const [notes, setNotes] = useState('');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: partners, isLoading: partnersLoading } = useQuery<BusinessPartner[]>({
+    queryKey: ['/api/admin/business-partners']
+  });
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPartnerId) {
+        throw new Error('Morate izabrati poslovnog partnera');
+      }
+      return await apiRequest(`/api/admin/spare-parts/${order.id}/assign-to-partner`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          partnerId: parseInt(selectedPartnerId),
+          notes
+        })
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Uspešno dodeljeno",
+        description: "Rezervni deo je uspešno dodeljen poslovnom partneru",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/spare-parts/status'] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Greška",
+        description: error.message || "Greška pri dodeljivanju dela partneru",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutation.mutate();
+  };
+
+  if (partnersLoading) {
+    return <div className="p-4 text-center">Učitavanje poslovnih partnera...</div>;
+  }
+
+  if (!partners || partners.length === 0) {
+    return (
+      <div className="p-4 text-center text-muted-foreground">
+        Nema dostupnih poslovnih partnera. Prvo dodajte poslovne partnere u sistemu.
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="partner">Poslovni partner *</Label>
+        <Select value={selectedPartnerId} onValueChange={setSelectedPartnerId} required>
+          <SelectTrigger data-testid="select-business-partner">
+            <SelectValue placeholder="Izaberite poslovnog partnera" />
+          </SelectTrigger>
+          <SelectContent>
+            {partners.map((partner) => (
+              <SelectItem key={partner.id} value={partner.id.toString()}>
+                {partner.companyName || partner.fullName} {partner.email && `(${partner.email})`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="notes">Napomene</Label>
+        <Textarea
+          id="notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          placeholder="Dodatne napomene za poslovnog partnera..."
+          data-testid="textarea-assign-notes"
+        />
+      </div>
+      <div className="bg-blue-50 p-3 rounded-md text-sm">
+        <p className="font-medium mb-1">📋 Informacije o delu:</p>
+        <p><strong>Naziv:</strong> {order.partName}</p>
+        {order.partNumber && <p><strong>Broj dela:</strong> {order.partNumber}</p>}
+        <p><strong>Količina:</strong> {order.quantity}</p>
+      </div>
+      <Button type="submit" disabled={mutation.isPending || !selectedPartnerId} className="w-full" data-testid="button-confirm-assign">
+        {mutation.isPending ? 'Dodeljujem...' : 'Dodeli poslovnom partneru'}
+      </Button>
+    </form>
+  );
 }
 
 function WorkflowActionDialog({ order, action, onClose }: WorkflowActionDialogProps) {
@@ -632,16 +739,28 @@ function SparePartCardEnhanced({ order, onAction, onShare }: { order: SparePartO
         );
       case 'available':
         return (
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={() => onAction(order, 'consume')}
-            className="flex items-center gap-1"
-            data-testid={`button-consume-${order.id}`}
-          >
-            <CheckCircle className="w-3 h-3" />
-            Potrošeno
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onAction(order, 'assign-to-partner')}
+              className="flex items-center gap-1 bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
+              data-testid={`button-assign-partner-${order.id}`}
+            >
+              <Users className="w-3 h-3" />
+              Dodeli partneru
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onAction(order, 'consume')}
+              className="flex items-center gap-1"
+              data-testid={`button-consume-${order.id}`}
+            >
+              <CheckCircle className="w-3 h-3" />
+              Potrošeno
+            </Button>
+          </div>
         );
       default:
         return null;
@@ -798,7 +917,8 @@ function WorkflowActionDialogEnhanced({ order, action, onClose }: WorkflowAction
         order: `/api/admin/spare-parts/${order.id}/order`,
         receive: `/api/admin/spare-parts/${order.id}/receive`,
         'make-available': `/api/admin/spare-parts/${order.id}/make-available`,
-        consume: `/api/technician/spare-parts/${order.id}/consume`
+        consume: `/api/technician/spare-parts/${order.id}/consume`,
+        'assign-to-partner': `/api/admin/spare-parts/${order.id}/assign-to-partner`
       };
 
       const endpoint = endpointMap[action];
@@ -940,6 +1060,8 @@ function WorkflowActionDialogEnhanced({ order, action, onClose }: WorkflowAction
             </Button>
           </form>
         );
+      case 'assign-to-partner':
+        return <AssignToPartnerForm order={order} onClose={onClose} />;
       default:
         return null;
     }
@@ -952,6 +1074,7 @@ function WorkflowActionDialogEnhanced({ order, action, onClose }: WorkflowAction
       case 'receive': return 'Potvrdi prijem';
       case 'make-available': return 'Prebaci u dostupno';
       case 'consume': return 'Označi kao potrošeno';
+      case 'assign-to-partner': return 'Dodeli poslovnom partneru';
       default: return '';
     }
   };
