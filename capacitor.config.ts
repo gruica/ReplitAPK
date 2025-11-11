@@ -101,7 +101,7 @@ const config: CapacitorConfig = {
   // Android specifične optimizacije
   android: {
     allowMixedContent: false, // Sigurnost - samo HTTPS
-    captureInput: true,
+    captureInput: false, // KRITIČNA IZMENA: omogući normalan onChange event flow
     webContentsDebuggingEnabled: isDevelopment, // Debug samo u dev mode
     loggingBehavior: isDevelopment ? 'debug' : 'production',
     
