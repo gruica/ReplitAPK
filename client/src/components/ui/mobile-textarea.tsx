@@ -18,12 +18,12 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
     dynamicHeight = false,
     minRows = 3,
     maxRows = 8,
+    onChange,
+    value,
     ...props 
   }, ref) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const combinedRef = ref || textareaRef;
-    const lastValueRef = React.useRef<string>('');
-    const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
     // Auto-resize functionality
     const adjustHeight = React.useCallback(() => {
@@ -40,86 +40,50 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
       }
     }, [dynamicHeight, minRows, maxRows]);
 
-    // SMART SPACE INSERTION - Automatski dodaje razmak između reči kod glasovnog unosa
-    // Android često dodaje tekst bez razmaka: "popravljenotrebalo" -> "popravljeno trebalo"
-    const addMissingSpaces = React.useCallback((value: string): string => {
-      if (!value || value.length < 2) return value;
+    // KRITIČAN FIX: Jednostavan onChange handler koji GARANTOVANO poziva parent onChange
+    const handleChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      console.log('📝 [MobileTextarea] onChange triggered:', {
+        value: e.target.value,
+        timestamp: new Date().toISOString()
+      });
       
-      // Proveri da li postoje mesta gde nedostaje razmak između reči
-      // Detektujemo mali->veliko slovo prelaz (npr. "poravljenoTrebalo" -> "popravljeno Trebalo")
-      const withSpaces = value.replace(/([a-zšđčćž])([A-ZŠĐČĆŽ])/g, '$1 $2');
+      // Adjust height ako je dinamička visina
+      adjustHeight();
       
-      // Dodatno, detektujemo ako se reč završava sa slovom i sledeća počinje sa slovom
-      // ali samo ako nema razmaka između njih (heuristika za spojene reči)
-      const improved = withSpaces.replace(/([a-zšđčćžA-ZŠĐČĆŽ]{3,})([A-ZŠĐČĆŽ][a-zšđčćž]{2,})/g, '$1 $2');
-      
-      if (improved !== value) {
-        console.log('✨ [MobileTextarea SPACE FIX] Dodati razmaci:', {
-          original: value,
-          fixed: improved
-        });
+      // DIREKTNO pozovi parent onChange - bez intervencije
+      if (onChange) {
+        onChange(e);
       }
-      
-      return improved;
-    }, []);
+    }, [onChange, adjustHeight]);
 
-    // AGGRESSIVE VALUE POLLING - Rešava problem sa glasovnim unosom koji ima delay
-    // Provera vrednosti svakih 200ms kada je polje fokusirano
-    const checkValueChange = React.useCallback(() => {
-      const currentElement = textareaRef.current;
-      if (!currentElement) return;
+    // KRITIČAN FIX: onInput handler za glasovni unos (Android bug)
+    // Android glasovni unos koristi onInput umesto onChange
+    const handleInput = React.useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
+      console.log('🎤 [MobileTextarea] onInput triggered (voice):', {
+        value: e.currentTarget.value,
+        timestamp: new Date().toISOString()
+      });
       
-      let currentValue = currentElement.value;
-      const lastValue = lastValueRef.current;
+      // Adjust height
+      adjustHeight();
       
-      // Automatski dodaj razmake ako nedostaju (glasovni unos bug fix)
-      currentValue = addMissingSpaces(currentValue);
-      
-      if (currentValue !== lastValue && currentValue !== (props.value || '')) {
-        console.log('🔍 [MobileTextarea POLLING] Detektovana promena vrednosti:', {
-          oldValue: lastValue,
-          newValue: currentValue,
-          propsValue: props.value,
-          timestamp: new Date().toISOString()
-        });
+      // FORSIRAJ onChange event za glasovni unos
+      if (onChange) {
+        const syntheticEvent = {
+          target: e.currentTarget,
+          currentTarget: e.currentTarget,
+          type: 'change'
+        } as React.ChangeEvent<HTMLTextAreaElement>;
         
-        lastValueRef.current = currentValue;
-        
-        // Update textarea value sa razmacima ako je potrebno
-        if (currentElement.value !== currentValue) {
-          currentElement.value = currentValue;
-        }
-        
-        // Triggeru onChange
-        if (props.onChange) {
-          const syntheticEvent = {
-            target: currentElement,
-            currentTarget: currentElement
-          } as React.ChangeEvent<HTMLTextAreaElement>;
-          
-          console.log('🎤 [MobileTextarea POLLING] Pozivam onChange sa novom vrednosti:', currentValue);
-          props.onChange(syntheticEvent);
-        }
-        
-        // Adjust height ako je dinamička visina
-        adjustHeight();
+        onChange(syntheticEvent);
       }
-    }, [props.onChange, props.value, adjustHeight, addMissingSpaces]);
+    }, [onChange, adjustHeight]);
 
-    // Auto-scroll textarea into view when focused on mobile
-    const handleFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-      console.log('🎯 [MobileTextarea] Focus - Pokretam polling za glasovni unos');
-      
-      // Započni agresivno polling kada je polje fokusirano
-      // Ovo hvata glasovni unos bez obzira na delay
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-      
-      pollingIntervalRef.current = setInterval(checkValueChange, 200);
+    // Auto-scroll into view when focused (mobile UX)
+    const handleFocus = React.useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+      console.log('🎯 [MobileTextarea] Focus');
       
       if (autoScrollOnFocus) {
-        // Slight delay to ensure virtual keyboard is shown
         setTimeout(() => {
           if (textareaRef.current) {
             textareaRef.current.scrollIntoView({ 
@@ -131,113 +95,46 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
         }, 300);
       }
       
-      // Call original onFocus if provided
       if (props.onFocus) {
         props.onFocus(e);
       }
-    };
+    }, [autoScrollOnFocus, props.onFocus]);
 
-    // Handle blur to catch value changes missed by onChange/onInput
-    const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-      console.log('🔴 [MobileTextarea] Blur - Zaustavljam polling');
+    // Handle blur to ensure final value is captured
+    const handleBlur = React.useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+      console.log('🔴 [MobileTextarea] Blur - final value:', e.currentTarget.value);
       
-      // Zaustavi polling kada polje izgubi fokus
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-      
-      // CRITICAL: Ensure value is captured when user leaves the field
-      // This is a safety net for voice input and paste that might not trigger onChange/onInput
-      const currentValue = e.currentTarget.value;
-      const propsValue = props.value || '';
-      
-      // Only trigger onChange if value has changed and differs from props.value
-      if (currentValue !== propsValue && props.onChange) {
-        console.log('🔄 [MobileTextarea] onBlur detected value change:', {
-          oldValue: propsValue,
-          newValue: currentValue,
-          changed: true
-        });
-        
+      // SAFETY: Trigger onChange one last time on blur
+      // This catches any missed value changes
+      if (onChange && e.currentTarget.value !== value) {
         const syntheticEvent = {
-          ...e,
           target: e.currentTarget,
-          currentTarget: e.currentTarget
+          currentTarget: e.currentTarget,
+          type: 'change'
         } as React.ChangeEvent<HTMLTextAreaElement>;
         
-        props.onChange(syntheticEvent);
+        onChange(syntheticEvent);
       }
       
-      // Call original onBlur if provided
       if (props.onBlur) {
         props.onBlur(e);
       }
-    };
-    
-    // Cleanup na unmount
-    React.useEffect(() => {
-      return () => {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-        }
-      };
-    }, []);
-
-    // Handle input for dynamic height
-    const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-      adjustHeight();
-      
-      // DEBUG: Log what's happening with voice input
-      const currentValue = e.currentTarget.value;
-      console.log('🎤 [MobileTextarea] onInput fired:', {
-        value: currentValue,
-        valueLength: currentValue?.length || 0,
-        eventType: e.type,
-        inputType: (e as any).inputType,
-        timestamp: new Date().toISOString()
-      });
-      
-      // CRITICAL FIX: Trigger onChange for voice input and paste compatibility
-      // Voice input and paste events use onInput instead of onChange on mobile
-      // This ensures React state updates work correctly with all input methods
-      if (props.onChange) {
-        const syntheticEvent = {
-          ...e,
-          target: e.currentTarget,
-          currentTarget: e.currentTarget
-        } as React.ChangeEvent<HTMLTextAreaElement>;
-        
-        console.log('🎤 [MobileTextarea] Triggering onChange with value:', currentValue);
-        
-        // Force React Hook Form update by calling onChange
-        props.onChange(syntheticEvent);
-        
-        // EXTRA FIX: Schedule another update after a small delay
-        // This ensures React Hook Form catches the value even if there's timing issues
-        setTimeout(() => {
-          if (e.currentTarget.value === currentValue && props.onChange) {
-            console.log('🔄 [MobileTextarea] Delayed onChange verification:', currentValue);
-            props.onChange(syntheticEvent);
-          }
-        }, 100);
-      }
-      
-      // Call original onInput if provided
-      if (props.onInput) {
-        props.onInput(e);
-      }
-    };
+    }, [onChange, value, props.onBlur]);
 
     // Adjust height on value change
     React.useEffect(() => {
       adjustHeight();
-    }, [props.value, adjustHeight]);
+    }, [value, adjustHeight]);
 
     // Enhanced mobile properties
     const mobileProps = {
       ...props,
       inputMode: 'text' as any,
+      value: value,
+      onChange: handleChange,
+      onInput: handleInput,
+      onFocus: handleFocus,
+      onBlur: handleBlur,
       // Enhanced touch experience
       style: {
         ...props.style,
@@ -280,9 +177,6 @@ const MobileTextarea = React.forwardRef<HTMLTextAreaElement, MobileTextareaProps
           className
         )}
         ref={combinedRef}
-        onFocus={handleFocus}
-        onInput={handleInput}
-        onBlur={handleBlur}
         data-testid={testId}
         {...mobileProps}
         {...speechProps}

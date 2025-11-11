@@ -15,90 +15,51 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
     enableSpeech = true, 
     mobileKeyboard = 'text',
     autoScrollOnFocus = true,
+    onChange,
+    value,
     ...props 
   }, ref) => {
     const inputRef = React.useRef<HTMLInputElement>(null);
     const combinedRef = ref || inputRef;
-    const lastValueRef = React.useRef<string>('');
-    const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
-    // SMART SPACE INSERTION - Automatski dodaje razmak između reči kod glasovnog unosa
-    // Android često dodaje tekst bez razmaka: "popravljenotrebalo" -> "popravljeno trebalo"
-    const addMissingSpaces = React.useCallback((value: string): string => {
-      if (!value || value.length < 2) return value;
+    // KRITIČAN FIX: Jednostavan onChange handler koji GARANTOVANO poziva parent onChange
+    const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      console.log('📝 [MobileInput] onChange triggered:', {
+        value: e.target.value,
+        timestamp: new Date().toISOString()
+      });
       
-      // Proveri da li postoje mesta gde nedostaje razmak između reči
-      // Detektujemo mali->veliko slovo prelaz (npr. "poravljenoTrebalo" -> "popravljeno Trebalo")
-      const withSpaces = value.replace(/([a-zšđčćž])([A-ZŠĐČĆŽ])/g, '$1 $2');
-      
-      // Dodatno, detektujemo ako se reč završava sa slovom i sledeća počinje sa slovom
-      // ali samo ako nema razmaka između njih (heuristika za spojene reči)
-      const improved = withSpaces.replace(/([a-zšđčćžA-ZŠĐČĆŽ]{3,})([A-ZŠĐČĆŽ][a-zšđčćž]{2,})/g, '$1 $2');
-      
-      if (improved !== value) {
-        console.log('✨ [MobileInput SPACE FIX] Dodati razmaci:', {
-          original: value,
-          fixed: improved
-        });
+      // DIREKTNO pozovi parent onChange - bez intervencije
+      if (onChange) {
+        onChange(e);
       }
-      
-      return improved;
-    }, []);
+    }, [onChange]);
 
-    // AGGRESSIVE VALUE POLLING - Rešava problem sa glasovnim unosom koji ima delay
-    // Provera vrednosti svakih 200ms kada je polje fokusirano
-    const checkValueChange = React.useCallback(() => {
-      const currentElement = inputRef.current;
-      if (!currentElement) return;
+    // KRITIČAN FIX: onInput handler za glasovni unos (Android bug)
+    // Android glasovni unos koristi onInput umesto onChange
+    const handleInput = React.useCallback((e: React.FormEvent<HTMLInputElement>) => {
+      console.log('🎤 [MobileInput] onInput triggered (voice):', {
+        value: e.currentTarget.value,
+        timestamp: new Date().toISOString()
+      });
       
-      let currentValue = currentElement.value;
-      const lastValue = lastValueRef.current;
-      
-      // Automatski dodaj razmake ako nedostaju (glasovni unos bug fix)
-      currentValue = addMissingSpaces(currentValue);
-      
-      if (currentValue !== lastValue && currentValue !== (props.value || '')) {
-        console.log('🔍 [MobileInput POLLING] Detektovana promena vrednosti:', {
-          oldValue: lastValue,
-          newValue: currentValue,
-          propsValue: props.value,
-          timestamp: new Date().toISOString()
-        });
+      // FORSIRAJ onChange event za glasovni unos
+      if (onChange) {
+        const syntheticEvent = {
+          target: e.currentTarget,
+          currentTarget: e.currentTarget,
+          type: 'change'
+        } as React.ChangeEvent<HTMLInputElement>;
         
-        lastValueRef.current = currentValue;
-        
-        // Update input value sa razmacima ako je potrebno
-        if (currentElement.value !== currentValue) {
-          currentElement.value = currentValue;
-        }
-        
-        // Triggeru onChange
-        if (props.onChange) {
-          const syntheticEvent = {
-            target: currentElement,
-            currentTarget: currentElement
-          } as React.ChangeEvent<HTMLInputElement>;
-          
-          console.log('🎤 [MobileInput POLLING] Pozivam onChange sa novom vrednosti:', currentValue);
-          props.onChange(syntheticEvent);
-        }
+        onChange(syntheticEvent);
       }
-    }, [props.onChange, props.value, addMissingSpaces]);
+    }, [onChange]);
 
-    // Auto-scroll input into view when focused on mobile
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-      console.log('🎯 [MobileInput] Focus - Pokretam polling za glasovni unos');
-      
-      // Započni agresivno polling kada je polje fokusirano
-      // Ovo hvata glasovni unos bez obzira na delay
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-      
-      pollingIntervalRef.current = setInterval(checkValueChange, 200);
+    // Auto-scroll into view when focused (mobile UX)
+    const handleFocus = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+      console.log('🎯 [MobileInput] Focus');
       
       if (autoScrollOnFocus) {
-        // Slight delay to ensure virtual keyboard is shown
         setTimeout(() => {
           if (inputRef.current) {
             inputRef.current.scrollIntoView({ 
@@ -110,93 +71,31 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
         }, 300);
       }
       
-      // Call original onFocus if provided
       if (props.onFocus) {
         props.onFocus(e);
       }
-    };
+    }, [autoScrollOnFocus, props.onFocus]);
 
-    // Handle blur to catch value changes missed by onChange/onInput
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      console.log('🔴 [MobileInput] Blur - Zaustavljam polling');
+    // Handle blur to ensure final value is captured
+    const handleBlur = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+      console.log('🔴 [MobileInput] Blur - final value:', e.currentTarget.value);
       
-      // Zaustavi polling kada polje izgubi fokus
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-      
-      const currentValue = e.currentTarget.value;
-      const propsValue = props.value || '';
-      
-      if (currentValue !== propsValue && props.onChange) {
-        console.log('🔄 [MobileInput] onBlur detected value change:', {
-          oldValue: propsValue,
-          newValue: currentValue
-        });
-        
+      // SAFETY: Trigger onChange one last time on blur
+      // This catches any missed value changes
+      if (onChange && e.currentTarget.value !== value) {
         const syntheticEvent = {
-          ...e,
           target: e.currentTarget,
-          currentTarget: e.currentTarget
+          currentTarget: e.currentTarget,
+          type: 'change'
         } as React.ChangeEvent<HTMLInputElement>;
         
-        props.onChange(syntheticEvent);
+        onChange(syntheticEvent);
       }
       
       if (props.onBlur) {
         props.onBlur(e);
       }
-    };
-    
-    // Cleanup na unmount
-    React.useEffect(() => {
-      return () => {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-        }
-      };
-    }, []);
-
-    // Handle input for voice input and paste compatibility
-    const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
-      const currentValue = e.currentTarget.value;
-      console.log('🎤 [MobileInput] onInput fired:', {
-        value: currentValue,
-        inputType: (e as any).inputType,
-        timestamp: new Date().toISOString()
-      });
-      
-      // CRITICAL FIX: Trigger onChange for voice input and paste compatibility
-      // Voice input and paste events use onInput instead of onChange on mobile
-      // This ensures React state updates work correctly with all input methods
-      if (props.onChange) {
-        const syntheticEvent = {
-          ...e,
-          target: e.currentTarget,
-          currentTarget: e.currentTarget
-        } as React.ChangeEvent<HTMLInputElement>;
-        
-        console.log('🎤 [MobileInput] Triggering onChange with value:', currentValue);
-        
-        // Force React Hook Form update by calling onChange
-        props.onChange(syntheticEvent);
-        
-        // EXTRA FIX: Schedule another update after a small delay
-        // This ensures React Hook Form catches the value even if there's timing issues
-        setTimeout(() => {
-          if (e.currentTarget.value === currentValue && props.onChange) {
-            console.log('🔄 [MobileInput] Delayed onChange verification:', currentValue);
-            props.onChange(syntheticEvent);
-          }
-        }, 100);
-      }
-      
-      // Call original onInput if provided
-      if (props.onInput) {
-        props.onInput(e);
-      }
-    };
+    }, [onChange, value, props.onBlur]);
 
     // Determine input mode for mobile keyboards
     const getInputMode = (): string => {
@@ -219,6 +118,11 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
     const mobileProps = {
       ...props,
       inputMode: getInputMode() as any,
+      value: value,
+      onChange: handleChange,
+      onInput: handleInput,
+      onFocus: handleFocus,
+      onBlur: handleBlur,
       // Enhanced touch experience
       style: {
         ...props.style,
@@ -260,9 +164,6 @@ const MobileInput = React.forwardRef<HTMLInputElement, MobileInputProps>(
           className
         )}
         ref={combinedRef}
-        onFocus={handleFocus}
-        onInput={handleInput}
-        onBlur={handleBlur}
         data-testid={testId}
         {...mobileProps}
         {...speechProps}
