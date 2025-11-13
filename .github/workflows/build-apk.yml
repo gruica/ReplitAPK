@@ -77,8 +77,10 @@ jobs:
           ./gradlew assembleRelease --no-daemon --stacktrace && break || sleep 15
         done
         echo "✅ APK uspešno napravljen i potpisan!"
-
-    - name: Verify APK signature
+        echo "📁 Debug - Lista svih APK fajlova:"
+        find . -name "*.apk" -type f
+        echo "📂 Debug - Sadržaj build direktorijuma:"
+        ls -R app/build/outputs/ || echo "⚠️ app/build/outputs ne postoji"     - name: Verify APK signature
       run: |
         echo "🔍 Provera potpisa APK-a..."
         jarsigner -verify -verbose -certs android/app/build/outputs/apk/release/app-release.apk
@@ -127,4 +129,4 @@ jobs:
         draft: false
         prerelease: false
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+       
