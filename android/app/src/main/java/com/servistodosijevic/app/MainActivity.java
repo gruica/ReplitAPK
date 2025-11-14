@@ -29,7 +29,7 @@ public class MainActivity extends BridgeActivity {
     }
     
     @Override
-    protected void onStart() {
+    public void onStart() {
         super.onStart();
         
         // Apply custom WebView settings after WebView is created
@@ -84,7 +84,7 @@ public class MainActivity extends BridgeActivity {
     }
     
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         
         // Re-apply settings when app returns to focus
